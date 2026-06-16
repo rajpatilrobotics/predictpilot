@@ -1,14 +1,13 @@
-import { runtimeConfig } from '@/config/env';
-import type { SupportedSuiNetwork } from '@/lib/sui/network';
+import { suiConfig, type SupportedSuiNetwork } from '@/config/sui';
 
 type ExplorerTarget = 'address' | 'object' | 'txblock';
 
 export function buildExplorerUrl(
   target: ExplorerTarget,
   id: string,
-  network: SupportedSuiNetwork = runtimeConfig.suiNetwork,
+  network: SupportedSuiNetwork = suiConfig.network,
 ) {
-  const url = new URL(`/${target}/${id}`, runtimeConfig.suiExplorerUrl);
+  const url = new URL(`/${target}/${id}`, suiConfig.explorerUrl);
   url.searchParams.set('network', network);
   return url.toString();
 }

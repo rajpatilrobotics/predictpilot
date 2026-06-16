@@ -1,15 +1,11 @@
 import { createDAppKit } from '@mysten/dapp-kit-react';
-import { createSuiClient } from '@/lib/sui/client';
-import { supportedSuiNetworks, type SupportedSuiNetwork } from '@/lib/sui/network';
-
-function toSupportedNetwork(network: string): SupportedSuiNetwork {
-  return network === 'testnet' ? network : 'testnet';
-}
+import { suiConfig } from '@/config/sui';
+import { createSuiGrpcClientForNetwork } from '@/lib/sui-client';
 
 export const dAppKit = createDAppKit({
-  networks: [...supportedSuiNetworks],
-  defaultNetwork: 'testnet',
-  createClient: (network) => createSuiClient(toSupportedNetwork(network)),
+  networks: [...suiConfig.supportedNetworks],
+  defaultNetwork: suiConfig.network,
+  createClient: createSuiGrpcClientForNetwork,
 });
 
 declare module '@mysten/dapp-kit-react' {

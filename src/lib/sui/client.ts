@@ -1,10 +1,18 @@
-import { SuiGrpcClient } from '@mysten/sui/grpc';
-import { runtimeConfig } from '@/config/env';
-import type { SupportedSuiNetwork } from '@/lib/sui/network';
+import { suiConfig, type SupportedSuiNetwork } from '@/config/sui';
+import {
+  appSuiClient,
+  createSuiGrpcClient,
+  createSuiGrpcClientForNetwork,
+  type CreateSuiGrpcClientOptions,
+} from '@/lib/sui-client';
 
-export function createSuiClient(network: SupportedSuiNetwork = runtimeConfig.suiNetwork) {
-  return new SuiGrpcClient({
-    network,
-    baseUrl: runtimeConfig.suiGrpcUrl,
-  });
+export function createSuiClient(network: SupportedSuiNetwork = suiConfig.network) {
+  return createSuiGrpcClient({ network });
 }
+
+export {
+  appSuiClient,
+  createSuiGrpcClient,
+  createSuiGrpcClientForNetwork,
+  type CreateSuiGrpcClientOptions,
+};
