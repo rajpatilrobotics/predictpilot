@@ -1,7 +1,8 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { DAppKitProvider } from '@mysten/dapp-kit-react';
+import { createAppQueryClient } from '@/lib/query-client';
 import { dAppKit } from '@/lib/sui/dapp-kit';
 
 type AppProvidersProps = {
@@ -9,17 +10,7 @@ type AppProvidersProps = {
 };
 
 export function AppProviders({ children }: AppProvidersProps) {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            refetchOnWindowFocus: false,
-            retry: 1,
-          },
-        },
-      }),
-  );
+  const [queryClient] = useState(() => createAppQueryClient());
 
   return (
     <DAppKitProvider dAppKit={dAppKit}>
