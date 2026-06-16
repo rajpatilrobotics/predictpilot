@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ManagerPnlDtoSchema,
+  ManagerSummaryDtoSchema,
   ObjectIdSchema,
   PathOracleIdSchema,
   PredictOraclesDtoSchema,
@@ -11,6 +12,20 @@ import {
 } from '@/integrations/deepbook-predict/schemas';
 
 const validObjectId = '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+const validOracleSummaryFixture = {
+  predict_id: validObjectId,
+  oracle_id: validObjectId,
+  oracle_cap_id: validObjectId,
+  underlying_asset: 'BTC',
+  expiry: 1_781_641_800_000,
+  min_strike: 50_000_000_000_000,
+  tick_size: 1_000_000_000,
+  status: 'active',
+  activated_at: 1_781_634_686_445,
+  settlement_price: null,
+  settled_at: null,
+  created_checkpoint: 349_219_640,
+};
 
 const validStatusFixture = {
   status: 'OK',
@@ -72,12 +87,12 @@ describe('DeepBook Predict schemas', () => {
   });
 
   it('keeps unverified object payloads permissive until exact fields are captured', () => {
-    expect(PredictStateDtoSchema.safeParse({ any_field: { nested: true } }).success).toBe(true);
+    expect(ManagerSummaryDtoSchema.safeParse({ any_field: { nested: true } }).success).toBe(true);
     expect(PredictStateDtoSchema.safeParse([]).success).toBe(false);
   });
 
   it('keeps unverified list payloads permissive but rejects non-lists', () => {
-    expect(PredictOraclesDtoSchema.safeParse([{ oracle_id: validObjectId }]).success).toBe(true);
+    expect(PredictOraclesDtoSchema.safeParse([validOracleSummaryFixture]).success).toBe(true);
     expect(VaultPerformanceDtoSchema.safeParse([{ vault_value: '1000000' }]).success).toBe(true);
     expect(PredictOraclesDtoSchema.safeParse({ oracle_id: validObjectId }).success).toBe(false);
   });

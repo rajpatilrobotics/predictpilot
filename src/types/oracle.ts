@@ -1,4 +1,4 @@
-import type { ObjectId, Price1e9, TimestampMs } from './predict';
+import type { ObjectId, Price1e9, SuiAddress, TimestampMs } from './predict';
 
 export type OracleLifecycleStatus =
   | 'INACTIVE'
@@ -38,6 +38,65 @@ export interface OracleSVIModel {
   price: OraclePriceModel;
   svi: OracleSviParametersModel;
   freshness: OracleFreshnessModel;
+}
+
+export interface OracleSummaryModel {
+  predictId: ObjectId;
+  oracleId: ObjectId;
+  oracleCapId: ObjectId;
+  underlyingAsset: string;
+  expiryMs: TimestampMs;
+  minStrike1e9: Price1e9;
+  tickSize1e9: Price1e9;
+  lifecycleStatus: OracleLifecycleStatus;
+  activatedAtMs: TimestampMs | null;
+  settlementPrice1e9: Price1e9 | null;
+  settledAtMs: TimestampMs | null;
+  createdCheckpoint: bigint;
+}
+
+export interface OracleIndexedPriceModel {
+  eventDigest: string;
+  digest: string;
+  sender: SuiAddress;
+  checkpoint: bigint;
+  checkpointTimestampMs: TimestampMs;
+  txIndex: number;
+  eventIndex: number;
+  packageId: ObjectId;
+  oracleId: ObjectId;
+  spot1e9: Price1e9;
+  forward1e9: Price1e9;
+  onchainTimestampMs: TimestampMs;
+}
+
+export interface OracleIndexedSviModel {
+  eventDigest: string;
+  digest: string;
+  sender: SuiAddress;
+  checkpoint: bigint;
+  checkpointTimestampMs: TimestampMs;
+  txIndex: number;
+  eventIndex: number;
+  packageId: ObjectId;
+  oracleId: ObjectId;
+  svi: OracleSviParametersModel;
+  onchainTimestampMs: TimestampMs;
+}
+
+export type OracleAskBoundsModel =
+  | {
+      status: 'UNAVAILABLE';
+    }
+  | {
+      status: 'PRESENT_UNMAPPED';
+    };
+
+export interface OracleStateModel {
+  oracle: OracleSummaryModel;
+  latestPrice: OracleIndexedPriceModel | null;
+  latestSvi: OracleIndexedSviModel | null;
+  askBounds: OracleAskBoundsModel;
 }
 
 export interface OraclePriceHistoryPoint {

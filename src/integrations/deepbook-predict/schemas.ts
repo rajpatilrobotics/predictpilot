@@ -42,6 +42,7 @@ export const RangeQueryVerifiedSchema = z
 
 const UnknownObjectDtoSchema = z.record(z.string(), z.unknown());
 const UnknownListDtoSchema = z.array(z.unknown());
+const IntegerishDtoSchema = z.union([z.number().int(), z.string().regex(/^-?\d+$/)]);
 
 const PredictServerStatusPipelineSchema = z
   .object({
@@ -68,11 +69,82 @@ export const PredictServerStatusDtoSchema = z
   })
   .strict();
 
-export const PredictStateDtoSchema = UnknownObjectDtoSchema;
-export const PredictOraclesDtoSchema = UnknownListDtoSchema;
-export const OracleStateDtoSchema = UnknownObjectDtoSchema;
+export const OracleSummaryDtoSchema = z
+  .object({
+    predict_id: ObjectIdSchema,
+    oracle_id: ObjectIdSchema,
+    oracle_cap_id: ObjectIdSchema,
+    underlying_asset: z.string(),
+    expiry: IntegerishDtoSchema,
+    min_strike: IntegerishDtoSchema,
+    tick_size: IntegerishDtoSchema,
+    status: z.string(),
+    activated_at: IntegerishDtoSchema.nullable(),
+    settlement_price: IntegerishDtoSchema.nullable(),
+    settled_at: IntegerishDtoSchema.nullable(),
+    created_checkpoint: IntegerishDtoSchema,
+  })
+  .passthrough();
+
+export const OraclePriceUpdateDtoSchema = z
+  .object({
+    event_digest: z.string(),
+    digest: z.string(),
+    sender: SuiAddressSchema,
+    checkpoint: IntegerishDtoSchema,
+    checkpoint_timestamp_ms: IntegerishDtoSchema,
+    tx_index: z.number().int().nonnegative(),
+    event_index: z.number().int().nonnegative(),
+    package: z.string(),
+    oracle_id: ObjectIdSchema,
+    spot: IntegerishDtoSchema,
+    forward: IntegerishDtoSchema,
+    onchain_timestamp: IntegerishDtoSchema,
+  })
+  .passthrough();
+
+export const OracleSviUpdateDtoSchema = z
+  .object({
+    event_digest: z.string(),
+    digest: z.string(),
+    sender: SuiAddressSchema,
+    checkpoint: IntegerishDtoSchema,
+    checkpoint_timestamp_ms: IntegerishDtoSchema,
+    tx_index: z.number().int().nonnegative(),
+    event_index: z.number().int().nonnegative(),
+    package: z.string(),
+    oracle_id: ObjectIdSchema,
+    a: IntegerishDtoSchema,
+    b: IntegerishDtoSchema,
+    rho: IntegerishDtoSchema,
+    rho_negative: z.boolean(),
+    m: IntegerishDtoSchema,
+    m_negative: z.boolean(),
+    sigma: IntegerishDtoSchema,
+    onchain_timestamp: IntegerishDtoSchema,
+  })
+  .passthrough();
+
+export const PredictStateDtoSchema = z
+  .object({
+    predict_id: ObjectIdSchema,
+    pricing: z.unknown().nullable(),
+    risk: z.unknown().nullable(),
+    trading_paused: z.boolean().nullable(),
+    quote_assets: z.array(z.string()),
+  })
+  .passthrough();
+export const PredictOraclesDtoSchema = z.array(OracleSummaryDtoSchema);
+export const OracleStateDtoSchema = z
+  .object({
+    oracle: OracleSummaryDtoSchema,
+    latest_price: OraclePriceUpdateDtoSchema.nullable(),
+    latest_svi: OracleSviUpdateDtoSchema.nullable(),
+    ask_bounds: z.union([UnknownObjectDtoSchema, z.null()]),
+  })
+  .passthrough();
 export const QuoteAssetsDtoSchema = UnknownListDtoSchema;
-export const OracleAskBoundsDtoSchema = UnknownObjectDtoSchema;
+export const OracleAskBoundsDtoSchema = z.union([UnknownObjectDtoSchema, z.null()]);
 export const VaultSummaryDtoSchema = UnknownObjectDtoSchema;
 export const VaultPerformanceDtoSchema = UnknownListDtoSchema;
 export const ManagersDtoSchema = UnknownListDtoSchema;
@@ -100,6 +172,9 @@ export type PathOracleId = z.infer<typeof PathOracleIdSchema>;
 export type PathManagerId = z.infer<typeof PathManagerIdSchema>;
 export type RangeQueryVerified = z.infer<typeof RangeQueryVerifiedSchema>;
 export type PredictServerStatusDto = z.infer<typeof PredictServerStatusDtoSchema>;
+export type OracleSummaryDto = z.infer<typeof OracleSummaryDtoSchema>;
+export type OraclePriceUpdateDto = z.infer<typeof OraclePriceUpdateDtoSchema>;
+export type OracleSviUpdateDto = z.infer<typeof OracleSviUpdateDtoSchema>;
 export type PredictStateDto = z.infer<typeof PredictStateDtoSchema>;
 export type PredictOraclesDto = z.infer<typeof PredictOraclesDtoSchema>;
 export type OracleStateDto = z.infer<typeof OracleStateDtoSchema>;

@@ -9,6 +9,7 @@ export type TimestampMs = bigint;
 
 export type PredictNetwork = 'testnet';
 export type PredictSourceBranch = 'predict-testnet-4-16';
+export type ServerValueStatus = 'PRESENT' | 'MISSING';
 
 export type BinaryDirection = 'UP' | 'DOWN';
 export type BinaryPositionAction = 'MINT' | 'REDEEM';
@@ -29,6 +30,14 @@ export interface PredictDeploymentModel {
   sourceBranch: PredictSourceBranch;
   defaultOracleId?: ObjectId;
   defaultMarketId?: ObjectId;
+}
+
+export interface PredictStateModel {
+  predictId: ObjectId;
+  quoteAssets: MoveType[];
+  tradingPaused: boolean | null;
+  pricingStatus: ServerValueStatus;
+  riskStatus: ServerValueStatus;
 }
 
 export interface MarketKeyModel {

@@ -27,7 +27,6 @@ const statusFixture = {
 };
 
 const listPaths = new Set([
-  `/predicts/${objectId}/oracles`,
   `/predicts/${objectId}/quote-assets`,
   `/predicts/${objectId}/vault/performance`,
   '/managers',
@@ -41,6 +40,21 @@ const listPaths = new Set([
   '/lp/withdrawals',
   `/trades/${objectId}`,
 ]);
+
+const oracleSummaryFixture = {
+  predict_id: objectId,
+  oracle_id: objectId,
+  oracle_cap_id: objectId,
+  underlying_asset: 'BTC',
+  expiry: 1_781_641_800_000,
+  min_strike: 50_000_000_000_000,
+  tick_size: 1_000_000_000,
+  status: 'active',
+  activated_at: 1_781_634_686_445,
+  settlement_price: null,
+  settled_at: null,
+  created_checkpoint: 349_219_640,
+};
 
 function jsonResponse(body: unknown) {
   return Promise.resolve(
@@ -56,6 +70,29 @@ function jsonResponse(body: unknown) {
 function responseForPath(pathname: string) {
   if (pathname === '/status') {
     return jsonResponse(statusFixture);
+  }
+
+  if (pathname === `/predicts/${objectId}/state`) {
+    return jsonResponse({
+      predict_id: objectId,
+      pricing: null,
+      quote_assets: ['e95040085976bfd54a1a07225cd46c8a2b4e8e2b6732f140a0fc49850ba73e1a::dusdc::DUSDC'],
+      risk: null,
+      trading_paused: null,
+    });
+  }
+
+  if (pathname === `/predicts/${objectId}/oracles`) {
+    return jsonResponse([oracleSummaryFixture]);
+  }
+
+  if (pathname === `/oracles/${objectId}/state`) {
+    return jsonResponse({
+      ask_bounds: null,
+      latest_price: null,
+      latest_svi: null,
+      oracle: oracleSummaryFixture,
+    });
   }
 
   if (listPaths.has(pathname)) {
