@@ -11,11 +11,13 @@ export type WalletConnectionStatus = 'connected' | 'connecting' | 'disconnected'
 export interface WalletStatusModel {
   accountAddress: string | null;
   currentNetwork: string;
+  expectedNetwork: string;
   isConnected: boolean;
   isConnecting: boolean;
   isDisconnected: boolean;
   isExpectedNetwork: boolean;
   isReconnecting: boolean;
+  isWrongNetwork: boolean;
   shortAddress: string | null;
   status: WalletConnectionStatus;
   statusLabel: string;
@@ -29,15 +31,18 @@ export function useWalletStatus(): WalletStatusModel {
   const wallet = useCurrentWallet();
   const connection = useWalletConnection();
   const accountAddress = account?.address ?? null;
+  const isExpectedNetwork = currentNetwork === suiConfig.network;
 
   return {
     accountAddress,
     currentNetwork,
+    expectedNetwork: suiConfig.network,
     isConnected: connection.isConnected,
     isConnecting: connection.isConnecting,
     isDisconnected: connection.isDisconnected,
-    isExpectedNetwork: currentNetwork === suiConfig.network,
+    isExpectedNetwork,
     isReconnecting: connection.isReconnecting,
+    isWrongNetwork: connection.isConnected && !isExpectedNetwork,
     shortAddress: accountAddress === null ? null : formatWalletAddress(accountAddress),
     status: connection.status,
     statusLabel: formatConnectionStatus(connection.status),

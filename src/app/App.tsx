@@ -1,4 +1,5 @@
 import { runtimeConfig } from '@/config/env';
+import { TestnetBanner } from '@/components/banners/TestnetBanner';
 import { WalletPanel } from '@/features/wallet/WalletPanel';
 
 const foundationItems = [
@@ -22,6 +23,7 @@ export function App() {
           </div>
           <WalletPanel />
         </header>
+        <TestnetBanner />
 
         <div className="grid flex-1 gap-4 py-8 md:grid-cols-3">
           {foundationItems.map((item) => (

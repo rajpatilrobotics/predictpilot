@@ -1,5 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TestnetBanner } from '@/components/banners/TestnetBanner';
+import { NetworkGuard } from '@/features/wallet/NetworkGuard';
 import { formatWalletAddress } from '@/features/wallet/useWalletStatus';
 import { WalletPanel } from '@/features/wallet/WalletPanel';
 
@@ -77,6 +79,7 @@ describe('WalletPanel', () => {
     expect(screen.getByText('testnet')).toBeInTheDocument();
     expect(screen.getByText('Disconnected')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Connect wallet' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Wrong network warning')).not.toBeInTheDocument();
   });
 
   it('renders connected wallet name, shortened account, network, and status', () => {
@@ -105,6 +108,128 @@ describe('WalletPanel', () => {
     expect(screen.getByText('testnet')).toBeInTheDocument();
     expect(screen.getByText('Connected')).toBeInTheDocument();
     expect(screen.getByText('2 wallet intents available.')).toBeInTheDocument();
+  });
+
+  it('renders a wrong-network warning with current and expected networks', () => {
+    const account = {
+      address: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+    };
+    const wallet = { name: 'Slush' };
+
+    walletMockState.account = account;
+    walletMockState.currentNetwork = 'mainnet';
+    walletMockState.wallet = wallet;
+    walletMockState.connection = {
+      account,
+      isConnected: true,
+      isConnecting: false,
+      isDisconnected: false,
+      isReconnecting: false,
+      status: 'connected',
+      supportedIntents: ['sui:signTransaction'],
+      wallet,
+    };
+
+    render(<WalletPanel />);
+
+    expect(screen.getByText('mainnet (expected testnet)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Wrong network warning')).toHaveTextContent(
+      'Switch to Testnet',
+    );
+  });
+});
+
+describe('NetworkGuard', () => {
+  beforeEach(() => {
+    walletMockState.account = null;
+    walletMockState.currentNetwork = 'testnet';
+    walletMockState.wallet = null;
+    walletMockState.connection = {
+      account: null,
+      isConnected: false,
+      isConnecting: false,
+      isDisconnected: true,
+      isReconnecting: false,
+      status: 'disconnected',
+      supportedIntents: [],
+      wallet: null,
+    };
+  });
+
+  it('allows children when disconnected or on Testnet', () => {
+    const { rerender } = render(
+      <NetworkGuard>
+        <button type="button">Future execution CTA</button>
+      </NetworkGuard>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Future execution CTA' })).toBeInTheDocument();
+
+    const account = {
+      address: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+    };
+    const wallet = { name: 'Slush' };
+
+    walletMockState.account = account;
+    walletMockState.wallet = wallet;
+    walletMockState.connection = {
+      account,
+      isConnected: true,
+      isConnecting: false,
+      isDisconnected: false,
+      isReconnecting: false,
+      status: 'connected',
+      supportedIntents: [],
+      wallet,
+    };
+
+    rerender(
+      <NetworkGuard>
+        <button type="button">Future execution CTA</button>
+      </NetworkGuard>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Future execution CTA' })).toBeInTheDocument();
+  });
+
+  it('replaces children with a blocker when connected on the wrong network', () => {
+    const account = {
+      address: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+    };
+    const wallet = { name: 'Slush' };
+
+    walletMockState.account = account;
+    walletMockState.currentNetwork = 'mainnet';
+    walletMockState.wallet = wallet;
+    walletMockState.connection = {
+      account,
+      isConnected: true,
+      isConnecting: false,
+      isDisconnected: false,
+      isReconnecting: false,
+      status: 'connected',
+      supportedIntents: [],
+      wallet,
+    };
+
+    render(
+      <NetworkGuard>
+        <button type="button">Future execution CTA</button>
+      </NetworkGuard>,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Future execution CTA' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Wrong network')).toHaveTextContent('mainnet');
+    expect(screen.getByLabelText('Wrong network')).toHaveTextContent('testnet');
+  });
+});
+
+describe('TestnetBanner', () => {
+  it('renders the permanent Testnet status banner', () => {
+    render(<TestnetBanner />);
+
+    expect(screen.getByLabelText('Testnet status')).toHaveTextContent('Sui Testnet only');
+    expect(screen.getByLabelText('Testnet status')).toHaveTextContent('testnet');
   });
 });
 
