@@ -1,4 +1,4 @@
-import { deepbookPredictConfig } from '@/config/deepbookPredict';
+import { predictDeploymentConfig, predictServerEndpoints } from '@/config/predict';
 import { fetchJson, type FetchLike, type HttpQuery } from '@/lib/http';
 import {
   LpSuppliesHistoryDtoSchema,
@@ -55,6 +55,7 @@ import {
   type VaultPerformanceDto,
   type VaultSummaryDto,
 } from './schemas';
+import type { ObjectId } from '@/types/predict';
 import type { z } from 'zod';
 
 export interface PredictServerClientOptions {
@@ -65,7 +66,7 @@ export interface PredictServerClientOptions {
 }
 
 export function createPredictServerClient({
-  baseUrl = deepbookPredictConfig.predictServerUrl,
+  baseUrl = predictDeploymentConfig.serverBaseUrl,
   fetchImpl,
   retries,
   timeoutMs,
@@ -90,19 +91,19 @@ export function createPredictServerClient({
     });
   }
 
-  function predictIdPath(predictId: ObjectIdDto) {
+  function predictIdPath(predictId: ObjectIdDto): ObjectId {
     const parsed = PathPredictIdSchema.parse({ predictId });
-    return parsed.predictId;
+    return parsed.predictId as ObjectId;
   }
 
-  function oracleIdPath(oracleId: ObjectIdDto) {
+  function oracleIdPath(oracleId: ObjectIdDto): ObjectId {
     const parsed = PathOracleIdSchema.parse({ oracleId });
-    return parsed.oracleId;
+    return parsed.oracleId as ObjectId;
   }
 
-  function managerIdPath(managerId: ObjectIdDto) {
+  function managerIdPath(managerId: ObjectIdDto): ObjectId {
     const parsed = PathManagerIdSchema.parse({ managerId });
-    return parsed.managerId;
+    return parsed.managerId as ObjectId;
   }
 
   function rangeQuery(range: 'ALL') {
@@ -112,7 +113,7 @@ export function createPredictServerClient({
   return {
     fetchPredictServerStatus(query: StatusQuery = {}): Promise<PredictServerStatusDto> {
       return request({
-        path: '/status',
+        path: predictServerEndpoints.status(),
         query: StatusQuerySchema.parse(query),
         schema: PredictServerStatusDtoSchema,
       });
@@ -121,7 +122,7 @@ export function createPredictServerClient({
     fetchPredictStateDto(predictId: ObjectIdDto): Promise<PredictStateDto> {
       const id = predictIdPath(predictId);
       return request({
-        path: `/predicts/${id}/state`,
+        path: predictServerEndpoints.predictState(id),
         schema: PredictStateDtoSchema,
       });
     },
@@ -129,7 +130,7 @@ export function createPredictServerClient({
     fetchPredictOraclesDto(predictId: ObjectIdDto): Promise<PredictOraclesDto> {
       const id = predictIdPath(predictId);
       return request({
-        path: `/predicts/${id}/oracles`,
+        path: predictServerEndpoints.predictOracles(id),
         schema: PredictOraclesDtoSchema,
       });
     },
@@ -137,7 +138,7 @@ export function createPredictServerClient({
     fetchPredictQuoteAssetsDto(predictId: ObjectIdDto): Promise<QuoteAssetsDto> {
       const id = predictIdPath(predictId);
       return request({
-        path: `/predicts/${id}/quote-assets`,
+        path: predictServerEndpoints.predictQuoteAssets(id),
         schema: QuoteAssetsDtoSchema,
       });
     },
@@ -145,7 +146,7 @@ export function createPredictServerClient({
     fetchOracleStateDto(oracleId: ObjectIdDto): Promise<OracleStateDto> {
       const id = oracleIdPath(oracleId);
       return request({
-        path: `/oracles/${id}/state`,
+        path: predictServerEndpoints.oracleState(id),
         schema: OracleStateDtoSchema,
       });
     },
@@ -153,7 +154,7 @@ export function createPredictServerClient({
     fetchOracleAskBoundsDto(oracleId: ObjectIdDto): Promise<OracleAskBoundsDto> {
       const id = oracleIdPath(oracleId);
       return request({
-        path: `/oracles/${id}/ask-bounds`,
+        path: predictServerEndpoints.oracleAskBounds(id),
         schema: OracleAskBoundsDtoSchema,
       });
     },
@@ -161,7 +162,7 @@ export function createPredictServerClient({
     fetchVaultSummaryDto(predictId: ObjectIdDto): Promise<VaultSummaryDto> {
       const id = predictIdPath(predictId);
       return request({
-        path: `/predicts/${id}/vault/summary`,
+        path: predictServerEndpoints.vaultSummary(id),
         schema: VaultSummaryDtoSchema,
       });
     },
@@ -172,7 +173,7 @@ export function createPredictServerClient({
     ): Promise<VaultPerformanceDto> {
       const id = predictIdPath(predictId);
       return request({
-        path: `/predicts/${id}/vault/performance`,
+        path: predictServerEndpoints.vaultPerformance(id),
         query: rangeQuery(range),
         schema: VaultPerformanceDtoSchema,
       });
@@ -180,7 +181,7 @@ export function createPredictServerClient({
 
     fetchManagersDto(): Promise<ManagersDto> {
       return request({
-        path: '/managers',
+        path: predictServerEndpoints.managers(),
         schema: ManagersDtoSchema,
       });
     },
@@ -188,7 +189,7 @@ export function createPredictServerClient({
     fetchManagerSummaryDto(managerId: ObjectIdDto): Promise<ManagerSummaryDto> {
       const id = managerIdPath(managerId);
       return request({
-        path: `/managers/${id}/summary`,
+        path: predictServerEndpoints.managerSummary(id),
         schema: ManagerSummaryDtoSchema,
       });
     },
@@ -196,7 +197,7 @@ export function createPredictServerClient({
     fetchManagerPositionsSummaryDto(managerId: ObjectIdDto): Promise<ManagerPositionsSummaryDto> {
       const id = managerIdPath(managerId);
       return request({
-        path: `/managers/${id}/positions/summary`,
+        path: predictServerEndpoints.managerPositionsSummary(id),
         schema: ManagerPositionsSummaryDtoSchema,
       });
     },
@@ -204,7 +205,7 @@ export function createPredictServerClient({
     fetchManagerPnlDto(managerId: ObjectIdDto, range: 'ALL' = 'ALL'): Promise<ManagerPnlDto> {
       const id = managerIdPath(managerId);
       return request({
-        path: `/managers/${id}/pnl`,
+        path: predictServerEndpoints.managerPnl(id),
         query: rangeQuery(range),
         schema: ManagerPnlDtoSchema,
       });
@@ -213,7 +214,7 @@ export function createPredictServerClient({
     fetchOraclePricesDto(oracleId: ObjectIdDto): Promise<OraclePricesDto> {
       const id = oracleIdPath(oracleId);
       return request({
-        path: `/oracles/${id}/prices`,
+        path: predictServerEndpoints.oraclePrices(id),
         schema: OraclePricesDtoSchema,
       });
     },
@@ -221,7 +222,7 @@ export function createPredictServerClient({
     fetchOracleLatestPriceDto(oracleId: ObjectIdDto): Promise<OracleLatestPriceDto> {
       const id = oracleIdPath(oracleId);
       return request({
-        path: `/oracles/${id}/prices/latest`,
+        path: predictServerEndpoints.oracleLatestPrice(id),
         schema: OracleLatestPriceDtoSchema,
       });
     },
@@ -229,7 +230,7 @@ export function createPredictServerClient({
     fetchOracleSviDto(oracleId: ObjectIdDto): Promise<OracleSviDto> {
       const id = oracleIdPath(oracleId);
       return request({
-        path: `/oracles/${id}/svi`,
+        path: predictServerEndpoints.oracleSvi(id),
         schema: OracleSviDtoSchema,
       });
     },
@@ -237,49 +238,49 @@ export function createPredictServerClient({
     fetchOracleLatestSviDto(oracleId: ObjectIdDto): Promise<OracleLatestSviDto> {
       const id = oracleIdPath(oracleId);
       return request({
-        path: `/oracles/${id}/svi/latest`,
+        path: predictServerEndpoints.oracleLatestSvi(id),
         schema: OracleLatestSviDtoSchema,
       });
     },
 
     fetchPositionMintHistoryDto(): Promise<PositionMintHistoryDto> {
       return request({
-        path: '/positions/minted',
+        path: predictServerEndpoints.historyPositionsMinted(),
         schema: PositionMintHistoryDtoSchema,
       });
     },
 
     fetchPositionRedeemHistoryDto(): Promise<PositionRedeemHistoryDto> {
       return request({
-        path: '/positions/redeemed',
+        path: predictServerEndpoints.historyPositionsRedeemed(),
         schema: PositionRedeemHistoryDtoSchema,
       });
     },
 
     fetchRangeMintHistoryDto(): Promise<RangeMintHistoryDto> {
       return request({
-        path: '/ranges/minted',
+        path: predictServerEndpoints.historyRangesMinted(),
         schema: RangeMintHistoryDtoSchema,
       });
     },
 
     fetchRangeRedeemHistoryDto(): Promise<RangeRedeemHistoryDto> {
       return request({
-        path: '/ranges/redeemed',
+        path: predictServerEndpoints.historyRangesRedeemed(),
         schema: RangeRedeemHistoryDtoSchema,
       });
     },
 
     fetchLpSuppliesHistoryDto(): Promise<LpSuppliesHistoryDto> {
       return request({
-        path: '/lp/supplies',
+        path: predictServerEndpoints.historyLpSupplies(),
         schema: LpSuppliesHistoryDtoSchema,
       });
     },
 
     fetchLpWithdrawalsHistoryDto(): Promise<LpWithdrawalsHistoryDto> {
       return request({
-        path: '/lp/withdrawals',
+        path: predictServerEndpoints.historyLpWithdrawals(),
         schema: LpWithdrawalsHistoryDtoSchema,
       });
     },
@@ -287,7 +288,7 @@ export function createPredictServerClient({
     fetchOracleTradesDto(oracleId: ObjectIdDto): Promise<OracleTradesDto> {
       const id = oracleIdPath(oracleId);
       return request({
-        path: `/trades/${id}`,
+        path: predictServerEndpoints.oracleTrades(id),
         schema: OracleTradesDtoSchema,
       });
     },

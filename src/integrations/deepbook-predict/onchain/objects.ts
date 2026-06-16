@@ -1,4 +1,4 @@
-import { deepbookPredictConfig } from '@/config/deepbookPredict';
+import { predictDeploymentConfig } from '@/config/predict';
 import { suiConfig } from '@/config/sui';
 import { normalizeObjectId } from '@/integrations/deepbook-predict/api/mapping';
 import { SuiAddressSchema } from '@/integrations/deepbook-predict/schemas';
@@ -157,7 +157,7 @@ export async function listWalletQuoteCoins({
 }: ListWalletQuoteCoinsOptions): Promise<QuoteCoinModel[]> {
   validateSuiAddress(owner);
 
-  const quoteAssetType = deepbookPredictConfig.quoteAsset.type as MoveType;
+  const quoteAssetType = predictDeploymentConfig.quoteAsset.type;
   const coins: QuoteCoinModel[] = [];
   let cursor: string | null = null;
 
@@ -213,7 +213,7 @@ export async function selectWalletQuoteCoinsForAmount({
       insufficientWalletDusdcError({
         availableQuote: selectedAmount.toString(),
         owner,
-        quoteAssetType: deepbookPredictConfig.quoteAsset.type,
+        quoteAssetType: predictDeploymentConfig.quoteAsset.type,
         requestedQuote: requestedAmount.toString(),
       }),
     );

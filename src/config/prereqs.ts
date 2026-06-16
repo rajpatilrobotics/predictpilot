@@ -1,4 +1,4 @@
-import { deepbookPredictConfig } from '@/config/deepbookPredict';
+import { predictDeploymentConfig } from '@/config/predict';
 import { suiConfig } from '@/config/sui';
 
 export type PredictPilotPrerequisiteId =
@@ -33,7 +33,7 @@ export const predictPilotPrerequisiteConfig = {
   automaticDusdcFundingAvailable: false,
   automaticSuiGasFundingAvailable: false,
   network: suiConfig.network,
-  quoteAsset: deepbookPredictConfig.quoteAsset,
+  quoteAsset: predictDeploymentConfig.quoteAsset,
   walletChain: suiConfig.walletChain,
 } as const;
 
@@ -81,7 +81,7 @@ export const predictPilotPrerequisites = [
     recovery:
       'Request DeepBook Predict Testnet DUSDC through the official token request flow before demo rehearsal.',
     requiredFor: ['manager-funding', 'trade-actions', 'lp-actions'],
-    summary: `The current quote asset is DUSDC (${deepbookPredictConfig.quoteAsset.type}) with ${deepbookPredictConfig.quoteAsset.decimals} decimals.`,
+    summary: `The current quote asset is DUSDC (${predictDeploymentConfig.quoteAsset.type}) with ${predictDeploymentConfig.quoteAsset.decimals} decimals.`,
   },
   {
     automatedInApp: false,

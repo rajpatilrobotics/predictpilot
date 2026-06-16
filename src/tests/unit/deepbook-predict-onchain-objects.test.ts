@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { deepbookPredictConfig } from '@/config/deepbookPredict';
+import { predictDeploymentConfig } from '@/config/predict';
 import {
   listWalletQuoteCoins,
   readAuthoritativeManagerObject,
@@ -10,18 +10,12 @@ import {
 } from '@/integrations/deepbook-predict/onchain/objects';
 import type { ObjectId, SuiAddress } from '@/types/predict';
 
-const managerId =
-  '0x640e9ab9bdd5c68e57ddf293260ed319abf85ea0d6d0da076952de023fe961b3' as ObjectId;
-const oracleId =
-  '0x175331eba3cbb60face9193d05d2efac052868d6cccaf80a62775e2e7eb0b462' as ObjectId;
-const owner =
-  '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
-const coinA =
-  '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' as ObjectId;
-const coinB =
-  '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' as ObjectId;
-const coinC =
-  '0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc' as ObjectId;
+const managerId = '0x640e9ab9bdd5c68e57ddf293260ed319abf85ea0d6d0da076952de023fe961b3' as ObjectId;
+const oracleId = '0x175331eba3cbb60face9193d05d2efac052868d6cccaf80a62775e2e7eb0b462' as ObjectId;
+const owner = '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
+const coinA = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' as ObjectId;
+const coinB = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' as ObjectId;
+const coinC = '0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc' as ObjectId;
 
 function createMockClient(): AuthoritativeSuiClient {
   return {
@@ -50,7 +44,7 @@ function mockCoin(objectId: ObjectId, balance: string) {
     digest: `digest-${objectId.slice(2, 8)}`,
     objectId,
     owner: { AddressOwner: owner },
-    type: `0x2::coin::Coin<${deepbookPredictConfig.quoteAsset.type}>`,
+    type: `0x2::coin::Coin<${predictDeploymentConfig.quoteAsset.type}>`,
     version: '7',
   };
 }
@@ -59,7 +53,10 @@ describe('DeepBook Predict authoritative onchain object helpers', () => {
   it('reads a manager object snapshot without parsing unverified internals', async () => {
     const client = createMockClient();
     vi.mocked(client.getObject).mockResolvedValue(
-      mockObjectResponse(managerId, `${deepbookPredictConfig.predictPackageId}::predict_manager::PredictManager`),
+      mockObjectResponse(
+        managerId,
+        `${predictDeploymentConfig.packageId}::predict_manager::PredictManager`,
+      ),
     );
 
     const snapshot = await readAuthoritativeManagerObject({ client, managerId });
@@ -85,7 +82,7 @@ describe('DeepBook Predict authoritative onchain object helpers', () => {
   it('reads an oracle object snapshot without lifecycle guessing', async () => {
     const client = createMockClient();
     vi.mocked(client.getObject).mockResolvedValue(
-      mockObjectResponse(oracleId, `${deepbookPredictConfig.predictPackageId}::oracle::OracleSVI`),
+      mockObjectResponse(oracleId, `${predictDeploymentConfig.packageId}::oracle::OracleSVI`),
     );
 
     const snapshot = await readAuthoritativeOracleObject({
@@ -105,7 +102,7 @@ describe('DeepBook Predict authoritative onchain object helpers', () => {
       id: oracleId,
       json: { fields: { intentionallyUnparsed: true } },
       network: 'testnet',
-      type: `${deepbookPredictConfig.predictPackageId}::oracle::OracleSVI`,
+      type: `${predictDeploymentConfig.packageId}::oracle::OracleSVI`,
     });
     expect(snapshot).not.toHaveProperty('lifecycleStatus');
   });
@@ -118,10 +115,14 @@ describe('DeepBook Predict authoritative onchain object helpers', () => {
     vi.mocked(oracleClient.getObject).mockRejectedValue(new Error('Object not found'));
     vi.mocked(coinClient.getObject).mockRejectedValue(new Error('Object has been deleted'));
 
-    await expect(readAuthoritativeManagerObject({ client: managerClient, managerId })).rejects.toMatchObject({
+    await expect(
+      readAuthoritativeManagerObject({ client: managerClient, managerId }),
+    ).rejects.toMatchObject({
       code: 'MANAGER_NOT_FOUND',
     });
-    await expect(readAuthoritativeOracleObject({ client: oracleClient, oracleId })).rejects.toMatchObject({
+    await expect(
+      readAuthoritativeOracleObject({ client: oracleClient, oracleId }),
+    ).rejects.toMatchObject({
       code: 'ONCHAIN_OBJECT_NOT_FOUND',
     });
     await expect(
@@ -161,13 +162,13 @@ describe('DeepBook Predict authoritative onchain object helpers', () => {
     const coins = await listWalletQuoteCoins({ client, owner, pageSize: 1 });
 
     expect(client.listCoins).toHaveBeenNthCalledWith(1, {
-      coinType: deepbookPredictConfig.quoteAsset.type,
+      coinType: predictDeploymentConfig.quoteAsset.type,
       cursor: null,
       limit: 1,
       owner,
     });
     expect(client.listCoins).toHaveBeenNthCalledWith(2, {
-      coinType: deepbookPredictConfig.quoteAsset.type,
+      coinType: predictDeploymentConfig.quoteAsset.type,
       cursor: 'next-page',
       limit: 1,
       owner,

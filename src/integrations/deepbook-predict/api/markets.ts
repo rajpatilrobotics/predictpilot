@@ -1,5 +1,8 @@
-import { deepbookPredictConfig } from '@/config/deepbookPredict';
-import { createPredictServerClient, type PredictServerClient } from '@/integrations/deepbook-predict/client';
+import { predictDeploymentConfig } from '@/config/predict';
+import {
+  createPredictServerClient,
+  type PredictServerClient,
+} from '@/integrations/deepbook-predict/client';
 import type { PredictStateDto } from '@/integrations/deepbook-predict/schemas';
 import type { ObjectId, PredictStateModel } from '@/types/predict';
 import type { OracleSummaryModel } from '@/types/oracle';
@@ -23,7 +26,7 @@ export interface GetPredictOraclesOptions {
 
 export async function getPredictState({
   client = createPredictServerClient(),
-  predictId = deepbookPredictConfig.predictObjectId as ObjectId,
+  predictId = predictDeploymentConfig.predictObjectId,
 }: GetPredictStateOptions = {}): Promise<PredictStateModel> {
   const dto = await client.fetchPredictStateDto(predictId);
   return mapPredictStateDtoToModel(dto);
@@ -31,7 +34,7 @@ export async function getPredictState({
 
 export async function getPredictOracles({
   client = createPredictServerClient(),
-  predictId = deepbookPredictConfig.predictObjectId as ObjectId,
+  predictId = predictDeploymentConfig.predictObjectId,
 }: GetPredictOraclesOptions = {}): Promise<OracleSummaryModel[]> {
   const dto = await client.fetchPredictOraclesDto(predictId);
   return dto.map(mapOracleSummaryDtoToModel);

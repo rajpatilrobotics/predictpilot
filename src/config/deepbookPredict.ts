@@ -1,17 +1,13 @@
-import { runtimeConfig } from '@/config/env';
+import { predictDeploymentConfig } from '@/config/predict';
 
 export const deepbookPredictConfig = {
-  network: runtimeConfig.suiNetwork,
-  predictServerUrl: runtimeConfig.predictServerUrl,
-  predictPackageId: runtimeConfig.predictPackageId,
-  predictRegistryId: runtimeConfig.predictRegistryId,
-  predictObjectId: runtimeConfig.predictObjectId,
-  quoteAsset: {
-    type: runtimeConfig.predictQuoteType,
-    currencyId: runtimeConfig.predictQuoteCurrencyId,
-    decimals: runtimeConfig.predictQuoteDecimals,
-  },
-  plpType: runtimeConfig.plpType,
-  defaultOracleId: runtimeConfig.defaultOracleId,
-  defaultMarketId: runtimeConfig.defaultMarketId,
+  defaultMarketId: predictDeploymentConfig.defaultMarketId,
+  defaultOracleId: predictDeploymentConfig.defaultOracleId,
+  network: predictDeploymentConfig.network,
+  plpType: predictDeploymentConfig.plpType,
+  predictObjectId: predictDeploymentConfig.predictObjectId,
+  predictPackageId: predictDeploymentConfig.packageId,
+  predictRegistryId: predictDeploymentConfig.registryId,
+  predictServerUrl: predictDeploymentConfig.serverBaseUrl,
+  quoteAsset: predictDeploymentConfig.quoteAsset,
 } as const;

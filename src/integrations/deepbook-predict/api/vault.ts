@@ -1,5 +1,8 @@
-import { deepbookPredictConfig } from '@/config/deepbookPredict';
-import { createPredictServerClient, type PredictServerClient } from '@/integrations/deepbook-predict/client';
+import { predictDeploymentConfig } from '@/config/predict';
+import {
+  createPredictServerClient,
+  type PredictServerClient,
+} from '@/integrations/deepbook-predict/client';
 import type { VaultPerformanceDto, VaultSummaryDto } from '@/integrations/deepbook-predict/schemas';
 import type { ObjectId } from '@/types/predict';
 import type { VaultModel, VaultPerformanceModel, VaultPerformancePoint } from '@/types/vault';
@@ -11,7 +14,10 @@ import {
   toTimestampMs,
 } from './mapping';
 
-export type VaultReadClient = Pick<PredictServerClient, 'fetchVaultPerformanceDto' | 'fetchVaultSummaryDto'>;
+export type VaultReadClient = Pick<
+  PredictServerClient,
+  'fetchVaultPerformanceDto' | 'fetchVaultSummaryDto'
+>;
 
 export interface GetVaultSummaryOptions {
   client?: VaultReadClient;
@@ -26,7 +32,7 @@ export interface GetVaultPerformanceOptions {
 
 export async function getVaultSummary({
   client = createPredictServerClient(),
-  predictId = deepbookPredictConfig.predictObjectId as ObjectId,
+  predictId = predictDeploymentConfig.predictObjectId,
 }: GetVaultSummaryOptions = {}): Promise<VaultModel> {
   const dto = await client.fetchVaultSummaryDto(predictId);
   return mapVaultSummaryDtoToModel(dto);
@@ -34,7 +40,7 @@ export async function getVaultSummary({
 
 export async function getVaultPerformance({
   client = createPredictServerClient(),
-  predictId = deepbookPredictConfig.predictObjectId as ObjectId,
+  predictId = predictDeploymentConfig.predictObjectId,
   range = 'ALL',
 }: GetVaultPerformanceOptions = {}): Promise<VaultPerformanceModel> {
   const dto = await client.fetchVaultPerformanceDto(predictId, range);
