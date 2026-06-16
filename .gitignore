@@ -141,3 +141,11 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Frontend build and test artifacts
+dist/
+playwright-report/
+test-results/
+
+# Local wallet/test auth state
+playwright/.auth/

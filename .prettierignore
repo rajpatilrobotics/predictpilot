@@ -1,0 +1,14 @@
+node_modules
+dist
+coverage
+playwright-report
+test-results
+.vite
+.pnpm-store
+
+AGENTS.md
+MASTER_CODEX_PROMPT.md
+README.md
+docs
+outputs
+work
