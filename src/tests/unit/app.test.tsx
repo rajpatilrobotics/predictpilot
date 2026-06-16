@@ -6,9 +6,13 @@ import {
   useDAppKit,
   useWalletConnection,
 } from '@mysten/dapp-kit-react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { App } from '@/app/App';
 import { AppProviders } from '@/app/providers';
+
+vi.mock('@mysten/dapp-kit-react/ui', () => ({
+  ConnectButton: () => <button type="button">Connect wallet</button>,
+}));
 
 function DAppKitHookSmoke() {
   const account = useCurrentAccount();
@@ -32,10 +36,15 @@ function DAppKitHookSmoke() {
 
 describe('App shell', () => {
   it('renders the PredictPilot foundation shell', () => {
-    render(<App />);
+    render(
+      <AppProviders>
+        <App />
+      </AppProviders>,
+    );
 
     expect(screen.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeInTheDocument();
     expect(screen.getByText('Vite + React + TypeScript')).toBeInTheDocument();
+    expect(screen.getByLabelText('Wallet status')).toBeInTheDocument();
   });
 
   it('provides DApp Kit hooks to child components on Testnet', () => {

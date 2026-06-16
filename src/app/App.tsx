@@ -1,4 +1,5 @@
 import { runtimeConfig } from '@/config/env';
+import { WalletPanel } from '@/features/wallet/WalletPanel';
 
 const foundationItems = [
   { label: 'Stack', value: 'Vite + React + TypeScript' },
@@ -10,7 +11,7 @@ export function App() {
   return (
     <main className="min-h-screen bg-[#f7f9fb] text-[#17211d]">
       <section className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-8">
-        <header className="flex items-center justify-between border-b border-[#d9dfdc] pb-5">
+        <header className="flex flex-col gap-5 border-b border-[#d9dfdc] pb-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#446b5e]">
               PredictPilot
@@ -19,9 +20,7 @@ export function App() {
               DeepBook Predict Terminal
             </h1>
           </div>
-          <span className="rounded border border-[#a8b7b0] bg-white px-3 py-1 text-sm font-medium text-[#243832]">
-            Testnet
-          </span>
+          <WalletPanel />
         </header>
 
         <div className="grid flex-1 gap-4 py-8 md:grid-cols-3">
