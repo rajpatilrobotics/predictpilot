@@ -28,6 +28,18 @@ Prepare these accounts before coding or demo rehearsal:
 - Access to the official Sui faucet for Testnet SUI gas. SUI on Testnet is free and intended for development. citeturn7view1
 - Access to the official DeepBook Predict Testnet token request form for DUSDC and other test assets. DeepBook Predict docs explicitly direct builders to that form. citeturn4view5
 
+### Operator prerequisites for real wallet flows
+
+Before any demo, recording, or manual transaction rehearsal, verify these prerequisites:
+
+- The active wallet network is Sui Testnet.
+- The connected demo wallet has enough Testnet SUI for gas.
+- The connected demo wallet has DeepBook Predict DUSDC, the current enabled quote asset.
+- The wallet has or can create one reusable PredictManager before trade flows.
+- The PredictManager has DUSDC deposited before mint or redeem actions.
+
+PredictPilot must treat missing SUI gas or missing DUSDC as setup prerequisites, not app bugs. The app must not claim to mint DUSDC, auto-faucet DUSDC, silently swap in another quote asset, or fake funding for a demo. The reusable frontend copy for these prerequisites lives in `src/config/prereqs.ts`.
+
 ### Required tools
 
 Use this toolchain baseline:
@@ -97,6 +109,7 @@ package.json
 src/config/env.ts
 src/config/networks.ts
 src/config/deepbookPredict.ts
+src/config/prereqs.ts
 src/lib/sui/client.ts
 playwright.config.ts
 vitest.config.ts
@@ -339,6 +352,8 @@ curl --location --request POST "https://faucet.${NETWORK}.sui.io/v2/gas" \
 
 Sui docs state that Testnet SUI is free, that the online faucet supports Testnet, and that `sui client balance` is the canonical balance verification command. They also document the direct cURL faucet request format. citeturn7view1turn18search0
 
+For PredictPilot, this is a hard operator prerequisite. Every wallet transaction, including manager creation, manager funding, trading, LP supply, and LP withdraw, needs Testnet SUI gas before the wallet prompt can complete. If a transaction fails before or during signing because the wallet has no gas, diagnose the wallet funding first instead of treating the app or DeepBook Predict integration as broken.
+
 ### Wallet setup
 
 For browser based signing, install Slush first. Slush is the official Sui wallet built by Mysten Labs and works automatically through the Wallet Standard. Phantom is a valid second wallet for compatibility checks because it also supports Sui app connections through the Wallet Standard. citeturn16view1turn16view2turn16view0
@@ -361,6 +376,9 @@ Use this policy:
 - fund the burner demo wallet, not a personal wallet
 - do not schedule demo recording until DUSDC is visible in the chosen wallet
 - keep a reserve amount for repeated mint, redeem, supply, and withdraw rehearsals
+- do not add an in-app DUSDC faucet, local fake token, or alternate quote asset unless official DeepBook Predict docs verify that path
+
+PredictPilot uses DUSDC as the current Testnet quote asset. Wallet DUSDC is required before manager deposit and LP supply flows. Manager DUSDC is required before trade flows that spend the PredictManager quote balance. If DUSDC is missing, the correct recovery is to complete the official external token request process and wait until the wallet balance is visible.
 
 ### PredictManager, oracle, and vault setup
 
