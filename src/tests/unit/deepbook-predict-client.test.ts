@@ -28,7 +28,6 @@ const statusFixture = {
 
 const listPaths = new Set([
   `/predicts/${objectId}/quote-assets`,
-  `/predicts/${objectId}/vault/performance`,
   '/managers',
   `/oracles/${objectId}/prices`,
   `/oracles/${objectId}/svi`,
@@ -54,6 +53,26 @@ const oracleSummaryFixture = {
   settlement_price: null,
   settled_at: null,
   created_checkpoint: 349_219_640,
+};
+
+const quoteAsset = 'e95040085976bfd54a1a07225cd46c8a2b4e8e2b6732f140a0fc49850ba73e1a::dusdc::DUSDC';
+
+const vaultSummaryFixture = {
+  available_liquidity: 1,
+  available_withdrawal: 1,
+  max_payout_utilization: 0,
+  net_deposits: 1,
+  plp_share_price: 1,
+  plp_total_supply: 1,
+  predict_id: objectId,
+  quote_assets: [quoteAsset],
+  total_max_payout: 0,
+  total_mtm: 0,
+  total_supplied: 1,
+  total_withdrawn: 0,
+  utilization: 0,
+  vault_balance: 1,
+  vault_value: 1,
 };
 
 function jsonResponse(body: unknown) {
@@ -92,6 +111,49 @@ function responseForPath(pathname: string) {
       latest_price: null,
       latest_svi: null,
       oracle: oracleSummaryFixture,
+    });
+  }
+
+  if (pathname === `/predicts/${objectId}/vault/summary`) {
+    return jsonResponse(vaultSummaryFixture);
+  }
+
+  if (pathname === `/predicts/${objectId}/vault/performance`) {
+    return jsonResponse({
+      points: [{ share_price: 1, timestamp_ms: 1_800_000_000_000, total_shares: 1, vault_value: 1 }],
+      predict_id: objectId,
+      range: 'ALL',
+    });
+  }
+
+  if (pathname === `/managers/${objectId}/summary`) {
+    return jsonResponse({
+      account_value: 0,
+      awaiting_settlement_positions: 0,
+      balances: [{ balance: 0, quote_asset: quoteAsset }],
+      manager_id: objectId,
+      open_exposure: 0,
+      open_positions: 0,
+      owner: objectId,
+      realized_pnl: 0,
+      redeemable_value: 0,
+      trading_balance: 0,
+      unrealized_pnl: 0,
+    });
+  }
+
+  if (pathname === `/managers/${objectId}/positions/summary`) {
+    return jsonResponse([]);
+  }
+
+  if (pathname === `/managers/${objectId}/pnl`) {
+    return jsonResponse({
+      current_total_pnl: 0,
+      current_unrealized_pnl: 0,
+      manager_id: objectId,
+      points: [],
+      range: 'ALL',
+      series_type: 'realized',
     });
   }
 

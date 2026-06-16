@@ -14,12 +14,22 @@ import type {
 export interface PnlPointModel {
   timestampMs: TimestampMs;
   pnlQuote: QuoteAmount;
+  realizedPnlQuote?: QuoteAmount;
+  cumulativeRealizedPnlQuote?: QuoteAmount;
+  unrealizedPnlQuote?: QuoteAmount;
+  totalPnlQuote?: QuoteAmount;
   equityQuote?: QuoteAmount;
 }
 
 interface ProtocolHistoryRecordBase {
   digest: TransactionDigest;
   timestampMs: TimestampMs;
+  eventDigest?: string;
+  sender?: SuiAddress;
+  checkpoint?: bigint;
+  packageId?: ObjectId;
+  txIndex?: number;
+  eventIndex?: number;
 }
 
 export interface BinaryMintHistoryRecord extends ProtocolHistoryRecordBase {
@@ -94,11 +104,11 @@ export interface LpWithdrawHistoryRecord extends ProtocolHistoryRecordBase {
 export interface OracleTradeHistoryRecord extends ProtocolHistoryRecordBase {
   kind: 'ORACLE_TRADE';
   oracleId: ObjectId;
-  trader: SuiAddress;
+  trader?: SuiAddress;
   direction?: BinaryDirection;
   marketKey?: MarketKeyModel;
   rangeKey?: RangeKeyModel;
-  quantityQuote: QuoteAmount;
+  quantityQuote?: QuoteAmount;
   costQuote?: QuoteAmount;
   payoutQuote?: QuoteAmount;
 }

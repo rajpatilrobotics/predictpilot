@@ -43,6 +43,150 @@ export const RangeQueryVerifiedSchema = z
 const UnknownObjectDtoSchema = z.record(z.string(), z.unknown());
 const UnknownListDtoSchema = z.array(z.unknown());
 const IntegerishDtoSchema = z.union([z.number().int(), z.string().regex(/^-?\d+$/)]);
+const NumberishDtoSchema = z.union([z.number().finite(), z.string().regex(/^-?\d+(\.\d+)?$/)]);
+
+const IndexedEventBaseDtoSchema = z
+  .object({
+    event_digest: z.string(),
+    digest: z.string(),
+    sender: SuiAddressSchema,
+    checkpoint: IntegerishDtoSchema,
+    checkpoint_timestamp_ms: IntegerishDtoSchema,
+    tx_index: z.number().int().nonnegative(),
+    event_index: z.number().int().nonnegative(),
+    package: z.string(),
+  })
+  .passthrough();
+
+const QuoteBalanceDtoSchema = z
+  .object({
+    quote_asset: z.string(),
+    balance: IntegerishDtoSchema,
+  })
+  .passthrough();
+
+const VaultPerformancePointDtoSchema = z
+  .object({
+    timestamp_ms: IntegerishDtoSchema,
+    share_price: NumberishDtoSchema,
+    vault_value: IntegerishDtoSchema,
+    total_shares: IntegerishDtoSchema,
+  })
+  .passthrough();
+
+const ManagerPositionSummaryRowDtoSchema = z
+  .object({
+    predict_id: ObjectIdSchema,
+    manager_id: ObjectIdSchema,
+    quote_asset: z.string(),
+    oracle_id: ObjectIdSchema,
+    underlying_asset: z.string(),
+    expiry: IntegerishDtoSchema,
+    strike: IntegerishDtoSchema,
+    is_up: z.boolean(),
+    minted_quantity: IntegerishDtoSchema,
+    redeemed_quantity: IntegerishDtoSchema,
+    open_quantity: IntegerishDtoSchema,
+    total_cost: IntegerishDtoSchema,
+    total_payout: IntegerishDtoSchema,
+    realized_pnl: IntegerishDtoSchema,
+    unrealized_pnl: IntegerishDtoSchema,
+    open_cost_basis: IntegerishDtoSchema,
+    average_entry_price: IntegerishDtoSchema.nullable(),
+    average_exit_price: IntegerishDtoSchema.nullable(),
+    mark_price: IntegerishDtoSchema.nullable(),
+    mark_value: IntegerishDtoSchema.nullable(),
+    status: z.string(),
+    first_minted_at: IntegerishDtoSchema,
+    last_activity_at: IntegerishDtoSchema,
+  })
+  .passthrough();
+
+const ManagerPnlPointDtoSchema = z
+  .object({
+    timestamp_ms: IntegerishDtoSchema,
+    realized_pnl: IntegerishDtoSchema.optional(),
+    cumulative_realized_pnl: IntegerishDtoSchema.optional(),
+    unrealized_pnl: IntegerishDtoSchema.optional(),
+    total_pnl: IntegerishDtoSchema.optional(),
+    account_value: IntegerishDtoSchema.optional(),
+  })
+  .passthrough();
+
+const BinaryMintHistoryRecordDtoSchema = IndexedEventBaseDtoSchema.extend({
+  predict_id: ObjectIdSchema,
+  manager_id: ObjectIdSchema,
+  trader: SuiAddressSchema,
+  quote_asset: z.string(),
+  oracle_id: ObjectIdSchema,
+  expiry: IntegerishDtoSchema,
+  strike: IntegerishDtoSchema,
+  is_up: z.boolean(),
+  quantity: IntegerishDtoSchema,
+  cost: IntegerishDtoSchema,
+  ask_price: IntegerishDtoSchema.optional(),
+}).passthrough();
+
+const BinaryRedeemHistoryRecordDtoSchema = IndexedEventBaseDtoSchema.extend({
+  predict_id: ObjectIdSchema,
+  manager_id: ObjectIdSchema,
+  owner: SuiAddressSchema,
+  executor: SuiAddressSchema,
+  quote_asset: z.string(),
+  oracle_id: ObjectIdSchema,
+  expiry: IntegerishDtoSchema,
+  strike: IntegerishDtoSchema,
+  is_up: z.boolean(),
+  quantity: IntegerishDtoSchema,
+  payout: IntegerishDtoSchema,
+  bid_price: IntegerishDtoSchema.optional(),
+  is_settled: z.boolean(),
+}).passthrough();
+
+const RangeMintHistoryRecordDtoSchema = IndexedEventBaseDtoSchema.extend({
+  predict_id: ObjectIdSchema,
+  manager_id: ObjectIdSchema,
+  trader: SuiAddressSchema,
+  quote_asset: z.string(),
+  oracle_id: ObjectIdSchema,
+  expiry: IntegerishDtoSchema,
+  lower_strike: IntegerishDtoSchema,
+  higher_strike: IntegerishDtoSchema,
+  quantity: IntegerishDtoSchema,
+  cost: IntegerishDtoSchema,
+  ask_price: IntegerishDtoSchema.optional(),
+}).passthrough();
+
+const RangeRedeemHistoryRecordDtoSchema = IndexedEventBaseDtoSchema.extend({
+  predict_id: ObjectIdSchema,
+  manager_id: ObjectIdSchema,
+  trader: SuiAddressSchema,
+  quote_asset: z.string(),
+  oracle_id: ObjectIdSchema,
+  expiry: IntegerishDtoSchema,
+  lower_strike: IntegerishDtoSchema,
+  higher_strike: IntegerishDtoSchema,
+  quantity: IntegerishDtoSchema,
+  payout: IntegerishDtoSchema,
+  bid_price: IntegerishDtoSchema.optional(),
+  is_settled: z.boolean(),
+}).passthrough();
+
+const LpSupplyHistoryRecordDtoSchema = IndexedEventBaseDtoSchema.extend({
+  predict_id: ObjectIdSchema,
+  supplier: SuiAddressSchema,
+  quote_asset: z.string(),
+  amount: IntegerishDtoSchema,
+  shares_minted: IntegerishDtoSchema,
+}).passthrough();
+
+const LpWithdrawalHistoryRecordDtoSchema = IndexedEventBaseDtoSchema.extend({
+  predict_id: ObjectIdSchema,
+  withdrawer: SuiAddressSchema,
+  quote_asset: z.string(),
+  amount: IntegerishDtoSchema,
+  shares_burned: IntegerishDtoSchema,
+}).passthrough();
 
 const PredictServerStatusPipelineSchema = z
   .object({
@@ -145,23 +289,78 @@ export const OracleStateDtoSchema = z
   .passthrough();
 export const QuoteAssetsDtoSchema = UnknownListDtoSchema;
 export const OracleAskBoundsDtoSchema = z.union([UnknownObjectDtoSchema, z.null()]);
-export const VaultSummaryDtoSchema = UnknownObjectDtoSchema;
-export const VaultPerformanceDtoSchema = UnknownListDtoSchema;
-export const ManagersDtoSchema = UnknownListDtoSchema;
-export const ManagerSummaryDtoSchema = UnknownObjectDtoSchema;
-export const ManagerPositionsSummaryDtoSchema = UnknownObjectDtoSchema;
-export const ManagerPnlDtoSchema = z.union([UnknownListDtoSchema, UnknownObjectDtoSchema]);
+export const VaultSummaryDtoSchema = z
+  .object({
+    predict_id: ObjectIdSchema,
+    quote_assets: z.array(z.string()),
+    vault_balance: IntegerishDtoSchema,
+    vault_value: IntegerishDtoSchema,
+    total_mtm: IntegerishDtoSchema,
+    total_max_payout: IntegerishDtoSchema,
+    available_liquidity: IntegerishDtoSchema,
+    available_withdrawal: IntegerishDtoSchema,
+    plp_total_supply: IntegerishDtoSchema,
+    plp_share_price: NumberishDtoSchema,
+    utilization: NumberishDtoSchema,
+    max_payout_utilization: NumberishDtoSchema,
+    net_deposits: IntegerishDtoSchema,
+    total_supplied: IntegerishDtoSchema,
+    total_withdrawn: IntegerishDtoSchema,
+  })
+  .passthrough();
+export const VaultPerformanceDtoSchema = z
+  .object({
+    predict_id: ObjectIdSchema,
+    range: z.literal('ALL'),
+    points: z.array(VaultPerformancePointDtoSchema),
+  })
+  .passthrough();
+export const ManagersDtoSchema = z.array(
+  IndexedEventBaseDtoSchema.extend({
+    manager_id: ObjectIdSchema,
+    owner: SuiAddressSchema,
+  }).passthrough(),
+);
+export const ManagerSummaryDtoSchema = z
+  .object({
+    manager_id: ObjectIdSchema,
+    owner: SuiAddressSchema,
+    balances: z.array(QuoteBalanceDtoSchema),
+    trading_balance: IntegerishDtoSchema,
+    open_exposure: IntegerishDtoSchema,
+    redeemable_value: IntegerishDtoSchema,
+    realized_pnl: IntegerishDtoSchema,
+    unrealized_pnl: IntegerishDtoSchema,
+    account_value: IntegerishDtoSchema,
+    open_positions: z.number().int().nonnegative(),
+    awaiting_settlement_positions: z.number().int().nonnegative(),
+  })
+  .passthrough();
+export const ManagerPositionsSummaryDtoSchema = z.array(ManagerPositionSummaryRowDtoSchema);
+export const ManagerPnlDtoSchema = z.union([
+  z.array(ManagerPnlPointDtoSchema),
+  z
+    .object({
+      manager_id: ObjectIdSchema,
+      range: z.literal('ALL'),
+      series_type: z.string(),
+      current_total_pnl: IntegerishDtoSchema,
+      current_unrealized_pnl: IntegerishDtoSchema,
+      points: z.array(ManagerPnlPointDtoSchema),
+    })
+    .passthrough(),
+]);
 export const OraclePricesDtoSchema = UnknownListDtoSchema;
 export const OracleLatestPriceDtoSchema = UnknownObjectDtoSchema;
 export const OracleSviDtoSchema = UnknownListDtoSchema;
 export const OracleLatestSviDtoSchema = UnknownObjectDtoSchema;
-export const PositionMintHistoryDtoSchema = UnknownListDtoSchema;
-export const PositionRedeemHistoryDtoSchema = UnknownListDtoSchema;
-export const RangeMintHistoryDtoSchema = UnknownListDtoSchema;
-export const RangeRedeemHistoryDtoSchema = UnknownListDtoSchema;
-export const LpSuppliesHistoryDtoSchema = UnknownListDtoSchema;
-export const LpWithdrawalsHistoryDtoSchema = UnknownListDtoSchema;
-export const OracleTradesDtoSchema = UnknownListDtoSchema;
+export const PositionMintHistoryDtoSchema = z.array(BinaryMintHistoryRecordDtoSchema);
+export const PositionRedeemHistoryDtoSchema = z.array(BinaryRedeemHistoryRecordDtoSchema);
+export const RangeMintHistoryDtoSchema = z.array(RangeMintHistoryRecordDtoSchema);
+export const RangeRedeemHistoryDtoSchema = z.array(RangeRedeemHistoryRecordDtoSchema);
+export const LpSuppliesHistoryDtoSchema = z.array(LpSupplyHistoryRecordDtoSchema);
+export const LpWithdrawalsHistoryDtoSchema = z.array(LpWithdrawalHistoryRecordDtoSchema);
+export const OracleTradesDtoSchema = z.array(IndexedEventBaseDtoSchema);
 
 export type ObjectIdDto = z.infer<typeof ObjectIdSchema>;
 export type SuiAddressDto = z.infer<typeof SuiAddressSchema>;

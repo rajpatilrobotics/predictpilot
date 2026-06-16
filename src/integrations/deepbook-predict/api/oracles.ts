@@ -17,6 +17,14 @@ import type {
   OracleSviParametersModel,
 } from '@/types/oracle';
 import type { ObjectId, SuiAddress } from '@/types/predict';
+import {
+  normalizeObjectId,
+  PredictAdapterError,
+  toBigInt,
+  toNullableBigInt,
+} from './mapping';
+
+export { PredictAdapterError } from './mapping';
 
 export type OracleReadClient = Pick<PredictServerClient, 'fetchOracleAskBoundsDto' | 'fetchOracleStateDto'>;
 
@@ -28,13 +36,6 @@ export interface GetOracleStateOptions {
 export interface GetAskBoundsOptions {
   client?: OracleReadClient;
   oracleId: ObjectId;
-}
-
-export class PredictAdapterError extends Error {
-  public constructor(message: string) {
-    super(message);
-    this.name = 'PredictAdapterError';
-  }
 }
 
 export async function getOracleState({
@@ -152,23 +153,6 @@ function applySign(value: number | string, isNegative: boolean) {
   return isNegative ? -amount : amount;
 }
 
-function toNullableBigInt(value: number | string | null) {
-  return value === null ? null : toBigInt(value);
-}
-
-function toBigInt(value: number | string) {
-  return BigInt(value);
-}
-
 function toObjectId(value: ObjectIdDto) {
   return value as ObjectId;
-}
-
-function normalizeObjectId(value: string) {
-  const canonical = value.startsWith('0x') ? value : `0x${value}`;
-  if (!/^0x[a-fA-F0-9]{64}$/.test(canonical)) {
-    throw new PredictAdapterError(`Expected a 32-byte Sui object ID, received: ${value}`);
-  }
-
-  return canonical as ObjectId;
 }

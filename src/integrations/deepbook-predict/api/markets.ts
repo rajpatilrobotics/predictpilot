@@ -1,10 +1,10 @@
 import { deepbookPredictConfig } from '@/config/deepbookPredict';
 import { createPredictServerClient, type PredictServerClient } from '@/integrations/deepbook-predict/client';
 import type { PredictStateDto } from '@/integrations/deepbook-predict/schemas';
-import { MoveTypeSchema } from '@/integrations/deepbook-predict/schemas';
-import type { MoveType, ObjectId, PredictStateModel } from '@/types/predict';
+import type { ObjectId, PredictStateModel } from '@/types/predict';
 import type { OracleSummaryModel } from '@/types/oracle';
-import { mapOracleSummaryDtoToModel, PredictAdapterError } from './oracles';
+import { normalizeMoveType } from './mapping';
+import { mapOracleSummaryDtoToModel } from './oracles';
 
 export type MarketReadClient = Pick<
   PredictServerClient,
@@ -45,15 +45,4 @@ export function mapPredictStateDtoToModel(dto: PredictStateDto): PredictStateMod
     riskStatus: dto.risk === null || dto.risk === undefined ? 'MISSING' : 'PRESENT',
     tradingPaused: dto.trading_paused,
   };
-}
-
-function normalizeMoveType(value: string): MoveType {
-  const canonical = value.startsWith('0x') ? value : `0x${value}`;
-  const parsed = MoveTypeSchema.safeParse(canonical);
-
-  if (!parsed.success) {
-    throw new PredictAdapterError(`Expected a Move type, received: ${value}`);
-  }
-
-  return parsed.data as MoveType;
 }

@@ -7,6 +7,7 @@ import type {
   RangeKeyModel,
   SuiAddress,
   TimestampMs,
+  TransactionDigest,
 } from './predict';
 import type { PlpModel } from './vault';
 
@@ -32,6 +33,75 @@ export interface PredictManagerModel {
   binaryPositions: BinaryPositionModel[];
   rangePositions: RangePositionModel[];
   lastRefreshedAtMs: TimestampMs | null;
+}
+
+export interface PredictManagerCreatedModel {
+  managerId: ObjectId;
+  owner: SuiAddress;
+  sender: SuiAddress;
+  digest: TransactionDigest;
+  eventDigest: string;
+  checkpoint: bigint;
+  checkpointTimestampMs: TimestampMs;
+  txIndex: number;
+  eventIndex: number;
+  packageId: ObjectId;
+}
+
+export interface ManagerQuoteBalanceModel {
+  quoteAssetType: MoveType;
+  balanceQuote: QuoteAmount;
+}
+
+export interface ManagerSummaryModel {
+  managerId: ObjectId;
+  owner: SuiAddress;
+  balances: ManagerQuoteBalanceModel[];
+  tradingBalanceQuote: QuoteAmount;
+  openExposureQuote: QuoteAmount;
+  redeemableValueQuote: QuoteAmount;
+  realizedPnlQuote: QuoteAmount;
+  unrealizedPnlQuote: QuoteAmount;
+  accountValueQuote: QuoteAmount;
+  openPositions: number;
+  awaitingSettlementPositions: number;
+  lastRefreshedAtMs: TimestampMs | null;
+}
+
+export interface BinaryPositionSummaryModel extends BinaryPositionModel {
+  predictId: ObjectId;
+  managerId: ObjectId;
+  quoteAssetType: MoveType;
+  underlyingAsset: string;
+  mintedQuantityQuote: QuoteAmount;
+  redeemedQuantityQuote: QuoteAmount;
+  openQuantityQuote: QuoteAmount;
+  totalCostQuote: QuoteAmount;
+  totalPayoutQuote: QuoteAmount;
+  realizedPnlQuote: QuoteAmount;
+  openCostBasisQuote: QuoteAmount;
+  averageEntryPrice1e9?: bigint;
+  averageExitPrice1e9?: bigint;
+  markPrice1e9?: bigint;
+  markValueQuote?: QuoteAmount;
+  status: string;
+  firstMintedAtMs: TimestampMs;
+  lastActivityAtMs: TimestampMs;
+}
+
+export interface ManagerPositionsSummaryModel {
+  managerId: ObjectId;
+  binaryPositions: BinaryPositionSummaryModel[];
+  rangePositions: RangePositionModel[];
+}
+
+export interface ManagerPnlModel {
+  managerId: ObjectId;
+  range: 'ALL';
+  seriesType: string | null;
+  currentTotalPnlQuote: QuoteAmount;
+  currentUnrealizedPnlQuote: QuoteAmount;
+  points: PnlPointModel[];
 }
 
 export interface WalletQuoteBalanceModel {
