@@ -61,7 +61,7 @@ Codex must read documents in this exact order before coding:
 - `DEMO_SCRIPT.md`
 - `CODEX_BUILD_TASKS.md`
 - `ENVIRONMENT_SETUP.md`
-- `README_DRAFT.md`
+- `README.md`
 - `SUBMISSION_CHECKLIST.md`
 - `KNOWN_ISSUES_AND_TODO_VERIFY.md`
 - `SECURITY_CHECKLIST.md`
@@ -83,7 +83,7 @@ Use those documents this way:
 - `DEMO_SCRIPT.md`: what judges must see work.
 - `CODEX_BUILD_TASKS.md`: backlog and execution order.
 - `ENVIRONMENT_SETUP.md`: install, run, config, and testnet setup.
-- `README_DRAFT.md`: public-facing consistency.
+- `README.md`: public-facing consistency.
 - `SUBMISSION_CHECKLIST.md`: final submission completeness.
 - `KNOWN_ISSUES_AND_TODO_VERIFY.md`: blocker register.
 - `SECURITY_CHECKLIST.md`: transaction and secret safety.
@@ -606,7 +606,7 @@ Read order:
 13. DEMO_SCRIPT.md
 14. CODEX_BUILD_TASKS.md
 15. ENVIRONMENT_SETUP.md
-16. README_DRAFT.md
+16. README.md
 17. SUBMISSION_CHECKLIST.md
 18. KNOWN_ISSUES_AND_TODO_VERIFY.md
 19. SECURITY_CHECKLIST.md
