@@ -149,3 +149,4 @@ test-results/
 
 # Local wallet/test auth state
 playwright/.auth/
+.vercel
