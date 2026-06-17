@@ -43,6 +43,15 @@ vi.mock('@/features/markets/MarketIntelligencePage', () => ({
   ),
 }));
 
+vi.mock('@/features/manager/PredictManagerPage', () => ({
+  PredictManagerPage: () => (
+    <article aria-label="PredictManager page">
+      <h1>PredictManager</h1>
+      <p>PredictManager page mounted</p>
+    </article>
+  ),
+}));
+
 vi.mock('@/features/oracle/OracleStatusPage', () => ({
   OracleStatusPage: () => (
     <article aria-label="Oracle status page">
@@ -178,6 +187,7 @@ describe('App shell', () => {
       dashboard: 'Dashboard page mounted',
       demo: 'Demo mode page mounted',
       history: 'History page mounted',
+      manager: 'PredictManager page mounted',
       markets: 'Market intelligence page mounted',
       'oracle-status': 'Oracle status page mounted',
       pnl: 'PnL page mounted',
@@ -205,7 +215,7 @@ describe('App shell', () => {
   });
 
   it('keeps unimplemented routes as safe placeholders', () => {
-    const placeholderRouteIds = new Set(['manager']);
+    const placeholderRouteIds = new Set<string>();
 
     for (const route of appRoutes.filter((item) => placeholderRouteIds.has(item.id))) {
       window.history.pushState({}, '', route.href);

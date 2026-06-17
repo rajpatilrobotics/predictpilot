@@ -8,6 +8,7 @@ import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { DemoModePage } from '@/features/demo/DemoModePage';
 import { HistoryPage } from '@/features/history/HistoryPage';
 import { MarketIntelligencePage } from '@/features/markets/MarketIntelligencePage';
+import { PredictManagerPage } from '@/features/manager/PredictManagerPage';
 import { OracleStatusPage } from '@/features/oracle/OracleStatusPage';
 import { SVISurfacePage } from '@/features/oracle/SVISurfacePage';
 import { PnlPage } from '@/features/portfolio/PnlPage';
@@ -81,6 +82,7 @@ function RouteContent({
     case 'demo':
       return <DemoModePage onNavigate={onNavigate} />;
     case 'manager':
+      return <PredictManagerPage />;
     case 'not-found':
       return <RoutePlaceholder route={route} />;
   }
