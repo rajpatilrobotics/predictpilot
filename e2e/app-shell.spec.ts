@@ -1,17 +1,18 @@
 import { expect, test } from '@playwright/test';
 
 const shellRoutes = [
-  { path: '/dashboard', title: 'Dashboard' },
-  { path: '/markets', title: 'Markets' },
-  { path: '/svi', title: 'SVI Surface' },
-  { path: '/oracle-status', title: 'Oracle Status' },
-  { path: '/strategy', title: 'Market Detail / Strategy' },
-  { path: '/manager', title: 'PredictManager' },
-  { path: '/portfolio', title: 'Portfolio' },
-  { path: '/pnl', title: 'PnL' },
-  { path: '/vault', title: 'Vault / PLP' },
-  { path: '/history', title: 'History' },
-  { path: '/demo', title: 'Demo Mode' },
+  { heading: 'Dashboard', path: '/dashboard' },
+  { heading: 'Market Intelligence', path: '/markets' },
+  { heading: 'No oracle selected', path: '/svi' },
+  { heading: 'No oracle selected', path: '/oracle-status' },
+  { heading: 'Market Detail / Strategy', path: '/strategy' },
+  { heading: 'Market Detail / Strategy', path: '/markets/0x123' },
+  { heading: 'PredictManager', path: '/manager' },
+  { heading: 'Portfolio', path: '/portfolio' },
+  { heading: 'PnL', path: '/pnl' },
+  { heading: 'Vault / PLP', path: '/vault' },
+  { heading: 'History', path: '/history' },
+  { heading: 'Demo Mode', path: '/demo' },
 ] as const;
 
 test('loads the PredictPilot app shell', async ({ page }) => {
@@ -25,7 +26,7 @@ test('loads the PredictPilot app shell', async ({ page }) => {
   await expect(page.getByRole('status', { name: /Testnet status/i })).toBeVisible();
 });
 
-test('reaches approved placeholder routes from navigation', async ({ page }) => {
+test('reaches mounted and placeholder routes from navigation', async ({ page }) => {
   await page.goto('/dashboard');
 
   await page.getByRole('link', { name: 'Vault / PLP' }).click();
@@ -41,16 +42,16 @@ test('every approved shell route loads inside the terminal shell', async ({ page
     await page.goto(route.path);
 
     await expect(page.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 1, name: route.title })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: route.heading })).toBeVisible();
     await expect(page.getByLabel('Persistent execution rail')).toBeVisible();
   }
 });
 
-test('legacy oracle route resolves to the oracle status placeholder', async ({ page }) => {
+test('legacy oracle route resolves to the oracle status page empty state', async ({ page }) => {
   await page.goto('/oracle');
 
   await expect(page.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 1, name: 'Oracle Status' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'No oracle selected' })).toBeVisible();
   await expect(page.getByLabel('Persistent execution rail')).toBeVisible();
 });
 
