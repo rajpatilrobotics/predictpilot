@@ -401,7 +401,8 @@ function PerformanceChart({
   points: VaultPerformancePoint[];
   quoteSymbol: string;
 }) {
-  const values = points.map((point) => Number(point.vaultValueQuote));
+  const visiblePoints = getVisiblePerformancePoints(points);
+  const values = visiblePoints.map((point) => Number(point.vaultValueQuote));
   const min = Math.min(...values);
   const max = Math.max(...values);
   const spread = Math.max(max - min, 1);
@@ -411,14 +412,14 @@ function PerformanceChart({
     <div className="mt-4">
       <div
         aria-label="Vault value performance chart"
-        className="flex h-40 items-end gap-2 border border-[#edf1ef] bg-[#fbfcfc] p-3"
+        className="flex h-40 min-w-0 items-end gap-px border border-[#edf1ef] bg-[#fbfcfc] p-3"
         role="img"
       >
-        {points.map((point, index) => {
+        {visiblePoints.map((point, index) => {
           const height = 24 + ((Number(point.vaultValueQuote) - min) / spread) * 112;
           return (
             <span
-              className="min-w-3 flex-1 bg-[#2f7d62]"
+              className="min-w-0 flex-1 bg-[#2f7d62]"
               key={`${point.timestampMs.toString()}-${index}`}
               style={{ height }}
               title={`${formatQuote(point.vaultValueQuote, quoteSymbol)} at ${formatTimestamp(point.timestampMs)}`}
@@ -426,6 +427,12 @@ function PerformanceChart({
           );
         })}
       </div>
+      {points.length > visiblePoints.length ? (
+        <p className="mt-2 text-xs leading-5 text-[#64736e]">
+          Showing latest {visiblePoints.length} of {points.length} performance points to keep the
+          chart readable on mobile.
+        </p>
+      ) : null}
       <div className="mt-3 grid gap-3 md:grid-cols-3">
         <MetricCard
           compact
@@ -443,6 +450,12 @@ function PerformanceChart({
       </div>
     </div>
   );
+}
+
+function getVisiblePerformancePoints(points: VaultPerformancePoint[]) {
+  const maxVisiblePoints = 72;
+
+  return points.length <= maxVisiblePoints ? points : points.slice(-maxVisiblePoints);
 }
 
 function VaultExposurePanel({ quoteSymbol, vault }: { quoteSymbol: string; vault: VaultModel }) {

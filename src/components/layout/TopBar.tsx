@@ -35,7 +35,7 @@ export function TopBar({ activeRoute }: TopBarProps) {
               {activeRoute.title}
             </span>
             <span className="border border-[#d5dcd9] bg-[#f7f9fb] px-2 py-1 text-[#52615c]">
-              Shell only
+              Live terminal
             </span>
           </div>
           <dl

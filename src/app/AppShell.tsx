@@ -35,7 +35,7 @@ export function AppShell({ activeRoute, isNotFound, onNavigate, routes }: AppShe
           <section className="mt-4">
             {isNotFound ? (
               <RouteErrorState
-                message="This placeholder route is not part of the approved PP-040 shell."
+                message="This route is not part of the approved PredictPilot terminal yet."
                 onNavigate={() => onNavigate('/dashboard')}
                 title="Route not found"
               />

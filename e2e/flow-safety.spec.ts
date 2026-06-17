@@ -9,7 +9,7 @@ test.describe('execution flow safety smoke', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Market Detail / Strategy' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Select a market first' })).toBeVisible();
     await expect(page.getByRole('button', { name: /request wallet signature/i })).toHaveCount(0);
-    await expect(page.getByText(/digest/i)).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /view transaction/i })).toHaveCount(0);
 
     await page.goto('/markets/0x123');
 

@@ -109,8 +109,8 @@ export function DashboardView({ model }: { model: DashboardViewModel }) {
               Dashboard
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[#52615c]">
-              Open a live OracleSVI market, preview risk, then sign one PTB when execution screens
-              are mounted.
+              Open a live OracleSVI market, preview risk, and keep every wallet action behind
+              simulation and pre-sign review.
             </p>
           </div>
           <span className="w-fit border border-[#a8b7b0] bg-[#edf5f1] px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#315447]">
@@ -442,7 +442,7 @@ function createQuickStartSteps(model: DashboardViewModel): QuickStartStep[] {
             : 'later',
     },
     {
-      copy: 'Route to strategy builder later; this dashboard never signs directly.',
+      copy: 'Open a market detail page to stage a strategy; this dashboard never signs directly.',
       label: 'Build Trade',
       state: currentStep === 'Build Trade' ? 'current' : 'later',
     },

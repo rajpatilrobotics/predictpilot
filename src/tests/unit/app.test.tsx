@@ -173,7 +173,7 @@ describe('App shell', () => {
     fireEvent.click(within(primaryNav).getByRole('link', { name: 'Markets' }));
     expect(screen.getByRole('heading', { name: 'Markets' })).toBeInTheDocument();
     expect(screen.getByText('Market intelligence page mounted')).toBeInTheDocument();
-    expect(screen.getAllByText('Shell only').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Live terminal').length).toBeGreaterThan(0);
 
     fireEvent.click(within(primaryNav).getByRole('link', { name: 'Vault / PLP' }));
     expect(screen.getByRole('heading', { name: 'Vault / PLP' })).toBeInTheDocument();

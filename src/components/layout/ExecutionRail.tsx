@@ -9,7 +9,7 @@ interface ExecutionRailProps {
 const railChecks = [
   'Preview required before signing',
   'Simulation boundary available',
-  'Post-transaction refresh pending UI',
+  'Post-transaction refresh after digest',
 ] as const;
 
 export function ExecutionRail({ activeRoute }: ExecutionRailProps) {
@@ -29,7 +29,7 @@ export function ExecutionRail({ activeRoute }: ExecutionRailProps) {
       <dl className="mt-4 space-y-3">
         <RailDatum label="Network" value={suiConfig.network} />
         <RailDatum label="Quote" value={predictDeploymentConfig.quoteAsset.symbol} />
-        <RailDatum label="Mode" value="Non-executable shell" />
+        <RailDatum label="Mode" value="Guarded wallet execution" />
       </dl>
 
       <div className="mt-4 border border-[#d9dfdc] bg-white p-3">
@@ -45,8 +45,8 @@ export function ExecutionRail({ activeRoute }: ExecutionRailProps) {
       </div>
 
       <p className="mt-4 border border-[#e0c891] bg-[#fff9ea] p-3 text-xs leading-5 text-[#5c4720]">
-        PP-040 keeps this rail as a placeholder. Trade, LP, and manager actions are mounted by
-        later phases only.
+        Actions open a pre-sign review first. Funding and live dUSDC are still required before
+        real Testnet proof.
       </p>
     </aside>
   );

@@ -59,8 +59,9 @@ export function MarketIntelligencePage({ nowMs }: MarketIntelligencePageProps) {
 
           return matchesUnderlying && matchesLifecycle;
         }),
+        renderNowMs,
       ),
-    [lifecycleFilter, oracles, underlyingFilter],
+    [lifecycleFilter, oracles, renderNowMs, underlyingFilter],
   );
   const selectedOracle = useMemo(
     () =>
@@ -698,10 +699,10 @@ function LifecycleBadge({ status }: { status: OracleLifecycleStatus }) {
   );
 }
 
-function sortOracleSummaries(oracles: OracleSummaryModel[]) {
+function sortOracleSummaries(oracles: OracleSummaryModel[], nowMs: number) {
   return [...oracles].sort((left, right) => {
-    const leftRank = left.lifecycleStatus === 'ACTIVE' ? 0 : 1;
-    const rightRank = right.lifecycleStatus === 'ACTIVE' ? 0 : 1;
+    const leftRank = getOracleDemoRank(left, nowMs);
+    const rightRank = getOracleDemoRank(right, nowMs);
 
     if (leftRank !== rightRank) {
       return leftRank - rightRank;
@@ -713,6 +714,26 @@ function sortOracleSummaries(oracles: OracleSummaryModel[]) {
 
     return left.underlyingAsset.localeCompare(right.underlyingAsset);
   });
+}
+
+function getOracleDemoRank(oracle: OracleSummaryModel, nowMs: number) {
+  if (oracle.lifecycleStatus === 'ACTIVE' && oracle.expiryMs > BigInt(nowMs)) {
+    return 0;
+  }
+
+  if (oracle.lifecycleStatus === 'ACTIVE') {
+    return 1;
+  }
+
+  if (oracle.lifecycleStatus === 'PENDING_SETTLEMENT') {
+    return 2;
+  }
+
+  if (oracle.lifecycleStatus === 'SETTLED') {
+    return 3;
+  }
+
+  return 4;
 }
 
 function getUnderlyingOptions(oracles: OracleSummaryModel[]) {
