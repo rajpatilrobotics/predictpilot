@@ -1,0 +1,126 @@
+import type { PredictPtbSimulationPreview } from '@/integrations/deepbook-predict/tx/simulate';
+import { toPredictTxPreviewViewModel } from '@/features/tx/lib/tx-preview';
+import { TerminalDatum, TerminalNotice, TerminalPanel } from '@/components/terminal/TerminalPanels';
+import { TxDigestLink } from '@/components/tx/TxDigestLink';
+
+export interface TransactionPreviewProps {
+  className?: string;
+  completedDigest?: string;
+  onRequestSignature?: () => void;
+  onSimulate?: () => void;
+  preview: PredictPtbSimulationPreview;
+}
+
+export function TransactionPreview({
+  className = '',
+  completedDigest,
+  onRequestSignature,
+  onSimulate,
+  preview,
+}: TransactionPreviewProps) {
+  const viewModel = toPredictTxPreviewViewModel(preview);
+  const statusTone = getStatusTone(viewModel.status);
+
+  return (
+    <TerminalPanel title="Transaction preview">
+      <div className={className}>
+        <div className="flex flex-col gap-3 border-b border-[#d9dfdc] pb-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase text-[#446b5e]">
+              Pre-sign review
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-[#17211d]">
+              {viewModel.title}
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#53645f]">
+              {viewModel.statusCopy}
+            </p>
+          </div>
+          <span
+            className={`w-fit border px-3 py-1 text-xs font-semibold uppercase ${statusTone}`}
+          >
+            {viewModel.status}
+          </span>
+        </div>
+
+        <dl className="mt-4 grid gap-3 md:grid-cols-2">
+          {viewModel.rows.map((row) => (
+            <TerminalDatum key={`${row.label}:${row.value}`} label={row.label} value={row.value} />
+          ))}
+        </dl>
+
+        <div className="mt-4 grid gap-3">
+          {viewModel.warnings.length === 0 ? null : (
+            <ul className="grid gap-2" aria-label="Transaction warnings">
+              {viewModel.warnings.map((warning) => (
+                <li
+                  className="border border-[#e0c891] bg-[#fff9ea] p-3 text-sm leading-6 text-[#5c4720]"
+                  key={warning}
+                >
+                  {warning}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {viewModel.recoveryCopy === undefined ? null : (
+            <TerminalNotice>{viewModel.recoveryCopy}</TerminalNotice>
+          )}
+
+          {completedDigest === undefined ? null : (
+            <p className="border border-[#b8c6c0] bg-[#edf5f1] p-3 text-sm text-[#315447]">
+              Completed digest:{' '}
+              <TxDigestLink
+                className="font-semibold underline underline-offset-2"
+                digest={completedDigest}
+                label="View transaction on Sui Explorer"
+              />
+            </p>
+          )}
+
+          <p className="text-sm leading-6 text-[#53645f]">
+            This is a pre-sign review, not proof of execution. The wallet signature request is
+            enabled only after simulation is ready.
+          </p>
+        </div>
+
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+          {onSimulate === undefined ? null : (
+            <button
+              className="border border-[#17211d] bg-white px-4 py-2 text-sm font-semibold text-[#17211d]"
+              onClick={onSimulate}
+              type="button"
+            >
+              Run simulation
+            </button>
+          )}
+
+          {onRequestSignature === undefined ? null : (
+            <button
+              className="border border-[#17211d] bg-[#17211d] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:border-[#c7d0cc] disabled:bg-[#e8eeeb] disabled:text-[#72817b]"
+              disabled={!viewModel.canRequestSignature}
+              onClick={onRequestSignature}
+              type="button"
+            >
+              Request wallet signature
+            </button>
+          )}
+        </div>
+      </div>
+    </TerminalPanel>
+  );
+}
+
+function getStatusTone(status: PredictPtbSimulationPreview['status']) {
+  switch (status) {
+    case 'ready':
+      return 'border-[#8fbda5] bg-[#edf7f1] text-[#25513c]';
+    case 'loading':
+      return 'border-[#b8c6c0] bg-[#f4f8f6] text-[#446b5e]';
+    case 'blocked':
+    case 'TODO_VERIFY_BLOCKED':
+      return 'border-[#e0c891] bg-[#fff9ea] text-[#5c4720]';
+    case 'error':
+      return 'border-[#d6a38f] bg-[#fff8f4] text-[#563023]';
+  }
+}
