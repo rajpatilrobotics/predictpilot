@@ -1,8 +1,27 @@
-import type { ReactNode } from 'react';
+import {
+  TerminalDatum as Datum,
+  TerminalNotice as UnavailableNotice,
+  TerminalPanel as Panel,
+  TerminalStatCard as MetricCard,
+} from '@/components/terminal/TerminalPanels';
 import { useLiveOracleTape } from '@/features/oracle/hooks/useLiveOracleTape';
+import {
+  freshnessBadgeLabel,
+  freshnessClassName,
+  lifecycleClassName,
+} from '@/features/oracle/lib/oracle-page-format';
 import type { OracleReadClient } from '@/integrations/deepbook-predict/api/oracles';
+import {
+  formatAge,
+  formatLifecycleLabel as formatLifecycle,
+  formatNullableScaled1e9,
+  formatNullableTimestamp,
+  formatObjectId,
+  formatSafeIsoTimestamp as formatTimestamp,
+  formatScaled1e9,
+} from '@/lib/formatters';
 import { getOracleStatus } from '@/lib/oracle-status';
-import type { DataFreshnessModel, DataFreshnessStatus } from '@/lib/freshness';
+import type { DataFreshnessModel } from '@/lib/freshness';
 import type { OracleStateModel, OracleSviParametersModel } from '@/types/oracle';
 import type { ObjectId, TimestampMs } from '@/types/predict';
 
@@ -213,41 +232,6 @@ function FreshnessStrip({ freshness, label }: { freshness: DataFreshnessModel; l
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="border border-[#d9dfdc] bg-[#fbfcfc] p-4">
-      <p className="text-xs uppercase tracking-[0.12em] text-[#64736e]">{label}</p>
-      <p className="mt-2 break-words font-semibold text-[#17211d]">{value}</p>
-    </div>
-  );
-}
-
-function Panel({ children, title }: { children: ReactNode; title: string }) {
-  return (
-    <section className="border border-[#d9dfdc] bg-white p-4" aria-label={title}>
-      <h2 className="text-lg font-semibold text-[#17211d]">{title}</h2>
-      <div className="mt-4">{children}</div>
-    </section>
-  );
-}
-
-function Datum({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-xs uppercase tracking-[0.1em] text-[#64736e]">{label}</dt>
-      <dd className="mt-1 break-words font-semibold text-[#17211d]">{value}</dd>
-    </div>
-  );
-}
-
-function UnavailableNotice({ children }: { children: ReactNode }) {
-  return (
-    <p className="border border-[#e0c891] bg-[#fff9ea] p-3 text-sm leading-6 text-[#5c4720]">
-      {children}
-    </p>
-  );
-}
-
 function SurfaceEmptyState({ description, title }: { description: string; title: string }) {
   return (
     <article aria-labelledby="surface-empty-title" className="border border-[#d9dfdc] bg-white p-5">
@@ -297,103 +281,5 @@ function formatAskBounds(oracleState: OracleStateModel) {
       return 'Present, unmapped';
     case 'UNAVAILABLE':
       return 'Unavailable';
-  }
-}
-
-function freshnessBadgeLabel(status: DataFreshnessStatus) {
-  switch (status) {
-    case 'FRESH':
-      return 'Live';
-    case 'DELAYED':
-      return 'Aging';
-    case 'STALE':
-      return 'Stale';
-    case 'UNKNOWN':
-      return 'Unavailable';
-  }
-}
-
-function formatLifecycle(status: OracleStateModel['oracle']['lifecycleStatus']) {
-  return status
-    .toLowerCase()
-    .split('_')
-    .map((part) => part[0].toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
-function formatObjectId(value: string) {
-  if (value.length <= 18) {
-    return value;
-  }
-
-  return `${value.slice(0, 8)}...${value.slice(-6)}`;
-}
-
-function formatNullableScaled1e9(value: bigint | null) {
-  return value === null ? 'Not set' : formatScaled1e9(value);
-}
-
-function formatScaled1e9(value: bigint) {
-  const scale = 1_000_000_000n;
-  const isNegative = value < 0n;
-  const absoluteValue = isNegative ? -value : value;
-  const whole = absoluteValue / scale;
-  const fraction = (absoluteValue % scale).toString().padStart(9, '0').replace(/0+$/, '');
-  const wholeText = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  const sign = isNegative ? '-' : '';
-
-  return fraction.length === 0 ? `${sign}${wholeText}` : `${sign}${wholeText}.${fraction}`;
-}
-
-function formatNullableTimestamp(value: bigint | null) {
-  return value === null ? 'Unavailable' : formatTimestamp(value);
-}
-
-function formatTimestamp(value: bigint) {
-  const timestamp = Number(value);
-
-  if (!Number.isSafeInteger(timestamp)) {
-    return value.toString();
-  }
-
-  return new Date(timestamp).toISOString();
-}
-
-function formatAge(ageMs: bigint | null) {
-  if (ageMs === null) {
-    return 'Unavailable';
-  }
-
-  if (ageMs < 1_000n) {
-    return `${ageMs.toString()}ms`;
-  }
-
-  const secondsText = (Number(ageMs) / 1_000).toFixed(1).replace(/\.0$/, '');
-  return `${secondsText}s`;
-}
-
-function freshnessClassName(status: DataFreshnessStatus) {
-  switch (status) {
-    case 'FRESH':
-      return 'border border-[#a7d6bd] bg-[#eef9f3] px-2 py-1 text-xs font-semibold text-[#24633e]';
-    case 'DELAYED':
-      return 'border border-[#e0c891] bg-[#fff9ea] px-2 py-1 text-xs font-semibold text-[#6a511d]';
-    case 'STALE':
-      return 'border border-[#d9a8a0] bg-[#fff8f6] px-2 py-1 text-xs font-semibold text-[#8a3e32]';
-    case 'UNKNOWN':
-      return 'border border-[#c8d3ce] bg-[#f4f7f6] px-2 py-1 text-xs font-semibold text-[#52615c]';
-  }
-}
-
-function lifecycleClassName(status: OracleStateModel['oracle']['lifecycleStatus']) {
-  switch (status) {
-    case 'ACTIVE':
-      return 'w-fit border border-[#a7d6bd] bg-[#eef9f3] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#24633e]';
-    case 'PENDING_SETTLEMENT':
-      return 'w-fit border border-[#e0c891] bg-[#fff9ea] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#6a511d]';
-    case 'SETTLED':
-      return 'w-fit border border-[#adc5d8] bg-[#eef6fc] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#285a7b]';
-    case 'INACTIVE':
-      return 'w-fit border border-[#c8d3ce] bg-[#f4f7f6] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#52615c]';
   }
 }

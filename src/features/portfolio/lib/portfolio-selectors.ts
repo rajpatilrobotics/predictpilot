@@ -234,7 +234,7 @@ function maxTimestamp(values: TimestampMs[]): TimestampMs | null {
 }
 
 function uniqueSortedStrings(values: string[]): string[] {
-  return Array.from(new Set(values)).sort();
+  return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right));
 }
 
 function uniqueSortedBigints(values: bigint[]): bigint[] {

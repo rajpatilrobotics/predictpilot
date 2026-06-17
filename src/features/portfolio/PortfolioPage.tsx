@@ -1,6 +1,17 @@
-import type { ReactNode } from 'react';
+import {
+  ManagerIdList as ManagerList,
+  TerminalKeyValue as KeyValue,
+  TerminalMetricCard as MetricCard,
+  TerminalPageHeader as PageHeader,
+  TerminalState as PortfolioState,
+} from '@/components/terminal/TerminalPanels';
 import { usePredictManager } from '@/features/manager/hooks/usePredictManager';
 import { useWalletStatus } from '@/features/wallet/useWalletStatus';
+import {
+  formatPrice1e9,
+  formatQuoteAmount,
+  formatTimestampMinute as formatTimestamp,
+} from '@/lib/formatters';
 import { useManagerSummary } from './hooks/useManagerSummary';
 import { usePositionsSummary } from './hooks/usePositionsSummary';
 import type {
@@ -115,6 +126,7 @@ export function PortfolioPage() {
         eyebrow="Assets"
         source="Indexed manager summary"
         title="Portfolio"
+        titleId="portfolio-page-title"
       />
       {content}
     </article>
@@ -135,14 +147,46 @@ function PortfolioSuccess({
   return (
     <div className="space-y-5">
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Portfolio summary">
-        <MetricCard label="Wallet" value={walletLabel} helper="Wallet dUSDC balance not loaded in this lane" />
-        <MetricCard label="Manager dUSDC" value={formatQuoteAmount(balance.totalManagerBalanceQuote)} helper="Held inside PredictManager" />
-        <MetricCard label="Trading balance" value={formatQuoteAmount(balance.tradingBalanceQuote)} helper="Available manager quote balance" />
-        <MetricCard label="Account value" value={formatQuoteAmount(balance.accountValueQuote)} helper="Indexed manager valuation" />
-        <MetricCard label="Open positions" value={String(balance.openPositions)} helper="Manager-backed quantities" />
-        <MetricCard label="Open exposure" value={formatQuoteAmount(balance.openExposureQuote)} helper="Indexed exposure" />
-        <MetricCard label="Realized PnL" value={formatQuoteAmount(balance.realizedPnlQuote)} helper="Manager-level realized result" />
-        <MetricCard label="Unrealized PnL" value={formatQuoteAmount(balance.unrealizedPnlQuote)} helper="Indexed estimate" />
+        <MetricCard
+          label="Wallet"
+          value={walletLabel}
+          helper="Wallet dUSDC balance not loaded in this lane"
+        />
+        <MetricCard
+          label="Manager dUSDC"
+          value={formatQuoteAmount(balance.totalManagerBalanceQuote)}
+          helper="Held inside PredictManager"
+        />
+        <MetricCard
+          label="Trading balance"
+          value={formatQuoteAmount(balance.tradingBalanceQuote)}
+          helper="Available manager quote balance"
+        />
+        <MetricCard
+          label="Account value"
+          value={formatQuoteAmount(balance.accountValueQuote)}
+          helper="Indexed manager valuation"
+        />
+        <MetricCard
+          label="Open positions"
+          value={String(balance.openPositions)}
+          helper="Manager-backed quantities"
+        />
+        <MetricCard
+          label="Open exposure"
+          value={formatQuoteAmount(balance.openExposureQuote)}
+          helper="Indexed exposure"
+        />
+        <MetricCard
+          label="Realized PnL"
+          value={formatQuoteAmount(balance.realizedPnlQuote)}
+          helper="Manager-level realized result"
+        />
+        <MetricCard
+          label="Unrealized PnL"
+          value={formatQuoteAmount(balance.unrealizedPnlQuote)}
+          helper="Indexed estimate"
+        />
       </section>
 
       <section className="border border-[#d9dfdc] bg-[#fbfcfc] p-4" aria-label="Manager identity">
@@ -209,10 +253,14 @@ function BinaryPositionsTable({ groups }: { groups: BinaryPositionGroupModel[] }
                 </td>
                 <td className="p-3 text-[#3f514b]">{formatQuoteAmount(group.openQuantityQuote)}</td>
                 <td className="p-3 text-[#3f514b]">
-                  {group.markValueQuote === null ? 'Unavailable' : formatQuoteAmount(group.markValueQuote)}
+                  {group.markValueQuote === null
+                    ? 'Unavailable'
+                    : formatQuoteAmount(group.markValueQuote)}
                 </td>
                 <td className="p-3 text-[#3f514b]">{formatQuoteAmount(group.realizedPnlQuote)}</td>
-                <td className="p-3 text-[#3f514b]">{formatQuoteAmount(group.unrealizedPnlQuote)}</td>
+                <td className="p-3 text-[#3f514b]">
+                  {formatQuoteAmount(group.unrealizedPnlQuote)}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -274,115 +322,4 @@ function RangePositionsTable({ groups }: { groups: RangePositionGroupModel[] }) 
       </div>
     </section>
   );
-}
-
-function PageHeader({
-  eyebrow,
-  source,
-  title,
-}: {
-  eyebrow: string;
-  source: string;
-  title: string;
-}) {
-  return (
-    <header className="flex flex-col gap-2 border-b border-[#d9dfdc] pb-4 md:flex-row md:items-end md:justify-between">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#446b5e]">
-          {eyebrow}
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-normal text-[#17211d]" id="portfolio-page-title">
-          {title}
-        </h1>
-      </div>
-      <span className="w-fit border border-[#b8c6c0] bg-[#edf5f1] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#315447]">
-        {source}
-      </span>
-    </header>
-  );
-}
-
-function PortfolioState({
-  children,
-  description,
-  title,
-  tone = 'neutral',
-}: {
-  children?: ReactNode;
-  description: string;
-  title: string;
-  tone?: 'error' | 'neutral';
-}) {
-  const isError = tone === 'error';
-
-  return (
-    <section
-      aria-label={title}
-      className={`border p-5 ${
-        isError
-          ? 'border-[#d6a38f] bg-[#fff8f4] text-[#563023]'
-          : 'border-[#d9dfdc] bg-[#fbfcfc] text-[#3f514b]'
-      }`}
-      role={isError ? 'alert' : 'status'}
-    >
-      <h2 className={`text-xl font-semibold ${isError ? 'text-[#3c1f16]' : 'text-[#17211d]'}`}>
-        {title}
-      </h2>
-      <p className="mt-2 max-w-3xl leading-6">{description}</p>
-      {children === undefined ? null : <div className="mt-4">{children}</div>}
-    </section>
-  );
-}
-
-function MetricCard({ helper, label, value }: { helper: string; label: string; value: string }) {
-  return (
-    <div className="border border-[#d9dfdc] bg-white p-4">
-      <p className="text-xs uppercase tracking-[0.12em] text-[#64736e]">{label}</p>
-      <p className="mt-2 break-words text-lg font-semibold text-[#17211d]">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-[#64736e]">{helper}</p>
-    </div>
-  );
-}
-
-function KeyValue({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs uppercase tracking-[0.12em] text-[#64736e]">{label}</p>
-      <p className="mt-1 break-all font-semibold text-[#17211d]">{value}</p>
-    </div>
-  );
-}
-
-function ManagerList({ managerIds }: { managerIds: string[] }) {
-  return (
-    <ul className="grid gap-2 text-sm">
-      {managerIds.map((managerId) => (
-        <li className="break-all border border-[#d9dfdc] bg-white p-3" key={managerId}>
-          {managerId}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function formatQuoteAmount(value: bigint) {
-  const sign = value < 0n ? '-' : '';
-  const absolute = value < 0n ? -value : value;
-  const whole = absolute / 1_000_000n;
-  const fraction = absolute % 1_000_000n;
-  const fractionText = fraction.toString().padStart(6, '0').replace(/0+$/, '');
-
-  return `${sign}${whole.toLocaleString()}${fractionText === '' ? '' : `.${fractionText}`} dUSDC`;
-}
-
-function formatPrice1e9(value: bigint) {
-  const whole = value / 1_000_000_000n;
-  const fraction = value % 1_000_000_000n;
-  const cents = (fraction / 10_000_000n).toString().padStart(2, '0');
-
-  return `${whole.toLocaleString()}.${cents}`;
-}
-
-function formatTimestamp(value: bigint) {
-  return new Date(Number(value)).toISOString().replace('T', ' ').slice(0, 16);
 }

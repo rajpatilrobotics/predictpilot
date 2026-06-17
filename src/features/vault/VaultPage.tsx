@@ -11,6 +11,7 @@ import {
 } from '@/features/vault/lib/vault-lp-prep';
 import type { VaultReadClient } from '@/integrations/deepbook-predict/api/vault';
 import { normalizeAppError, type PredictPilotError } from '@/lib/errors';
+import { formatDecimalBigint } from '@/lib/formatters';
 import type { QuoteAmount, SuiAddress } from '@/types/predict';
 import type { VaultModel, VaultPerformanceModel, VaultPerformancePoint } from '@/types/vault';
 
@@ -296,7 +297,10 @@ function VaultMetrics({ quoteSymbol, vault }: { quoteSymbol: string; vault: Vaul
   const liabilityQuote = vault.totalLiabilityQuote ?? vault.totalMtmQuote;
 
   return (
-    <section aria-label="Vault summary metrics" className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+    <section
+      aria-label="Vault summary metrics"
+      className="grid gap-3 md:grid-cols-2 xl:grid-cols-4"
+    >
       <MetricCard
         label="Vault value"
         value={formatQuote(vault.vaultValueQuote, quoteSymbol)}
@@ -357,7 +361,10 @@ function VaultPerformancePanel({
   const points = performance?.points ?? [];
 
   return (
-    <section aria-labelledby="vault-performance-title" className="border border-[#d9dfdc] bg-white p-4">
+    <section
+      aria-labelledby="vault-performance-title"
+      className="border border-[#d9dfdc] bg-white p-4"
+    >
       <div className="flex flex-col gap-2 border-b border-[#edf1ef] pb-3 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#64736e]">
@@ -433,7 +440,9 @@ function PerformanceChart({
         <MetricCard
           compact
           label="Latest vault value"
-          value={latest === undefined ? 'Unavailable' : formatQuote(latest.vaultValueQuote, quoteSymbol)}
+          value={
+            latest === undefined ? 'Unavailable' : formatQuote(latest.vaultValueQuote, quoteSymbol)
+          }
         />
         <MetricCard
           compact
@@ -448,19 +457,30 @@ function PerformanceChart({
 
 function VaultExposurePanel({ quoteSymbol, vault }: { quoteSymbol: string; vault: VaultModel }) {
   return (
-    <section aria-labelledby="vault-exposure-title" className="border border-[#d9dfdc] bg-white p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#64736e]">Risk context</p>
+    <section
+      aria-labelledby="vault-exposure-title"
+      className="border border-[#d9dfdc] bg-white p-4"
+    >
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#64736e]">
+        Risk context
+      </p>
       <h2 className="mt-1 text-lg font-semibold text-[#17211d]" id="vault-exposure-title">
         Withdrawal limiter status
       </h2>
       <div className="mt-4 space-y-3">
-        <ExposureRow label="Available withdraw" value={formatQuote(vault.availableWithdrawalQuote, quoteSymbol)} />
-        <ExposureRow label="Max payout coverage" value={formatQuote(vault.totalMaxPayoutQuote, quoteSymbol)} />
-        <ExposureRow label="Max payout utilization" value={formatPercent(vault.maxPayoutUtilizationRatio)} />
         <ExposureRow
-          label="Accepted quote asset"
-          value={shortenMoveType(vault.quoteAssetType)}
+          label="Available withdraw"
+          value={formatQuote(vault.availableWithdrawalQuote, quoteSymbol)}
         />
+        <ExposureRow
+          label="Max payout coverage"
+          value={formatQuote(vault.totalMaxPayoutQuote, quoteSymbol)}
+        />
+        <ExposureRow
+          label="Max payout utilization"
+          value={formatPercent(vault.maxPayoutUtilizationRatio)}
+        />
+        <ExposureRow label="Accepted quote asset" value={shortenMoveType(vault.quoteAssetType)} />
       </div>
       <div className="mt-4 border border-[#ead7a7] bg-[#fffaf0] p-3 text-sm leading-6 text-[#664b14]">
         Withdrawals are constrained by current max payout coverage.
@@ -518,7 +538,10 @@ function LpActionPanel({
   });
 
   return (
-    <section aria-labelledby={`${isSupply ? 'supply' : 'withdraw'}-vault-title`} className="border border-[#d9dfdc] bg-white p-4">
+    <section
+      aria-labelledby={`${isSupply ? 'supply' : 'withdraw'}-vault-title`}
+      className="border border-[#d9dfdc] bg-white p-4"
+    >
       <div className="flex flex-col gap-2 border-b border-[#edf1ef] pb-3 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#64736e]">
@@ -551,12 +574,19 @@ function LpActionPanel({
         <div className="grid gap-2 border border-[#edf1ef] bg-[#fbfcfc] p-3 text-sm text-[#4f625b]">
           <ExposureRow
             label={walletBalanceLabel}
-            value={hasWalletBalance ? `${formatAtomic(walletBalance)} ${isSupply ? quoteSymbol : 'PLP'}` : 'Not loaded'}
+            value={
+              hasWalletBalance
+                ? `${formatAtomic(walletBalance)} ${isSupply ? quoteSymbol : 'PLP'}`
+                : 'Not loaded'
+            }
           />
           {isSupply ? (
             <ExposureRow label="Expected PLP" value="Simulation or onchain confirmation required" />
           ) : (
-            <ExposureRow label="Expected DUSDC" value="Simulation or onchain confirmation required" />
+            <ExposureRow
+              label="Expected DUSDC"
+              value="Simulation or onchain confirmation required"
+            />
           )}
           {withdrawContext !== undefined && withdrawContext !== null ? (
             <ExposureRow
@@ -567,7 +597,10 @@ function LpActionPanel({
         </div>
 
         {isZeroBalance ? (
-          <div className="border border-dashed border-[#c8d3ce] bg-[#fbfcfc] p-3 text-sm text-[#4f625b]" role="status">
+          <div
+            className="border border-dashed border-[#c8d3ce] bg-[#fbfcfc] p-3 text-sm text-[#4f625b]"
+            role="status"
+          >
             {emptyWalletCopy}
           </div>
         ) : null}
@@ -585,7 +618,7 @@ function LpActionPanel({
             <ExposureRow label="Prepared action" value={preparation.preview.action} />
             <ExposureRow label="Network" value={preparation.preview.expectedNetwork} />
             <ExposureRow
-              label={isSupply ? 'Vault value snapshot' : 'Vault value snapshot'}
+              label="Vault value snapshot"
               value={formatQuote(preparation.preview.vaultSnapshot.vaultValueQuote, quoteSymbol)}
             />
           </div>
@@ -616,7 +649,10 @@ function PreparationStateView({
 }) {
   if (status.kind === 'idle') {
     return (
-      <div className="border border-[#d9dfdc] bg-[#fbfcfc] p-3 text-sm text-[#4f625b]" role="status">
+      <div
+        className="border border-[#d9dfdc] bg-[#fbfcfc] p-3 text-sm text-[#4f625b]"
+        role="status"
+      >
         Enter an amount to prepare an unsigned {isSupply ? 'supply' : 'withdraw'} preview.
       </div>
     );
@@ -624,7 +660,11 @@ function PreparationStateView({
 
   if (status.kind === 'loading') {
     return (
-      <div aria-label={`${isSupply ? 'Supply' : 'Withdraw'} preparation loading`} className="border border-[#d9dfdc] bg-[#fbfcfc] p-3 text-sm text-[#4f625b]" role="status">
+      <div
+        aria-label={`${isSupply ? 'Supply' : 'Withdraw'} preparation loading`}
+        className="border border-[#d9dfdc] bg-[#fbfcfc] p-3 text-sm text-[#4f625b]"
+        role="status"
+      >
         Preparing unsigned {isSupply ? 'supply' : 'withdraw'} preview...
       </div>
     );
@@ -632,7 +672,10 @@ function PreparationStateView({
 
   if (status.kind === 'ready') {
     return (
-      <div className="border border-[#a9d8c6] bg-[#f1fbf6] p-3 text-sm text-[#245942]" role="status">
+      <div
+        className="border border-[#a9d8c6] bg-[#f1fbf6] p-3 text-sm text-[#245942]"
+        role="status"
+      >
         {isSupply ? 'Supply preparation ready.' : 'Withdraw preparation ready.'} Review this preview
         before any future wallet signing flow.
       </div>
@@ -640,7 +683,10 @@ function PreparationStateView({
   }
 
   return (
-    <div className="border border-[#ead7a7] bg-[#fffaf0] p-3 text-sm leading-6 text-[#664b14]" role="alert">
+    <div
+      className="border border-[#ead7a7] bg-[#fffaf0] p-3 text-sm leading-6 text-[#664b14]"
+      role="alert"
+    >
       <p className="font-semibold">{status.title}</p>
       <p className="mt-1">{status.message}</p>
     </div>
@@ -768,13 +814,7 @@ function LoadingSummary() {
   );
 }
 
-function ErrorNotice({
-  compact = false,
-  error,
-}: {
-  compact?: boolean;
-  error: PredictPilotError;
-}) {
+function ErrorNotice({ compact = false, error }: { compact?: boolean; error: PredictPilotError }) {
   return (
     <div
       className={`border border-[#e2b5b5] bg-[#fff7f7] text-[#7c2828] ${compact ? 'mt-4 p-3 text-sm' : 'p-4'}`}
@@ -829,7 +869,10 @@ type NetworkState =
       status: 'ready' | 'wrong-network';
     };
 
-function getNetworkState(currentNetwork: string | null | undefined, expectedNetwork: string): NetworkState {
+function getNetworkState(
+  currentNetwork: string | null | undefined,
+  expectedNetwork: string,
+): NetworkState {
   if (currentNetwork === null || currentNetwork === undefined || currentNetwork.length === 0) {
     return {
       expectedNetwork,
@@ -891,7 +934,9 @@ function NetworkBadge({ networkState }: { networkState: NetworkState }) {
       : 'border-[#b8c6c0] bg-[#edf5f1] text-[#315447]';
 
   return (
-    <span className={`w-fit border px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] ${className}`}>
+    <span
+      className={`w-fit border px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] ${className}`}
+    >
       {label}
     </span>
   );
@@ -941,14 +986,7 @@ function formatQuote(amount: bigint, symbol: string) {
 }
 
 function formatAtomic(amount: bigint) {
-  const decimals = predictDeploymentConfig.quoteDecimals;
-  const scale = 10n ** BigInt(decimals);
-  const whole = amount / scale;
-  const fraction = amount % scale;
-  const fractionText = fraction.toString().padStart(decimals, '0').replace(/0+$/, '');
-  const wholeText = new Intl.NumberFormat('en-US').format(Number(whole));
-
-  return fractionText.length === 0 ? wholeText : `${wholeText}.${fractionText}`;
+  return formatDecimalBigint(amount, predictDeploymentConfig.quoteDecimals);
 }
 
 function formatPercent(value: number) {

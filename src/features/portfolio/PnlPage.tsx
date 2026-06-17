@@ -1,6 +1,16 @@
-import type { ReactNode } from 'react';
+import {
+  ManagerIdList as ManagerList,
+  TerminalMetricCard as MetricCard,
+  TerminalPageHeader as PageHeader,
+  TerminalState as PnlState,
+} from '@/components/terminal/TerminalPanels';
 import { usePredictManager } from '@/features/manager/hooks/usePredictManager';
 import { useWalletStatus } from '@/features/wallet/useWalletStatus';
+import {
+  formatOptionalQuoteAmount,
+  formatQuoteAmount,
+  formatTimestampMinute as formatTimestamp,
+} from '@/lib/formatters';
 import type { PnlPointModel } from '@/types/history';
 import type { ManagerPnlModel } from '@/types/portfolio';
 import { usePnl } from './hooks/usePnl';
@@ -80,7 +90,12 @@ export function PnlPage() {
 
   return (
     <article aria-labelledby="pnl-page-title" className="space-y-5">
-      <PageHeader eyebrow="Assets" source="Indexed manager PnL" title="PnL" />
+      <PageHeader
+        eyebrow="Assets"
+        source="Indexed manager PnL"
+        title="PnL"
+        titleId="pnl-page-title"
+      />
       {content}
     </article>
   );
@@ -135,7 +150,12 @@ function PnlChart({ points }: { points: PnlPointModel[] }) {
           ALL
         </span>
       </div>
-      <svg aria-label="Manager PnL chart" className="mt-4 h-56 w-full" role="img" viewBox="0 0 640 220">
+      <svg
+        aria-label="Manager PnL chart"
+        className="mt-4 h-56 w-full"
+        role="img"
+        viewBox="0 0 640 220"
+      >
         <line stroke="#d9dfdc" strokeWidth="1" x1="0" x2="640" y1="190" y2="190" />
         <line stroke="#d9dfdc" strokeWidth="1" x1="0" x2="640" y1="30" y2="30" />
         {path.kind === 'single' ? (
@@ -190,86 +210,6 @@ function PnlTable({ points }: { points: PnlPointModel[] }) {
   );
 }
 
-function PageHeader({
-  eyebrow,
-  source,
-  title,
-}: {
-  eyebrow: string;
-  source: string;
-  title: string;
-}) {
-  return (
-    <header className="flex flex-col gap-2 border-b border-[#d9dfdc] pb-4 md:flex-row md:items-end md:justify-between">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#446b5e]">
-          {eyebrow}
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-normal text-[#17211d]" id="pnl-page-title">
-          {title}
-        </h1>
-      </div>
-      <span className="w-fit border border-[#b8c6c0] bg-[#edf5f1] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#315447]">
-        {source}
-      </span>
-    </header>
-  );
-}
-
-function PnlState({
-  children,
-  description,
-  title,
-  tone = 'neutral',
-}: {
-  children?: ReactNode;
-  description: string;
-  title: string;
-  tone?: 'error' | 'neutral';
-}) {
-  const isError = tone === 'error';
-
-  return (
-    <section
-      aria-label={title}
-      className={`border p-5 ${
-        isError
-          ? 'border-[#d6a38f] bg-[#fff8f4] text-[#563023]'
-          : 'border-[#d9dfdc] bg-[#fbfcfc] text-[#3f514b]'
-      }`}
-      role={isError ? 'alert' : 'status'}
-    >
-      <h2 className={`text-xl font-semibold ${isError ? 'text-[#3c1f16]' : 'text-[#17211d]'}`}>
-        {title}
-      </h2>
-      <p className="mt-2 max-w-3xl leading-6">{description}</p>
-      {children === undefined ? null : <div className="mt-4">{children}</div>}
-    </section>
-  );
-}
-
-function MetricCard({ helper, label, value }: { helper: string; label: string; value: string }) {
-  return (
-    <div className="border border-[#d9dfdc] bg-white p-4">
-      <p className="text-xs uppercase tracking-[0.12em] text-[#64736e]">{label}</p>
-      <p className="mt-2 break-words text-lg font-semibold text-[#17211d]">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-[#64736e]">{helper}</p>
-    </div>
-  );
-}
-
-function ManagerList({ managerIds }: { managerIds: string[] }) {
-  return (
-    <ul className="grid gap-2 text-sm">
-      {managerIds.map((managerId) => (
-        <li className="break-all border border-[#d9dfdc] bg-white p-3" key={managerId}>
-          {managerId}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 function buildPnlPath(points: PnlPointModel[]) {
   const width = 640;
   const minY = 30;
@@ -294,22 +234,4 @@ function buildPnlPath(points: PnlPointModel[]) {
     kind: 'line' as const,
     points: coordinates.map((coordinate) => `${coordinate.x},${coordinate.y}`).join(' '),
   };
-}
-
-function formatQuoteAmount(value: bigint) {
-  const sign = value < 0n ? '-' : '';
-  const absolute = value < 0n ? -value : value;
-  const whole = absolute / 1_000_000n;
-  const fraction = absolute % 1_000_000n;
-  const fractionText = fraction.toString().padStart(6, '0').replace(/0+$/, '');
-
-  return `${sign}${whole.toLocaleString()}${fractionText === '' ? '' : `.${fractionText}`} dUSDC`;
-}
-
-function formatOptionalQuoteAmount(value: bigint | undefined) {
-  return value === undefined ? 'Unavailable' : formatQuoteAmount(value);
-}
-
-function formatTimestamp(value: bigint) {
-  return new Date(Number(value)).toISOString().replace('T', ' ').slice(0, 16);
 }

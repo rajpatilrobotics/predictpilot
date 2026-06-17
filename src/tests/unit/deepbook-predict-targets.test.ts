@@ -89,7 +89,7 @@ describe('DeepBook Predict target registry', () => {
   });
 
   it('does not export unsupported target groups', () => {
-    expect(Object.keys(predictTxTargets).sort()).toEqual([
+    expect(Object.keys(predictTxTargets).sort((left, right) => left.localeCompare(right))).toEqual([
       'marketKey',
       'predict',
       'predictManager',

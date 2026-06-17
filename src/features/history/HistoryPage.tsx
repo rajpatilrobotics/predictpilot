@@ -1,7 +1,17 @@
-import type { ReactNode } from 'react';
+import {
+  ManagerIdList as ManagerList,
+  TerminalMetricCard as MetricCard,
+  TerminalPageHeader as PageHeader,
+  TerminalState as HistoryState,
+} from '@/components/terminal/TerminalPanels';
 import { TxDigestLink } from '@/components/tx/TxDigestLink';
 import { usePredictManager } from '@/features/manager/hooks/usePredictManager';
 import { useWalletStatus } from '@/features/wallet/useWalletStatus';
+import {
+  formatPrice1e9,
+  formatQuoteAmount,
+  formatTimestampMinute as formatTimestamp,
+} from '@/lib/formatters';
 import type { ProtocolHistoryRecord } from '@/types/history';
 import type { SuiAddress } from '@/types/predict';
 import { useTransactionHistory } from './hooks/useTransactionHistory';
@@ -89,7 +99,12 @@ export function HistoryPage() {
 
   return (
     <article aria-labelledby="history-page-title" className="space-y-5">
-      <PageHeader eyebrow="Assets" source="Indexed transaction history" title="History" />
+      <PageHeader
+        eyebrow="Assets"
+        source="Indexed transaction history"
+        title="History"
+        titleId="history-page-title"
+      />
       {content}
     </article>
   );
@@ -103,11 +118,19 @@ function HistorySuccess({
   return (
     <div className="space-y-5">
       <section className="grid gap-3 md:grid-cols-3" aria-label="History summary">
-        <MetricCard helper="Matched indexed events" label="Total records" value={String(history.totalCount)} />
+        <MetricCard
+          helper="Matched indexed events"
+          label="Total records"
+          value={String(history.totalCount)}
+        />
         <MetricCard
           helper="Newest indexed timestamp"
           label="Latest activity"
-          value={history.latestTimestampMs === null ? 'Unavailable' : formatTimestamp(history.latestTimestampMs)}
+          value={
+            history.latestTimestampMs === null
+              ? 'Unavailable'
+              : formatTimestamp(history.latestTimestampMs)
+          }
         />
         <MetricCard
           helper="Digest links use existing event digests"
@@ -159,10 +182,12 @@ function HistoryGroup({
   title: string;
   total: number;
 }) {
+  const titleId = historyGroupTitleId(title);
+
   return (
-    <section aria-labelledby={`${title.replace(/\s+/g, '-').toLowerCase()}-title`} className="space-y-3">
+    <section aria-labelledby={titleId} className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-[#17211d]" id={`${title.replace(/\s+/g, '-').toLowerCase()}-title`}>
+        <h2 className="text-lg font-semibold text-[#17211d]" id={titleId}>
           {title}
         </h2>
         <span className="border border-[#b8c6c0] bg-[#edf5f1] px-2 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#315447]">
@@ -198,6 +223,10 @@ function HistoryGroup({
   );
 }
 
+function historyGroupTitleId(title: string) {
+  return `${title.toLowerCase().split(' ').join('-')}-title`;
+}
+
 function HistoryRow({ record }: { record: ProtocolHistoryRecord }) {
   return (
     <tr className="border-t border-[#d9dfdc]">
@@ -210,93 +239,10 @@ function HistoryRow({ record }: { record: ProtocolHistoryRecord }) {
         {record.digest === '' ? (
           <span className="text-[#64736e]">Unavailable</span>
         ) : (
-          <TxDigestLink
-            className="font-semibold text-[#176b5b] underline"
-            digest={record.digest}
-          />
+          <TxDigestLink className="font-semibold text-[#176b5b] underline" digest={record.digest} />
         )}
       </td>
     </tr>
-  );
-}
-
-function PageHeader({
-  eyebrow,
-  source,
-  title,
-}: {
-  eyebrow: string;
-  source: string;
-  title: string;
-}) {
-  return (
-    <header className="flex flex-col gap-2 border-b border-[#d9dfdc] pb-4 md:flex-row md:items-end md:justify-between">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#446b5e]">
-          {eyebrow}
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-normal text-[#17211d]" id="history-page-title">
-          {title}
-        </h1>
-      </div>
-      <span className="w-fit border border-[#b8c6c0] bg-[#edf5f1] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#315447]">
-        {source}
-      </span>
-    </header>
-  );
-}
-
-function HistoryState({
-  children,
-  description,
-  title,
-  tone = 'neutral',
-}: {
-  children?: ReactNode;
-  description: string;
-  title: string;
-  tone?: 'error' | 'neutral';
-}) {
-  const isError = tone === 'error';
-
-  return (
-    <section
-      aria-label={title}
-      className={`border p-5 ${
-        isError
-          ? 'border-[#d6a38f] bg-[#fff8f4] text-[#563023]'
-          : 'border-[#d9dfdc] bg-[#fbfcfc] text-[#3f514b]'
-      }`}
-      role={isError ? 'alert' : 'status'}
-    >
-      <h2 className={`text-xl font-semibold ${isError ? 'text-[#3c1f16]' : 'text-[#17211d]'}`}>
-        {title}
-      </h2>
-      <p className="mt-2 max-w-3xl leading-6">{description}</p>
-      {children === undefined ? null : <div className="mt-4">{children}</div>}
-    </section>
-  );
-}
-
-function MetricCard({ helper, label, value }: { helper: string; label: string; value: string }) {
-  return (
-    <div className="border border-[#d9dfdc] bg-white p-4">
-      <p className="text-xs uppercase tracking-[0.12em] text-[#64736e]">{label}</p>
-      <p className="mt-2 break-words text-lg font-semibold text-[#17211d]">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-[#64736e]">{helper}</p>
-    </div>
-  );
-}
-
-function ManagerList({ managerIds }: { managerIds: string[] }) {
-  return (
-    <ul className="grid gap-2 text-sm">
-      {managerIds.map((managerId) => (
-        <li className="break-all border border-[#d9dfdc] bg-white p-3" key={managerId}>
-          {managerId}
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -332,7 +278,9 @@ function historyQuantity(record: ProtocolHistoryRecord) {
     case 'LP_WITHDRAW':
       return formatQuoteAmount(record.withdrawnQuote);
     case 'ORACLE_TRADE':
-      return record.quantityQuote === undefined ? 'Unavailable' : formatQuoteAmount(record.quantityQuote);
+      return record.quantityQuote === undefined
+        ? 'Unavailable'
+        : formatQuoteAmount(record.quantityQuote);
   }
 }
 
@@ -372,26 +320,4 @@ function formatHistoryKind(kind: ProtocolHistoryRecord['kind']) {
     case 'ORACLE_TRADE':
       return 'Oracle trade';
   }
-}
-
-function formatQuoteAmount(value: bigint) {
-  const sign = value < 0n ? '-' : '';
-  const absolute = value < 0n ? -value : value;
-  const whole = absolute / 1_000_000n;
-  const fraction = absolute % 1_000_000n;
-  const fractionText = fraction.toString().padStart(6, '0').replace(/0+$/, '');
-
-  return `${sign}${whole.toLocaleString()}${fractionText === '' ? '' : `.${fractionText}`} dUSDC`;
-}
-
-function formatPrice1e9(value: bigint) {
-  const whole = value / 1_000_000_000n;
-  const fraction = value % 1_000_000_000n;
-  const cents = (fraction / 10_000_000n).toString().padStart(2, '0');
-
-  return `${whole.toLocaleString()}.${cents}`;
-}
-
-function formatTimestamp(value: bigint) {
-  return new Date(Number(value)).toISOString().replace('T', ' ').slice(0, 16);
 }
