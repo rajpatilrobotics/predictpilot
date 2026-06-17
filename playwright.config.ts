@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:5173';
+const localBaseURL = 'http://127.0.0.1:5173';
+const baseURL = process.env.E2E_BASE_URL ?? localBaseURL;
+const shouldStartLocalWebServer = process.env.E2E_BASE_URL === undefined;
 
 export default defineConfig({
   testDir: './e2e',
@@ -13,11 +15,15 @@ export default defineConfig({
     baseURL,
     trace: 'on-first-retry',
   },
-  webServer: {
-    command: 'pnpm dev --host 127.0.0.1 --port 5173',
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-  },
+  ...(shouldStartLocalWebServer
+    ? {
+        webServer: {
+          command: 'pnpm dev --host 127.0.0.1 --port 5173',
+          url: localBaseURL,
+          reuseExistingServer: !process.env.CI,
+        },
+      }
+    : {}),
   projects: [
     {
       name: 'chromium',
