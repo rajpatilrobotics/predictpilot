@@ -1,7 +1,6 @@
 import { Transaction } from '@mysten/sui/transactions';
 import { predictDeploymentConfig, type PredictQuoteAssetConfig } from '@/config/predict';
-import { ObjectIdSchema } from '@/integrations/deepbook-predict/schemas';
-import { createAppError, type PredictPilotError } from '@/lib/errors';
+import type { PredictPilotError } from '@/lib/errors';
 import { predictInvalidationKeys } from '@/lib/query-keys';
 import type { QueryKey } from '@tanstack/react-query';
 import type {
@@ -16,7 +15,15 @@ import type {
   PredictTransactionAction,
   PredictTransactionExecutionRequest,
 } from '@/types/tx';
-import { predictProtocolTypes, predictTxTargets } from '../targets';
+import { predictTxTargets } from '../targets';
+import {
+  addPredictManagerTradeCall,
+  buildBinaryMarketKey,
+  createPredictExecutionRequest,
+  createPredictManagerOracleAffectedObjects,
+  createPtbBuildError,
+  validateBinaryTradeInputs,
+} from './builder-shared';
 
 export interface BuildRedeemBinaryTxOptions {
   managerId?: ObjectId | null;
@@ -54,20 +61,8 @@ export type BuildRedeemBinaryTxResult =
       ok: false;
     };
 
-type ValidatedRedeemBinaryInputs =
-  | {
-      managerId: ObjectId;
-      marketKey: MarketKeyModel;
-      ok: true;
-      quantityQuote: QuoteAmount;
-      sender: SuiAddress;
-    }
-  | {
-      error: PredictPilotError;
-      ok: false;
-    };
-
 const REDEEM_BINARY_ACTION = 'REDEEM' satisfies PredictTransactionAction;
+const REDEEM_BINARY_BUILDER = 'buildRedeemBinaryTx';
 const REDEEM_BINARY_DESCRIPTION =
   'Redeem a binary position back into the selected PredictManager balance.';
 
@@ -77,7 +72,17 @@ export function buildRedeemBinaryTx({
   quantityQuote,
   sender,
 }: BuildRedeemBinaryTxOptions = {}): BuildRedeemBinaryTxResult {
-  const validation = validateRedeemBinaryInputs({
+  const validation = validateBinaryTradeInputs({
+    action: REDEEM_BINARY_ACTION,
+    builder: REDEEM_BINARY_BUILDER,
+    copy: {
+      invalidKeyRecovery: 'Refresh oracle state and choose a valid binary market before redeeming.',
+      invalidManagerRecovery:
+        'Select or create a PredictManager before redeeming a binary position.',
+      invalidQuantityMessage: 'Redeem quantity must be greater than zero.',
+      invalidQuantityRecovery:
+        'Enter a positive quantity before building the binary redeem transaction.',
+    },
     managerId,
     marketKey,
     quantityQuote,
@@ -93,247 +98,70 @@ export function buildRedeemBinaryTx({
 
   try {
     const transaction = new Transaction();
-    const binaryMarketKey = transaction.moveCall({
-      arguments: [
-        transaction.pure.id(validation.marketKey.oracleId),
-        transaction.pure.u64(validation.marketKey.expiryMs),
-        transaction.pure.u64(validation.marketKey.strike1e9),
-      ],
-      target: getMarketKeyTarget(validation.marketKey.direction),
-    });
+    const binaryMarketKey = buildBinaryMarketKey(transaction, validation.marketKey);
 
-    transaction.moveCall({
-      arguments: [
-        transaction.object(predictDeploymentConfig.predictObjectId),
-        transaction.object(validation.managerId),
-        transaction.object(validation.marketKey.oracleId),
-        binaryMarketKey,
-        transaction.pure.u64(validation.quantityQuote),
-        transaction.object.clock(),
-      ],
-      target: predictTxTargets.predict.redeem,
-      typeArguments: [predictProtocolTypes.quoteAssetType],
-    });
-
-    const affectedObjects = createBinaryAffectedObjects(validation.managerId, validation.marketKey.oracleId);
-    const postTransactionRefreshKeys = predictInvalidationKeys.afterManagerWrite({
+    addPredictManagerTradeCall({
       managerId: validation.managerId,
       oracleId: validation.marketKey.oracleId,
-    });
-    const preview: RedeemBinaryTxPreview = {
-      action: REDEEM_BINARY_ACTION,
-      affectedObjects,
-      description: REDEEM_BINARY_DESCRIPTION,
-      direction: validation.marketKey.direction,
-      expectedNetwork: predictDeploymentConfig.network,
-      managerId: validation.managerId,
-      marketKey: validation.marketKey,
-      oracleId: validation.marketKey.oracleId,
-      postTransactionRefreshKeys,
+      positionKey: binaryMarketKey,
       quantityQuote: validation.quantityQuote,
-      quoteAsset: predictDeploymentConfig.quoteAsset,
-      sender: validation.sender,
       target: predictTxTargets.predict.redeem,
-      title: 'Redeem binary position',
-    };
+      transaction,
+    });
+
+    const affectedObjects = createPredictManagerOracleAffectedObjects(
+      validation.managerId,
+      validation.marketKey.oracleId,
+    );
+    const preview = createRedeemBinaryPreview(validation, affectedObjects);
 
     return {
-      executionRequest: {
+      executionRequest: createPredictExecutionRequest({
         action: REDEEM_BINARY_ACTION,
         affectedObjects,
         description: REDEEM_BINARY_DESCRIPTION,
         sender: validation.sender,
         transaction,
-      },
+      }),
       ok: true,
       preview,
       transaction,
     };
   } catch (error) {
     return {
-      error: createAppError('PTB_BUILD_FAILED', {
-        context: {
-          action: REDEEM_BINARY_ACTION,
-          builder: 'buildRedeemBinaryTx',
-          errorName: error instanceof Error ? error.name : typeof error,
-          managerId: validation.managerId,
-          oracleId: validation.marketKey.oracleId,
-        },
+      error: createPtbBuildError({
+        action: REDEEM_BINARY_ACTION,
+        builder: REDEEM_BINARY_BUILDER,
+        error,
+        managerId: validation.managerId,
+        oracleId: validation.marketKey.oracleId,
       }),
       ok: false,
     };
   }
 }
 
-function validateRedeemBinaryInputs({
-  managerId,
-  marketKey,
-  quantityQuote,
-  sender,
-}: BuildRedeemBinaryTxOptions): ValidatedRedeemBinaryInputs {
-  if (!hasConnectedSender(sender)) {
-    return {
-      error: createAppError('WALLET_NOT_CONNECTED', {
-        context: {
-          action: REDEEM_BINARY_ACTION,
-          builder: 'buildRedeemBinaryTx',
-        },
-      }),
-      ok: false,
-    };
-  }
-
-  if (!hasValidObjectId(managerId)) {
-    return {
-      error: createAppError('INVALID_INPUT', {
-        context: {
-          action: REDEEM_BINARY_ACTION,
-          builder: 'buildRedeemBinaryTx',
-          field: 'managerId',
-        },
-        message: 'A valid PredictManager object ID is required.',
-        recovery: 'Select or create a PredictManager before redeeming a binary position.',
-      }),
-      ok: false,
-    };
-  }
-
-  const marketKeyValidation = validateMarketKey(marketKey);
-  if (!marketKeyValidation.ok) {
-    return {
-      error: createAppError('INVALID_INPUT', {
-        context: {
-          action: REDEEM_BINARY_ACTION,
-          builder: 'buildRedeemBinaryTx',
-          field: marketKeyValidation.field,
-        },
-        message: marketKeyValidation.message,
-        recovery: 'Refresh oracle state and choose a valid binary market before redeeming.',
-      }),
-      ok: false,
-    };
-  }
-
-  if (!hasPositiveQuoteAmount(quantityQuote)) {
-    return {
-      error: createAppError('INVALID_INPUT', {
-        context: {
-          action: REDEEM_BINARY_ACTION,
-          builder: 'buildRedeemBinaryTx',
-          field: 'quantityQuote',
-        },
-        message: 'Redeem quantity must be greater than zero.',
-        recovery: 'Enter a positive quantity before building the binary redeem transaction.',
-      }),
-      ok: false,
-    };
-  }
-
+function createRedeemBinaryPreview(
+  validation: Extract<ReturnType<typeof validateBinaryTradeInputs>, { ok: true }>,
+  affectedObjects: AffectedObjectHint[],
+): RedeemBinaryTxPreview {
   return {
-    managerId,
-    marketKey: marketKeyValidation.marketKey,
-    ok: true,
-    quantityQuote,
-    sender,
+    action: REDEEM_BINARY_ACTION,
+    affectedObjects,
+    description: REDEEM_BINARY_DESCRIPTION,
+    direction: validation.marketKey.direction,
+    expectedNetwork: predictDeploymentConfig.network,
+    managerId: validation.managerId,
+    marketKey: validation.marketKey,
+    oracleId: validation.marketKey.oracleId,
+    postTransactionRefreshKeys: predictInvalidationKeys.afterManagerWrite({
+      managerId: validation.managerId,
+      oracleId: validation.marketKey.oracleId,
+    }),
+    quantityQuote: validation.quantityQuote,
+    quoteAsset: predictDeploymentConfig.quoteAsset,
+    sender: validation.sender,
+    target: predictTxTargets.predict.redeem,
+    title: 'Redeem binary position',
   };
-}
-
-function createBinaryAffectedObjects(managerId: ObjectId, oracleId: ObjectId): AffectedObjectHint[] {
-  return [
-    {
-      id: predictDeploymentConfig.predictObjectId,
-      kind: 'predict',
-      label: 'Predict',
-    },
-    {
-      id: managerId,
-      kind: 'manager',
-      label: 'PredictManager',
-    },
-    {
-      id: oracleId,
-      kind: 'oracle',
-      label: 'OracleSVI',
-    },
-  ];
-}
-
-function getMarketKeyTarget(direction: BinaryDirection) {
-  return direction === 'UP' ? predictTxTargets.marketKey.up : predictTxTargets.marketKey.down;
-}
-
-function hasConnectedSender(sender: BuildRedeemBinaryTxOptions['sender']): sender is SuiAddress {
-  return typeof sender === 'string' && sender.trim().length > 0;
-}
-
-function hasValidObjectId(objectId: ObjectId | null | undefined): objectId is ObjectId {
-  return typeof objectId === 'string' && ObjectIdSchema.safeParse(objectId).success;
-}
-
-function hasPositiveQuoteAmount(
-  quantityQuote: BuildRedeemBinaryTxOptions['quantityQuote'],
-): quantityQuote is QuoteAmount {
-  return typeof quantityQuote === 'bigint' && quantityQuote > 0n;
-}
-
-function validateMarketKey(
-  marketKey: BuildRedeemBinaryTxOptions['marketKey'],
-):
-  | {
-      marketKey: MarketKeyModel;
-      ok: true;
-    }
-  | {
-      field: keyof MarketKeyModel | 'marketKey';
-      message: string;
-      ok: false;
-    } {
-  if (marketKey === null || marketKey === undefined) {
-    return {
-      field: 'marketKey',
-      message: 'A binary market key is required.',
-      ok: false,
-    };
-  }
-
-  if (!hasValidObjectId(marketKey.oracleId)) {
-    return {
-      field: 'oracleId',
-      message: 'A valid OracleSVI object ID is required.',
-      ok: false,
-    };
-  }
-
-  if (marketKey.direction !== 'UP' && marketKey.direction !== 'DOWN') {
-    return {
-      field: 'direction',
-      message: 'Binary market direction must be UP or DOWN.',
-      ok: false,
-    };
-  }
-
-  if (!isNonNegativeBigint(marketKey.expiryMs)) {
-    return {
-      field: 'expiryMs',
-      message: 'Binary market expiry must be a non-negative integer timestamp.',
-      ok: false,
-    };
-  }
-
-  if (!isNonNegativeBigint(marketKey.strike1e9)) {
-    return {
-      field: 'strike1e9',
-      message: 'Binary market strike must be a non-negative integer price.',
-      ok: false,
-    };
-  }
-
-  return {
-    marketKey,
-    ok: true,
-  };
-}
-
-function isNonNegativeBigint(value: unknown): value is bigint {
-  return typeof value === 'bigint' && value >= 0n;
 }

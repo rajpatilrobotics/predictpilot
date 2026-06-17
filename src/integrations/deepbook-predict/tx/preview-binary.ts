@@ -1,40 +1,31 @@
 import type { QueryKey } from '@tanstack/react-query';
 import { predictDeploymentConfig, type PredictQuoteAssetConfig } from '@/config/predict';
-import {
-  buildBinaryMarketKey,
-  type MarketKeyValidationWarning,
-  type StrikeInput,
-} from '@/features/markets/lib/market-keys';
-import { createAppError, type PredictPilotError } from '@/lib/errors';
-import {
-  getOracleStatus,
-  type OracleActionAvailability,
-  type OracleStatusModel,
-} from '@/lib/oracle-status';
-import { predictInvalidationKeys } from '@/lib/query-keys';
+import { buildBinaryMarketKey, type StrikeInput } from '@/features/markets/lib/market-keys';
+import type { PredictPilotError } from '@/lib/errors';
+import { getOracleStatus, type OracleStatusModel } from '@/lib/oracle-status';
 import type { OracleAskBoundsModel, OracleStateModel } from '@/types/oracle';
-import type {
-  BinaryDirection,
-  MarketKeyModel,
-  QuoteAmount,
-  TimestampMs,
-} from '@/types/predict';
+import type { BinaryDirection, MarketKeyModel, QuoteAmount, TimestampMs } from '@/types/predict';
 import type { BinaryPositionSummaryModel, ManagerSummaryModel } from '@/types/portfolio';
+import {
+  absorbEstimateWarnings,
+  createCommonTradePreviewFields,
+  getInsufficientManagerBalanceFailure,
+  getOracleAvailabilityErrorCode,
+  hasPositiveQuoteAmount,
+  isSameMarketKey,
+  mapMarketKeyWarning,
+  previewFailure,
+  pushOracleRefreshWarning,
+  verifyTradeEstimate,
+  type TradePreviewWarning,
+  type TradePreviewWarningCode,
+} from './preview-shared';
 
 export type BinaryTradePreviewAction = 'MINT' | 'REDEEM';
 export type BinaryTradeEstimateSource = string;
 
-export type BinaryTradePreviewWarningCode =
-  | 'ASK_BOUNDS_PRESENT_UNMAPPED'
-  | 'ASK_BOUNDS_UNAVAILABLE'
-  | 'ESTIMATE_REQUIRES_AUTHORITATIVE_REFRESH'
-  | 'ORACLE_REQUIRES_AUTHORITATIVE_REFRESH';
-
-export interface BinaryTradePreviewWarning {
-  code: BinaryTradePreviewWarningCode;
-  message: string;
-  severity: 'info' | 'warning';
-}
+export type BinaryTradePreviewWarningCode = TradePreviewWarningCode;
+export type BinaryTradePreviewWarning = TradePreviewWarning;
 
 export interface BinaryTradeAmountEstimatorInput {
   action: BinaryTradePreviewAction;
@@ -128,7 +119,7 @@ export async function previewBinaryTrade({
   const warnings: BinaryTradePreviewWarning[] = [];
 
   if (manager === null || manager === undefined) {
-    return failure('MANAGER_NOT_FOUND', warnings, {
+    return previewFailure('MANAGER_NOT_FOUND', warnings, {
       context: {
         action,
         oracleId: oracleState.oracle.oracleId,
@@ -137,7 +128,7 @@ export async function previewBinaryTrade({
   }
 
   if (!hasPositiveQuoteAmount(quantityQuote)) {
-    return failure('INVALID_INPUT', warnings, {
+    return previewFailure('INVALID_INPUT', warnings, {
       context: {
         action,
         field: 'quantityQuote',
@@ -158,7 +149,7 @@ export async function previewBinaryTrade({
   warnings.push(...marketKeyResult.warnings.map(mapMarketKeyWarning));
 
   if (!marketKeyResult.ok) {
-    return failure('INVALID_INPUT', warnings, {
+    return previewFailure('INVALID_INPUT', warnings, {
       context: {
         action,
         errors: marketKeyResult.errors.map((error) => error.code),
@@ -175,7 +166,7 @@ export async function previewBinaryTrade({
   const availability = action === 'MINT' ? oracleStatus.mint : oracleStatus.redeem;
 
   if (!availability.isAllowed) {
-    return failure(getOracleAvailabilityErrorCode(availability), warnings, {
+    return previewFailure(getOracleAvailabilityErrorCode(availability), warnings, {
       context: {
         action,
         managerId: manager.managerId,
@@ -186,15 +177,14 @@ export async function previewBinaryTrade({
   }
 
   if (availability.requiresAuthoritativeRefresh) {
-    warnings.push({
-      code: 'ORACLE_REQUIRES_AUTHORITATIVE_REFRESH',
-      message: 'Oracle state is usable for preview, but should be refreshed before signing.',
-      severity: 'warning',
-    });
+    pushOracleRefreshWarning(warnings);
   }
 
-  if (action === 'REDEEM' && !hasEnoughOwnedQuantity(ownedPosition, marketKeyResult.key, quantityQuote)) {
-    return failure('INVALID_INPUT', warnings, {
+  if (
+    action === 'REDEEM' &&
+    !hasEnoughOwnedQuantity(ownedPosition, marketKeyResult.key, quantityQuote)
+  ) {
+    return previewFailure('INVALID_INPUT', warnings, {
       context: {
         action,
         field: 'quantityQuote',
@@ -206,24 +196,22 @@ export async function previewBinaryTrade({
     });
   }
 
-  if (estimateTradeAmounts === undefined) {
-    return failure('TODO_VERIFY_PATH_USED', warnings, {
-      context: {
-        action,
-        managerId: manager.managerId,
-        oracleId: oracleState.oracle.oracleId,
-        previewPath: 'binary-trade-amount-estimator',
-      },
-    });
-  }
-
-  const estimate = await getVerifiedEstimate({
+  const estimate = await verifyTradeEstimate({
     action,
-    estimateTradeAmounts,
-    manager,
-    marketKey: marketKeyResult.key,
-    oracleState,
-    quantityQuote,
+    estimator: estimateTradeAmounts,
+    input: {
+      action,
+      manager,
+      marketKey: marketKeyResult.key,
+      oracleState,
+      quantityQuote,
+      quoteAsset: predictDeploymentConfig.quoteAsset,
+    },
+    invalidEstimateMessage: 'Binary trade estimator returned an invalid result.',
+    isEstimateUsable: isEstimateUsableForAction,
+    managerId: manager.managerId,
+    oracleId: oracleState.oracle.oracleId,
+    previewPath: 'binary-trade-amount-estimator',
     warnings,
   });
 
@@ -231,25 +219,19 @@ export async function previewBinaryTrade({
     return estimate;
   }
 
-  warnings.push(...(estimate.value.warnings ?? []));
+  absorbEstimateWarnings(estimate.value, warnings);
 
-  if (estimate.value.requiresAuthoritativeRefresh) {
-    warnings.push({
-      code: 'ESTIMATE_REQUIRES_AUTHORITATIVE_REFRESH',
-      message: 'The estimate requires an authoritative refresh before wallet signing.',
-      severity: 'warning',
-    });
-  }
+  const balanceFailure = getInsufficientManagerBalanceFailure({
+    action,
+    estimatedCostQuote:
+      estimate.value.action === 'MINT' ? estimate.value.estimatedCostQuote : undefined,
+    managerBalanceQuote: manager.tradingBalanceQuote,
+    managerId: manager.managerId,
+    warnings,
+  });
 
-  if (estimate.value.action === 'MINT' && estimate.value.estimatedCostQuote > manager.tradingBalanceQuote) {
-    return failure('INSUFFICIENT_MANAGER_DUSDC', warnings, {
-      context: {
-        action,
-        estimatedCostQuote: estimate.value.estimatedCostQuote,
-        managerBalanceQuote: manager.tradingBalanceQuote,
-        managerId: manager.managerId,
-      },
-    });
+  if (balanceFailure !== null) {
+    return balanceFailure;
   }
 
   return {
@@ -257,134 +239,23 @@ export async function previewBinaryTrade({
     preview: {
       action,
       direction,
-      estimateRequiresAuthoritativeRefresh: estimate.value.requiresAuthoritativeRefresh,
-      estimateSource: estimate.value.source,
       ...(estimate.value.action === 'MINT'
         ? { estimatedCostQuote: estimate.value.estimatedCostQuote }
         : { estimatedPayoutQuote: estimate.value.estimatedPayoutQuote }),
       expiryMs: marketKeyResult.key.expiryMs,
-      managerBalanceQuote: manager.tradingBalanceQuote,
-      managerId: manager.managerId,
       marketKey: marketKeyResult.key,
-      oracleId: oracleState.oracle.oracleId,
       oracleStatus,
-      postTransactionRefreshKeys: predictInvalidationKeys.afterManagerWrite({
-        managerId: manager.managerId,
-        oracleId: oracleState.oracle.oracleId,
+      ...createCommonTradePreviewFields({
+        availabilityRequiresAuthoritativeRefresh: availability.requiresAuthoritativeRefresh,
+        estimate: estimate.value,
+        manager,
+        oracleState,
+        quantityQuote,
+        warnings,
       }),
-      quantityQuote,
-      quoteAsset: predictDeploymentConfig.quoteAsset,
-      requiresAuthoritativeRefresh:
-        availability.requiresAuthoritativeRefresh || estimate.value.requiresAuthoritativeRefresh,
       strike1e9: marketKeyResult.key.strike1e9,
-      underlyingAsset: oracleState.oracle.underlyingAsset,
-      warnings,
     },
   };
-}
-
-async function getVerifiedEstimate({
-  action,
-  estimateTradeAmounts,
-  manager,
-  marketKey,
-  oracleState,
-  quantityQuote,
-  warnings,
-}: {
-  action: BinaryTradePreviewAction;
-  estimateTradeAmounts: BinaryTradeAmountEstimator;
-  manager: ManagerSummaryModel;
-  marketKey: MarketKeyModel;
-  oracleState: OracleStateModel;
-  quantityQuote: QuoteAmount;
-  warnings: BinaryTradePreviewWarning[];
-}): Promise<
-  | {
-      ok: true;
-      value: BinaryTradeAmountEstimate;
-    }
-  | {
-      error: PredictPilotError;
-      ok: false;
-      warnings: BinaryTradePreviewWarning[];
-    }
-> {
-  try {
-    const estimate = await estimateTradeAmounts({
-      action,
-      manager,
-      marketKey,
-      oracleState,
-      quantityQuote,
-      quoteAsset: predictDeploymentConfig.quoteAsset,
-    });
-
-    if (!estimate.isVerified) {
-      return failure('TODO_VERIFY_PATH_USED', warnings, {
-        context: {
-          action,
-          estimatorSource: estimate.source,
-          managerId: manager.managerId,
-          oracleId: oracleState.oracle.oracleId,
-          previewPath: 'binary-trade-amount-estimator',
-        },
-      });
-    }
-
-    if (!isEstimateUsableForAction(action, estimate)) {
-      return failure('SIMULATION_FAILED', warnings, {
-        context: {
-          action,
-          estimatorSource: estimate.source,
-          managerId: manager.managerId,
-          oracleId: oracleState.oracle.oracleId,
-        },
-        message: 'Binary trade estimator returned an invalid result.',
-        recovery: 'Refresh the preview inputs and retry with a verified estimator.',
-      });
-    }
-
-    return {
-      ok: true,
-      value: estimate,
-    };
-  } catch (error) {
-    return failure('SIMULATION_FAILED', warnings, {
-      context: {
-        action,
-        errorName: error instanceof Error ? error.name : typeof error,
-        managerId: manager.managerId,
-        oracleId: oracleState.oracle.oracleId,
-      },
-    });
-  }
-}
-
-function failure(
-  code: Parameters<typeof createAppError>[0],
-  warnings: BinaryTradePreviewWarning[],
-  options?: Parameters<typeof createAppError>[1],
-): Extract<PreviewBinaryTradeResult, { ok: false }> {
-  return {
-    error: createAppError(code, options),
-    ok: false,
-    warnings,
-  };
-}
-
-function getOracleAvailabilityErrorCode(
-  availability: OracleActionAvailability,
-): 'ORACLE_NOT_TRADEABLE' | 'ORACLE_STALE' {
-  if (
-    availability.reasonCodes.includes('ORACLE_STALE') ||
-    availability.reasonCodes.includes('ORACLE_PRICE_MISSING') ||
-    availability.reasonCodes.includes('ORACLE_SVI_MISSING')
-  ) {
-    return 'ORACLE_STALE';
-  }
-
-  return 'ORACLE_NOT_TRADEABLE';
 }
 
 function hasEnoughOwnedQuantity(
@@ -411,25 +282,4 @@ function isEstimateUsableForAction(
   return estimate.action === 'MINT'
     ? estimate.estimatedCostQuote >= 0n
     : estimate.estimatedPayoutQuote >= 0n;
-}
-
-function isSameMarketKey(left: MarketKeyModel, right: MarketKeyModel) {
-  return (
-    left.direction === right.direction &&
-    left.expiryMs === right.expiryMs &&
-    left.oracleId === right.oracleId &&
-    left.strike1e9 === right.strike1e9
-  );
-}
-
-function mapMarketKeyWarning(warning: MarketKeyValidationWarning): BinaryTradePreviewWarning {
-  return {
-    code: warning.code,
-    message: warning.message,
-    severity: 'warning',
-  };
-}
-
-function hasPositiveQuoteAmount(quantityQuote: QuoteAmount | null | undefined): quantityQuote is QuoteAmount {
-  return typeof quantityQuote === 'bigint' && quantityQuote > 0n;
 }

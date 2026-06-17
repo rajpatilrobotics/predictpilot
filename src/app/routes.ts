@@ -26,142 +26,23 @@ export interface AppRoute {
   title: string;
 }
 
-export const appRoutes = [
-  {
-    description: 'Terminal overview placeholder for live market, manager, and vault context.',
-    focus: 'Market, manager, and vault readiness',
-    href: '/dashboard',
-    id: 'dashboard',
-    label: 'Dashboard',
-    railDescription: 'Future dashboard actions will route judges into the best next safe workflow.',
-    railTitle: 'Readiness actions',
-    section: 'Overview',
-    shortLabel: 'Home',
-    title: 'Dashboard',
-  },
-  {
-    description: 'Market intelligence placeholder for oracle discovery and expiry scanning.',
-    focus: 'Oracle discovery and market scanning',
-    href: '/markets',
-    id: 'markets',
-    label: 'Markets',
-    railDescription: 'Future market actions will select an oracle before trade preview.',
-    railTitle: 'Market actions',
-    section: 'Overview',
-    shortLabel: 'Markets',
-    title: 'Markets',
-  },
-  {
-    description: 'SVI surface placeholder for volatility surface context and oracle pricing shape.',
-    focus: 'SVI parameters, surface context, and market structure',
-    href: '/svi',
-    id: 'svi',
-    label: 'SVI Surface',
-    railDescription: 'Future SVI actions will compare surface changes before strategy staging.',
-    railTitle: 'SVI context',
-    section: 'Overview',
-    shortLabel: 'SVI',
-    title: 'SVI Surface',
-  },
-  {
-    description: 'Oracle status placeholder for lifecycle, freshness, and settlement readiness.',
-    focus: 'Oracle lifecycle, freshness, and settlement state',
-    href: '/oracle-status',
-    id: 'oracle-status',
-    label: 'Oracle Status',
-    railDescription: 'Future oracle actions will pin a focused market and show freshness checks.',
-    railTitle: 'Oracle status',
-    section: 'Overview',
-    shortLabel: 'Oracle',
-    title: 'Oracle Status',
-  },
-  {
-    description: 'Focused market and strategy placeholder for binary and range preparation.',
-    focus: 'Binary and range strategy preparation',
-    href: '/strategy',
-    id: 'strategy',
-    label: 'Market Detail / Strategy',
-    railDescription: 'Future strategy actions will stage strikes, quantity, risk, and simulation.',
-    railTitle: 'Strategy builder',
-    section: 'Execute',
-    shortLabel: 'Build',
-    title: 'Market Detail / Strategy',
-  },
-  {
-    description: 'PredictManager placeholder for manager readiness and quote balances.',
-    focus: 'Manager readiness and quote balance actions',
-    href: '/manager',
-    id: 'manager',
-    label: 'PredictManager',
-    railDescription: 'Future manager actions will create, deposit, and withdraw through PTBs.',
-    railTitle: 'Manager actions',
-    section: 'Execute',
-    shortLabel: 'Manager',
-    title: 'PredictManager',
-  },
-  {
-    description: 'Portfolio placeholder for manager-backed positions and PnL context.',
-    focus: 'Manager-backed positions and PnL',
-    href: '/portfolio',
-    id: 'portfolio',
-    label: 'Portfolio',
-    railDescription: 'Future portfolio actions will route open positions into preview flows.',
-    railTitle: 'Position actions',
-    section: 'Assets',
-    shortLabel: 'Portfolio',
-    title: 'Portfolio',
-  },
-  {
-    description: 'PnL placeholder for manager profit, loss, and time-series performance context.',
-    focus: 'Manager PnL, performance series, and realized activity',
-    href: '/pnl',
-    id: 'pnl',
-    label: 'PnL',
-    railDescription: 'Future PnL actions will connect position history to manager performance.',
-    railTitle: 'PnL context',
-    section: 'Assets',
-    shortLabel: 'PnL',
-    title: 'PnL',
-  },
-  {
-    description: 'Vault and PLP placeholder for shared-liquidity supply and withdraw context.',
-    focus: 'Vault liquidity, PLP, and exposure',
-    href: '/vault',
-    id: 'vault',
-    label: 'Vault / PLP',
-    railDescription: 'Future vault actions will stage PLP supply or withdrawal previews.',
-    railTitle: 'Vault actions',
-    section: 'Assets',
-    shortLabel: 'Vault',
-    title: 'Vault / PLP',
-  },
-  {
-    description: 'History placeholder for server-backed mints, redeems, LP activity, and digests.',
-    focus: 'Server-backed activity and digest proof',
-    href: '/history',
-    id: 'history',
-    label: 'History',
-    railDescription: 'Future history actions will inspect digest proof and refresh outcomes.',
-    railTitle: 'Activity proof',
-    section: 'Assets',
-    shortLabel: 'History',
-    title: 'History',
-  },
-  {
-    description: 'Demo placeholder for judge walkthrough readiness and proof checkpoints.',
-    focus: 'Judge walkthrough and proof checkpoints',
-    href: '/demo',
-    id: 'demo',
-    label: 'Demo Mode',
-    railDescription: 'Future demo actions will guide the approved live Testnet walkthrough.',
-    railTitle: 'Demo flow',
-    section: 'Demo',
-    shortLabel: 'Demo',
-    title: 'Demo Mode',
-  },
-] as const satisfies readonly AppRoute[];
+type ListedAppRouteId = Exclude<AppRouteId, 'market-detail' | 'not-found'>;
 
-type ListedAppRouteId = (typeof appRoutes)[number]['id'];
+const routeSpecs = [
+  'dashboard|/dashboard|Overview|Dashboard|Home|Market, manager, and vault readiness|Terminal overview placeholder for live market, manager, and vault context.|Readiness actions|Future dashboard actions will route judges into the best next safe workflow.',
+  'markets|/markets|Overview|Markets|Markets|Oracle discovery and market scanning|Market intelligence placeholder for oracle discovery and expiry scanning.|Market actions|Future market actions will select an oracle before trade preview.',
+  'svi|/svi|Overview|SVI Surface|SVI|SVI parameters, surface context, and market structure|SVI surface placeholder for volatility surface context and oracle pricing shape.|SVI context|Future SVI actions will compare surface changes before strategy staging.',
+  'oracle-status|/oracle-status|Overview|Oracle Status|Oracle|Oracle lifecycle, freshness, and settlement state|Oracle status placeholder for lifecycle, freshness, and settlement readiness.|Oracle status|Future oracle actions will pin a focused market and show freshness checks.',
+  'strategy|/strategy|Execute|Market Detail / Strategy|Build|Binary and range strategy preparation|Focused market and strategy placeholder for binary and range preparation.|Strategy builder|Future strategy actions will stage strikes, quantity, risk, and simulation.',
+  'manager|/manager|Execute|PredictManager|Manager|Manager readiness and quote balance actions|PredictManager placeholder for manager readiness and quote balances.|Manager actions|Future manager actions will create, deposit, and withdraw through PTBs.',
+  'portfolio|/portfolio|Assets|Portfolio|Portfolio|Manager-backed positions and PnL|Portfolio placeholder for manager-backed positions and PnL context.|Position actions|Future portfolio actions will route open positions into preview flows.',
+  'pnl|/pnl|Assets|PnL|PnL|Manager PnL, performance series, and realized activity|PnL placeholder for manager profit, loss, and time-series performance context.|PnL context|Future PnL actions will connect position history to manager performance.',
+  'vault|/vault|Assets|Vault / PLP|Vault|Vault liquidity, PLP, and exposure|Vault and PLP placeholder for shared-liquidity supply and withdraw context.|Vault actions|Future vault actions will stage PLP supply or withdrawal previews.',
+  'history|/history|Assets|History|History|Server-backed activity and digest proof|History placeholder for server-backed mints, redeems, LP activity, and digests.|Activity proof|Future history actions will inspect digest proof and refresh outcomes.',
+  'demo|/demo|Demo|Demo Mode|Demo|Judge walkthrough and proof checkpoints|Demo placeholder for judge walkthrough readiness and proof checkpoints.|Demo flow|Future demo actions will guide the approved live Testnet walkthrough.',
+] as const;
+
+export const appRoutes = routeSpecs.map(parseRouteSpec) as readonly AppRoute[];
 
 const notFoundRoute = {
   description: 'The requested route is not part of the PredictPilot shell yet.',
@@ -175,6 +56,60 @@ const notFoundRoute = {
   shortLabel: 'Missing',
   title: 'Route Not Found',
 } as const satisfies AppRoute;
+
+function parseRouteSpec(spec: string): AppRoute {
+  const [id, href, section, label, shortLabel, focus, description, railTitle, railDescription] =
+    spec.split('|');
+
+  if (
+    !isListedRouteId(id) ||
+    !isRouteSection(section) ||
+    href === undefined ||
+    label === undefined ||
+    shortLabel === undefined ||
+    focus === undefined ||
+    description === undefined ||
+    railTitle === undefined ||
+    railDescription === undefined
+  ) {
+    throw new Error(`Invalid PredictPilot route spec: ${spec}`);
+  }
+
+  return {
+    description,
+    focus,
+    href,
+    id,
+    label,
+    railDescription,
+    railTitle,
+    section,
+    shortLabel,
+    title: label,
+  };
+}
+
+function isListedRouteId(id: string | undefined): id is ListedAppRouteId {
+  return (
+    id === 'dashboard' ||
+    id === 'demo' ||
+    id === 'history' ||
+    id === 'manager' ||
+    id === 'markets' ||
+    id === 'oracle-status' ||
+    id === 'pnl' ||
+    id === 'portfolio' ||
+    id === 'strategy' ||
+    id === 'svi' ||
+    id === 'vault'
+  );
+}
+
+function isRouteSection(section: string | undefined): section is AppRoute['section'] {
+  return (
+    section === 'Assets' || section === 'Demo' || section === 'Execute' || section === 'Overview'
+  );
+}
 
 export function resolveAppRoute(pathname: string): AppRoute {
   const normalizedPath = normalizePathname(pathname);
