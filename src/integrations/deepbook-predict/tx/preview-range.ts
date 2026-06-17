@@ -3,34 +3,31 @@ import { predictDeploymentConfig, type PredictQuoteAssetConfig } from '@/config/
 import {
   buildRangeKey,
   type MarketKeyValidationError,
-  type MarketKeyValidationWarning,
   type StrikeInput,
 } from '@/features/markets/lib/market-keys';
-import { createAppError, type PredictPilotError } from '@/lib/errors';
-import {
-  getOracleStatus,
-  type OracleActionAvailability,
-  type OracleStatusModel,
-} from '@/lib/oracle-status';
+import type { PredictPilotError } from '@/lib/errors';
+import { getOracleStatus, type OracleStatusModel } from '@/lib/oracle-status';
 import { predictInvalidationKeys } from '@/lib/query-keys';
 import type { OracleAskBoundsModel, OracleStateModel } from '@/types/oracle';
 import type { QuoteAmount, RangeKeyModel, TimestampMs } from '@/types/predict';
 import type { ManagerSummaryModel, RangePositionModel } from '@/types/portfolio';
+import {
+  getOracleAvailabilityErrorCode,
+  hasPositiveQuoteAmount,
+  isSameRangeKey,
+  mapMarketKeyWarning,
+  previewFailure,
+  pushEstimateRefreshWarning,
+  pushOracleRefreshWarning,
+  type TradePreviewWarning,
+  type TradePreviewWarningCode,
+} from './preview-shared';
 
 export type RangeTradePreviewAction = 'MINT_RANGE' | 'REDEEM_RANGE';
 export type RangeTradeEstimateSource = string;
 
-export type RangeTradePreviewWarningCode =
-  | 'ASK_BOUNDS_PRESENT_UNMAPPED'
-  | 'ASK_BOUNDS_UNAVAILABLE'
-  | 'ESTIMATE_REQUIRES_AUTHORITATIVE_REFRESH'
-  | 'ORACLE_REQUIRES_AUTHORITATIVE_REFRESH';
-
-export interface RangeTradePreviewWarning {
-  code: RangeTradePreviewWarningCode;
-  message: string;
-  severity: 'info' | 'warning';
-}
+export type RangeTradePreviewWarningCode = TradePreviewWarningCode;
+export type RangeTradePreviewWarning = TradePreviewWarning;
 
 export interface RangeTradeAmountEstimatorInput {
   action: RangeTradePreviewAction;
@@ -124,7 +121,7 @@ export async function previewRangeTrade({
   const warnings: RangeTradePreviewWarning[] = [];
 
   if (manager === null || manager === undefined) {
-    return failure('MANAGER_NOT_FOUND', warnings, {
+    return previewFailure('MANAGER_NOT_FOUND', warnings, {
       context: {
         action,
         oracleId: oracleState.oracle.oracleId,
@@ -133,7 +130,7 @@ export async function previewRangeTrade({
   }
 
   if (!hasPositiveQuoteAmount(quantityQuote)) {
-    return failure('INVALID_INPUT', warnings, {
+    return previewFailure('INVALID_INPUT', warnings, {
       context: {
         action,
         field: 'quantityQuote',
@@ -154,7 +151,7 @@ export async function previewRangeTrade({
   warnings.push(...rangeKeyResult.warnings.map(mapMarketKeyWarning));
 
   if (!rangeKeyResult.ok) {
-    return failure(getRangeKeyErrorCode(rangeKeyResult.errors), warnings, {
+    return previewFailure(getRangeKeyErrorCode(rangeKeyResult.errors), warnings, {
       context: {
         action,
         errors: rangeKeyResult.errors.map((error) => error.code),
@@ -163,7 +160,8 @@ export async function previewRangeTrade({
         oracleId: oracleState.oracle.oracleId,
       },
       message: 'Range strike inputs are invalid for this oracle.',
-      recovery: 'Choose lower and higher strikes that are ordered, above the minimum, and aligned to tick size.',
+      recovery:
+        'Choose lower and higher strikes that are ordered, above the minimum, and aligned to tick size.',
     });
   }
 
@@ -171,7 +169,7 @@ export async function previewRangeTrade({
   const availability = action === 'MINT_RANGE' ? oracleStatus.mintRange : oracleStatus.redeemRange;
 
   if (!availability.isAllowed) {
-    return failure(getOracleAvailabilityErrorCode(availability), warnings, {
+    return previewFailure(getOracleAvailabilityErrorCode(availability), warnings, {
       context: {
         action,
         managerId: manager.managerId,
@@ -182,15 +180,14 @@ export async function previewRangeTrade({
   }
 
   if (availability.requiresAuthoritativeRefresh) {
-    warnings.push({
-      code: 'ORACLE_REQUIRES_AUTHORITATIVE_REFRESH',
-      message: 'Oracle state is usable for preview, but should be refreshed before signing.',
-      severity: 'warning',
-    });
+    pushOracleRefreshWarning(warnings);
   }
 
-  if (action === 'REDEEM_RANGE' && !hasEnoughOwnedRangeQuantity(ownedRangePosition, rangeKeyResult.key, quantityQuote)) {
-    return failure('INVALID_INPUT', warnings, {
+  if (
+    action === 'REDEEM_RANGE' &&
+    !hasEnoughOwnedRangeQuantity(ownedRangePosition, rangeKeyResult.key, quantityQuote)
+  ) {
+    return previewFailure('INVALID_INPUT', warnings, {
       context: {
         action,
         field: 'quantityQuote',
@@ -203,7 +200,7 @@ export async function previewRangeTrade({
   }
 
   if (estimateTradeAmounts === undefined) {
-    return failure('TODO_VERIFY_PATH_USED', warnings, {
+    return previewFailure('TODO_VERIFY_PATH_USED', warnings, {
       context: {
         action,
         managerId: manager.managerId,
@@ -230,15 +227,14 @@ export async function previewRangeTrade({
   warnings.push(...(estimate.value.warnings ?? []));
 
   if (estimate.value.requiresAuthoritativeRefresh) {
-    warnings.push({
-      code: 'ESTIMATE_REQUIRES_AUTHORITATIVE_REFRESH',
-      message: 'The estimate requires an authoritative refresh before wallet signing.',
-      severity: 'warning',
-    });
+    pushEstimateRefreshWarning(warnings);
   }
 
-  if (estimate.value.action === 'MINT_RANGE' && estimate.value.estimatedCostQuote > manager.tradingBalanceQuote) {
-    return failure('INSUFFICIENT_MANAGER_DUSDC', warnings, {
+  if (
+    estimate.value.action === 'MINT_RANGE' &&
+    estimate.value.estimatedCostQuote > manager.tradingBalanceQuote
+  ) {
+    return previewFailure('INSUFFICIENT_MANAGER_DUSDC', warnings, {
       context: {
         action,
         estimatedCostQuote: estimate.value.estimatedCostQuote,
@@ -317,7 +313,7 @@ async function getVerifiedEstimate({
     });
 
     if (!estimate.isVerified) {
-      return failure('TODO_VERIFY_PATH_USED', warnings, {
+      return previewFailure('TODO_VERIFY_PATH_USED', warnings, {
         context: {
           action,
           estimatorSource: estimate.source,
@@ -329,7 +325,7 @@ async function getVerifiedEstimate({
     }
 
     if (!isEstimateUsableForAction(action, estimate)) {
-      return failure('SIMULATION_FAILED', warnings, {
+      return previewFailure('SIMULATION_FAILED', warnings, {
         context: {
           action,
           estimatorSource: estimate.source,
@@ -346,7 +342,7 @@ async function getVerifiedEstimate({
       value: estimate,
     };
   } catch (error) {
-    return failure('SIMULATION_FAILED', warnings, {
+    return previewFailure('SIMULATION_FAILED', warnings, {
       context: {
         action,
         errorName: error instanceof Error ? error.name : typeof error,
@@ -357,34 +353,12 @@ async function getVerifiedEstimate({
   }
 }
 
-function failure(
-  code: Parameters<typeof createAppError>[0],
-  warnings: RangeTradePreviewWarning[],
-  options?: Parameters<typeof createAppError>[1],
-): Extract<PreviewRangeTradeResult, { ok: false }> {
-  return {
-    error: createAppError(code, options),
-    ok: false,
-    warnings,
-  };
-}
-
-function getRangeKeyErrorCode(errors: MarketKeyValidationError[]): 'INVALID_INPUT' | 'INVALID_RANGE' {
-  return errors.some((error) => error.code === 'RANGE_ORDER_INVALID') ? 'INVALID_RANGE' : 'INVALID_INPUT';
-}
-
-function getOracleAvailabilityErrorCode(
-  availability: OracleActionAvailability,
-): 'ORACLE_NOT_TRADEABLE' | 'ORACLE_STALE' {
-  if (
-    availability.reasonCodes.includes('ORACLE_STALE') ||
-    availability.reasonCodes.includes('ORACLE_PRICE_MISSING') ||
-    availability.reasonCodes.includes('ORACLE_SVI_MISSING')
-  ) {
-    return 'ORACLE_STALE';
-  }
-
-  return 'ORACLE_NOT_TRADEABLE';
+function getRangeKeyErrorCode(
+  errors: MarketKeyValidationError[],
+): 'INVALID_INPUT' | 'INVALID_RANGE' {
+  return errors.some((error) => error.code === 'RANGE_ORDER_INVALID')
+    ? 'INVALID_RANGE'
+    : 'INVALID_INPUT';
 }
 
 function hasEnoughOwnedRangeQuantity(
@@ -411,25 +385,4 @@ function isEstimateUsableForAction(
   return estimate.action === 'MINT_RANGE'
     ? estimate.estimatedCostQuote >= 0n
     : estimate.estimatedPayoutQuote >= 0n;
-}
-
-function isSameRangeKey(left: RangeKeyModel, right: RangeKeyModel) {
-  return (
-    left.expiryMs === right.expiryMs &&
-    left.higherStrike1e9 === right.higherStrike1e9 &&
-    left.lowerStrike1e9 === right.lowerStrike1e9 &&
-    left.oracleId === right.oracleId
-  );
-}
-
-function mapMarketKeyWarning(warning: MarketKeyValidationWarning): RangeTradePreviewWarning {
-  return {
-    code: warning.code,
-    message: warning.message,
-    severity: 'warning',
-  };
-}
-
-function hasPositiveQuoteAmount(quantityQuote: QuoteAmount | null | undefined): quantityQuote is QuoteAmount {
-  return typeof quantityQuote === 'bigint' && quantityQuote > 0n;
 }

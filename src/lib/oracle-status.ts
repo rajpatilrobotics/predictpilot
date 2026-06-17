@@ -150,29 +150,7 @@ function getMintAvailability({
   isExpired: boolean;
   oracleState: OracleStateModel;
 }): OracleActionAvailability {
-  const reasonCodes: OracleStatusReasonCode[] = [];
-
-  addLifecycleBlockers(reasonCodes, oracleState.oracle.lifecycleStatus);
-
-  if (isExpired) {
-    reasonCodes.push('ORACLE_EXPIRED');
-  }
-
-  if (oracleState.latestPrice === null) {
-    reasonCodes.push('ORACLE_PRICE_MISSING');
-  }
-
-  if (oracleState.latestSvi === null) {
-    reasonCodes.push('ORACLE_SVI_MISSING');
-  }
-
-  if (freshness.aggregateStatus === 'STALE') {
-    reasonCodes.push('ORACLE_STALE');
-  }
-
-  if (freshness.aggregateStatus === 'UNKNOWN' && reasonCodes.length === 0) {
-    reasonCodes.push('ORACLE_STALE');
-  }
+  const reasonCodes = collectOracleTradeBlockers({ freshness, isExpired, oracleState });
 
   if (reasonCodes.length > 0) {
     return actionAvailability({
@@ -233,28 +211,7 @@ function getRedeemAvailability({
   }
 
   const reasonCodes: OracleStatusReasonCode[] = [];
-
-  addLifecycleBlockers(reasonCodes, oracleState.oracle.lifecycleStatus);
-
-  if (isExpired) {
-    reasonCodes.push('ORACLE_EXPIRED');
-  }
-
-  if (oracleState.latestPrice === null) {
-    reasonCodes.push('ORACLE_PRICE_MISSING');
-  }
-
-  if (oracleState.latestSvi === null) {
-    reasonCodes.push('ORACLE_SVI_MISSING');
-  }
-
-  if (freshness.aggregateStatus === 'STALE') {
-    reasonCodes.push('ORACLE_STALE');
-  }
-
-  if (freshness.aggregateStatus === 'UNKNOWN' && reasonCodes.length === 0) {
-    reasonCodes.push('ORACLE_STALE');
-  }
+  reasonCodes.push(...collectOracleTradeBlockers({ freshness, isExpired, oracleState }));
 
   if (reasonCodes.length > 0) {
     return blockedAction(action, reasonCodes, freshness.aggregateStatus !== 'FRESH');
@@ -281,7 +238,46 @@ function getRedeemAvailability({
   });
 }
 
-function addLifecycleBlockers(reasonCodes: OracleStatusReasonCode[], lifecycleStatus: OracleLifecycleStatus) {
+function collectOracleTradeBlockers({
+  freshness,
+  isExpired,
+  oracleState,
+}: {
+  freshness: OracleFreshnessBreakdown;
+  isExpired: boolean;
+  oracleState: OracleStateModel;
+}) {
+  const reasonCodes: OracleStatusReasonCode[] = [];
+
+  addLifecycleBlockers(reasonCodes, oracleState.oracle.lifecycleStatus);
+
+  if (isExpired) {
+    reasonCodes.push('ORACLE_EXPIRED');
+  }
+
+  if (oracleState.latestPrice === null) {
+    reasonCodes.push('ORACLE_PRICE_MISSING');
+  }
+
+  if (oracleState.latestSvi === null) {
+    reasonCodes.push('ORACLE_SVI_MISSING');
+  }
+
+  if (freshness.aggregateStatus === 'STALE') {
+    reasonCodes.push('ORACLE_STALE');
+  }
+
+  if (freshness.aggregateStatus === 'UNKNOWN' && reasonCodes.length === 0) {
+    reasonCodes.push('ORACLE_STALE');
+  }
+
+  return reasonCodes;
+}
+
+function addLifecycleBlockers(
+  reasonCodes: OracleStatusReasonCode[],
+  lifecycleStatus: OracleLifecycleStatus,
+) {
   switch (lifecycleStatus) {
     case 'ACTIVE':
       return;

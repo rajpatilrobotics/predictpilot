@@ -1,40 +1,29 @@
 import type { QueryKey } from '@tanstack/react-query';
 import { predictDeploymentConfig, type PredictQuoteAssetConfig } from '@/config/predict';
-import {
-  buildBinaryMarketKey,
-  type MarketKeyValidationWarning,
-  type StrikeInput,
-} from '@/features/markets/lib/market-keys';
-import { createAppError, type PredictPilotError } from '@/lib/errors';
-import {
-  getOracleStatus,
-  type OracleActionAvailability,
-  type OracleStatusModel,
-} from '@/lib/oracle-status';
+import { buildBinaryMarketKey, type StrikeInput } from '@/features/markets/lib/market-keys';
+import type { PredictPilotError } from '@/lib/errors';
+import { getOracleStatus, type OracleStatusModel } from '@/lib/oracle-status';
 import { predictInvalidationKeys } from '@/lib/query-keys';
 import type { OracleAskBoundsModel, OracleStateModel } from '@/types/oracle';
-import type {
-  BinaryDirection,
-  MarketKeyModel,
-  QuoteAmount,
-  TimestampMs,
-} from '@/types/predict';
+import type { BinaryDirection, MarketKeyModel, QuoteAmount, TimestampMs } from '@/types/predict';
 import type { BinaryPositionSummaryModel, ManagerSummaryModel } from '@/types/portfolio';
+import {
+  getOracleAvailabilityErrorCode,
+  hasPositiveQuoteAmount,
+  isSameMarketKey,
+  mapMarketKeyWarning,
+  previewFailure,
+  pushEstimateRefreshWarning,
+  pushOracleRefreshWarning,
+  type TradePreviewWarning,
+  type TradePreviewWarningCode,
+} from './preview-shared';
 
 export type BinaryTradePreviewAction = 'MINT' | 'REDEEM';
 export type BinaryTradeEstimateSource = string;
 
-export type BinaryTradePreviewWarningCode =
-  | 'ASK_BOUNDS_PRESENT_UNMAPPED'
-  | 'ASK_BOUNDS_UNAVAILABLE'
-  | 'ESTIMATE_REQUIRES_AUTHORITATIVE_REFRESH'
-  | 'ORACLE_REQUIRES_AUTHORITATIVE_REFRESH';
-
-export interface BinaryTradePreviewWarning {
-  code: BinaryTradePreviewWarningCode;
-  message: string;
-  severity: 'info' | 'warning';
-}
+export type BinaryTradePreviewWarningCode = TradePreviewWarningCode;
+export type BinaryTradePreviewWarning = TradePreviewWarning;
 
 export interface BinaryTradeAmountEstimatorInput {
   action: BinaryTradePreviewAction;
@@ -128,7 +117,7 @@ export async function previewBinaryTrade({
   const warnings: BinaryTradePreviewWarning[] = [];
 
   if (manager === null || manager === undefined) {
-    return failure('MANAGER_NOT_FOUND', warnings, {
+    return previewFailure('MANAGER_NOT_FOUND', warnings, {
       context: {
         action,
         oracleId: oracleState.oracle.oracleId,
@@ -137,7 +126,7 @@ export async function previewBinaryTrade({
   }
 
   if (!hasPositiveQuoteAmount(quantityQuote)) {
-    return failure('INVALID_INPUT', warnings, {
+    return previewFailure('INVALID_INPUT', warnings, {
       context: {
         action,
         field: 'quantityQuote',
@@ -158,7 +147,7 @@ export async function previewBinaryTrade({
   warnings.push(...marketKeyResult.warnings.map(mapMarketKeyWarning));
 
   if (!marketKeyResult.ok) {
-    return failure('INVALID_INPUT', warnings, {
+    return previewFailure('INVALID_INPUT', warnings, {
       context: {
         action,
         errors: marketKeyResult.errors.map((error) => error.code),
@@ -175,7 +164,7 @@ export async function previewBinaryTrade({
   const availability = action === 'MINT' ? oracleStatus.mint : oracleStatus.redeem;
 
   if (!availability.isAllowed) {
-    return failure(getOracleAvailabilityErrorCode(availability), warnings, {
+    return previewFailure(getOracleAvailabilityErrorCode(availability), warnings, {
       context: {
         action,
         managerId: manager.managerId,
@@ -186,15 +175,14 @@ export async function previewBinaryTrade({
   }
 
   if (availability.requiresAuthoritativeRefresh) {
-    warnings.push({
-      code: 'ORACLE_REQUIRES_AUTHORITATIVE_REFRESH',
-      message: 'Oracle state is usable for preview, but should be refreshed before signing.',
-      severity: 'warning',
-    });
+    pushOracleRefreshWarning(warnings);
   }
 
-  if (action === 'REDEEM' && !hasEnoughOwnedQuantity(ownedPosition, marketKeyResult.key, quantityQuote)) {
-    return failure('INVALID_INPUT', warnings, {
+  if (
+    action === 'REDEEM' &&
+    !hasEnoughOwnedQuantity(ownedPosition, marketKeyResult.key, quantityQuote)
+  ) {
+    return previewFailure('INVALID_INPUT', warnings, {
       context: {
         action,
         field: 'quantityQuote',
@@ -207,7 +195,7 @@ export async function previewBinaryTrade({
   }
 
   if (estimateTradeAmounts === undefined) {
-    return failure('TODO_VERIFY_PATH_USED', warnings, {
+    return previewFailure('TODO_VERIFY_PATH_USED', warnings, {
       context: {
         action,
         managerId: manager.managerId,
@@ -234,15 +222,14 @@ export async function previewBinaryTrade({
   warnings.push(...(estimate.value.warnings ?? []));
 
   if (estimate.value.requiresAuthoritativeRefresh) {
-    warnings.push({
-      code: 'ESTIMATE_REQUIRES_AUTHORITATIVE_REFRESH',
-      message: 'The estimate requires an authoritative refresh before wallet signing.',
-      severity: 'warning',
-    });
+    pushEstimateRefreshWarning(warnings);
   }
 
-  if (estimate.value.action === 'MINT' && estimate.value.estimatedCostQuote > manager.tradingBalanceQuote) {
-    return failure('INSUFFICIENT_MANAGER_DUSDC', warnings, {
+  if (
+    estimate.value.action === 'MINT' &&
+    estimate.value.estimatedCostQuote > manager.tradingBalanceQuote
+  ) {
+    return previewFailure('INSUFFICIENT_MANAGER_DUSDC', warnings, {
       context: {
         action,
         estimatedCostQuote: estimate.value.estimatedCostQuote,
@@ -321,7 +308,7 @@ async function getVerifiedEstimate({
     });
 
     if (!estimate.isVerified) {
-      return failure('TODO_VERIFY_PATH_USED', warnings, {
+      return previewFailure('TODO_VERIFY_PATH_USED', warnings, {
         context: {
           action,
           estimatorSource: estimate.source,
@@ -333,7 +320,7 @@ async function getVerifiedEstimate({
     }
 
     if (!isEstimateUsableForAction(action, estimate)) {
-      return failure('SIMULATION_FAILED', warnings, {
+      return previewFailure('SIMULATION_FAILED', warnings, {
         context: {
           action,
           estimatorSource: estimate.source,
@@ -350,7 +337,7 @@ async function getVerifiedEstimate({
       value: estimate,
     };
   } catch (error) {
-    return failure('SIMULATION_FAILED', warnings, {
+    return previewFailure('SIMULATION_FAILED', warnings, {
       context: {
         action,
         errorName: error instanceof Error ? error.name : typeof error,
@@ -359,32 +346,6 @@ async function getVerifiedEstimate({
       },
     });
   }
-}
-
-function failure(
-  code: Parameters<typeof createAppError>[0],
-  warnings: BinaryTradePreviewWarning[],
-  options?: Parameters<typeof createAppError>[1],
-): Extract<PreviewBinaryTradeResult, { ok: false }> {
-  return {
-    error: createAppError(code, options),
-    ok: false,
-    warnings,
-  };
-}
-
-function getOracleAvailabilityErrorCode(
-  availability: OracleActionAvailability,
-): 'ORACLE_NOT_TRADEABLE' | 'ORACLE_STALE' {
-  if (
-    availability.reasonCodes.includes('ORACLE_STALE') ||
-    availability.reasonCodes.includes('ORACLE_PRICE_MISSING') ||
-    availability.reasonCodes.includes('ORACLE_SVI_MISSING')
-  ) {
-    return 'ORACLE_STALE';
-  }
-
-  return 'ORACLE_NOT_TRADEABLE';
 }
 
 function hasEnoughOwnedQuantity(
@@ -411,25 +372,4 @@ function isEstimateUsableForAction(
   return estimate.action === 'MINT'
     ? estimate.estimatedCostQuote >= 0n
     : estimate.estimatedPayoutQuote >= 0n;
-}
-
-function isSameMarketKey(left: MarketKeyModel, right: MarketKeyModel) {
-  return (
-    left.direction === right.direction &&
-    left.expiryMs === right.expiryMs &&
-    left.oracleId === right.oracleId &&
-    left.strike1e9 === right.strike1e9
-  );
-}
-
-function mapMarketKeyWarning(warning: MarketKeyValidationWarning): BinaryTradePreviewWarning {
-  return {
-    code: warning.code,
-    message: warning.message,
-    severity: 'warning',
-  };
-}
-
-function hasPositiveQuoteAmount(quantityQuote: QuoteAmount | null | undefined): quantityQuote is QuoteAmount {
-  return typeof quantityQuote === 'bigint' && quantityQuote > 0n;
 }
