@@ -40,6 +40,12 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Integration tests
+        run: pnpm test:integration
+
+      - name: PTB tests
+        run: pnpm test:ptb
+
       - name: Build
         run: pnpm build
 
