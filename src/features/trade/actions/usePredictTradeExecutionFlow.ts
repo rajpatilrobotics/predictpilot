@@ -10,6 +10,7 @@ import {
   type PredictSimulationTransport,
 } from '@/integrations/deepbook-predict/tx/simulate';
 import { createAppError, type PredictPilotError } from '@/lib/errors';
+import { runPostTransactionRefresh } from '@/lib/post-tx-refresh';
 import { executePredictTransaction, type PredictTransactionTransport } from '@/lib/tx-executor';
 import type { QuoteAmount, SuiAddress, TransactionDigest } from '@/types/predict';
 import type {
@@ -284,11 +285,13 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
       return;
     }
 
-    const refreshWarning = await invalidateAfterTrade({
+    const refreshWarning = await runPostTransactionRefresh({
       action,
-      keys: state.builderPreview?.postTransactionRefreshKeys ?? [],
+      affectedObjects: executionResult.affectedObjects,
+      digest: executionResult.digest,
       queryClient: invalidationClient,
-      service: `${copy.statusLabel}.invalidateAfterTrade`,
+      queryKeys: state.builderPreview?.postTransactionRefreshKeys ?? [],
+      service: `${copy.statusLabel}.postTransactionRefresh`,
     });
 
     setState((current) => ({
@@ -351,30 +354,4 @@ function createDAppKitTransactionTransport({
         }
       : {}),
   };
-}
-
-async function invalidateAfterTrade({
-  action,
-  keys,
-  queryClient,
-  service,
-}: {
-  action: PredictTransactionAction;
-  keys: QueryKey[];
-  queryClient: Pick<QueryClient, 'invalidateQueries'>;
-  service: string;
-}) {
-  try {
-    await Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
-    return null;
-  } catch (error) {
-    return createAppError('POST_TX_REFRESH_FAILED', {
-      context: {
-        action,
-        errorName: error instanceof Error ? error.name : typeof error,
-        refreshKeys: keys.length,
-        service,
-      },
-    });
-  }
 }
