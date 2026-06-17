@@ -79,6 +79,16 @@ vi.mock('@/features/history/HistoryPage', () => ({
   ),
 }));
 
+vi.mock('@/features/trade/MarketDetailPage', () => ({
+  MarketDetailPage: ({ oracleId }: { oracleId?: string | null }) => (
+    <article aria-label="Market detail strategy page">
+      <h1>Market Detail / Strategy</h1>
+      <p>{oracleId === undefined ? 'Strategy route mounted' : 'Market detail page mounted'}</p>
+      {oracleId === undefined ? null : <p>{oracleId}</p>}
+    </article>
+  ),
+}));
+
 vi.mock('@/features/vault/VaultPage', () => ({
   VaultPage: () => (
     <article aria-label="Vault page">
@@ -162,6 +172,7 @@ describe('App shell', () => {
       'oracle-status': 'Oracle status page mounted',
       pnl: 'PnL page mounted',
       portfolio: 'Portfolio page mounted',
+      strategy: 'Strategy route mounted',
       svi: 'SVI surface page mounted',
       vault: 'Vault page mounted',
     } as const;
@@ -184,7 +195,7 @@ describe('App shell', () => {
   });
 
   it('keeps unimplemented routes as safe placeholders', () => {
-    const placeholderRouteIds = new Set(['demo', 'manager', 'strategy']);
+    const placeholderRouteIds = new Set(['demo', 'manager']);
 
     for (const route of appRoutes.filter((item) => placeholderRouteIds.has(item.id))) {
       window.history.pushState({}, '', route.href);
@@ -208,10 +219,33 @@ describe('App shell', () => {
     expect(resolveAppRoute('/oracle').id).toBe('oracle-status');
   });
 
+  it('mounts dynamic market detail routes inside the shared shell', () => {
+    const oracleId = '0x123';
+
+    renderAppAt(`/markets/${oracleId}`);
+
+    expect(screen.getByRole('heading', { name: 'Market Detail / Strategy' })).toBeInTheDocument();
+    expect(screen.getByText('Market detail page mounted')).toBeInTheDocument();
+    expect(screen.getByText(oracleId)).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Market Detail / Strategy route placeholder'),
+    ).not.toBeInTheDocument();
+  });
+
   it('renders distinct Phase 5 pages for SVI, oracle status, and PnL', () => {
     const distinctRoutes = [
-      { mountedText: 'SVI surface page mounted', path: '/svi', title: 'SVI Surface', railTitle: 'SVI context' },
-      { mountedText: 'Oracle status page mounted', path: '/oracle-status', title: 'Oracle Status', railTitle: 'Oracle status' },
+      {
+        mountedText: 'SVI surface page mounted',
+        path: '/svi',
+        title: 'SVI Surface',
+        railTitle: 'SVI context',
+      },
+      {
+        mountedText: 'Oracle status page mounted',
+        path: '/oracle-status',
+        title: 'Oracle Status',
+        railTitle: 'Oracle status',
+      },
       { mountedText: 'PnL page mounted', path: '/pnl', title: 'PnL', railTitle: 'PnL context' },
     ] as const;
 

@@ -11,6 +11,7 @@ import { OracleStatusPage } from '@/features/oracle/OracleStatusPage';
 import { SVISurfacePage } from '@/features/oracle/SVISurfacePage';
 import { PnlPage } from '@/features/portfolio/PnlPage';
 import { PortfolioPage } from '@/features/portfolio/PortfolioPage';
+import { MarketDetailPage } from '@/features/trade/MarketDetailPage';
 import { VaultPage } from '@/features/vault/VaultPage';
 import type { AppRoute } from '@/app/routes';
 
@@ -66,24 +67,38 @@ function RouteContent({ route }: { route: AppRoute }) {
       return <HistoryPage />;
     case 'vault':
       return <VaultPage />;
+    case 'market-detail':
+      return <MarketDetailPage oracleId={getOracleIdFromMarketRoute(route.href)} />;
+    case 'strategy':
+      return <MarketDetailPage />;
     case 'demo':
     case 'manager':
-    case 'market-detail':
     case 'not-found':
-    case 'strategy':
       return <RoutePlaceholder route={route} />;
   }
 }
 
+function getOracleIdFromMarketRoute(pathname: string) {
+  const prefix = '/markets/';
+
+  return pathname.startsWith(prefix) ? decodeURIComponent(pathname.slice(prefix.length)) : null;
+}
+
 function RoutePlaceholder({ route }: { route: AppRoute }) {
   return (
-    <article aria-labelledby="route-title" className="min-h-[420px] border border-[#c8d3ce] bg-white p-5 shadow-sm">
+    <article
+      aria-labelledby="route-title"
+      className="min-h-[420px] border border-[#c8d3ce] bg-white p-5 shadow-sm"
+    >
       <div className="flex flex-col gap-2 border-b border-[#d9dfdc] pb-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#446b5e]">
             {route.section}
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-normal text-[#17211d]" id="route-title">
+          <h1
+            className="mt-2 text-3xl font-semibold tracking-normal text-[#17211d]"
+            id="route-title"
+          >
             {route.title}
           </h1>
         </div>
