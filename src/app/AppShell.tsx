@@ -4,6 +4,14 @@ import { MobileNav } from '@/components/layout/MobileNav';
 import { RouteErrorState } from '@/components/layout/RouteStates';
 import { SidebarNav } from '@/components/layout/SidebarNav';
 import { TopBar } from '@/components/layout/TopBar';
+import { DashboardPage } from '@/features/dashboard/DashboardPage';
+import { HistoryPage } from '@/features/history/HistoryPage';
+import { MarketIntelligencePage } from '@/features/markets/MarketIntelligencePage';
+import { OracleStatusPage } from '@/features/oracle/OracleStatusPage';
+import { SVISurfacePage } from '@/features/oracle/SVISurfacePage';
+import { PnlPage } from '@/features/portfolio/PnlPage';
+import { PortfolioPage } from '@/features/portfolio/PortfolioPage';
+import { VaultPage } from '@/features/vault/VaultPage';
 import type { AppRoute } from '@/app/routes';
 
 interface AppShellProps {
@@ -21,7 +29,7 @@ export function AppShell({ activeRoute, isNotFound, onNavigate, routes }: AppShe
         <SidebarNav activeRoute={activeRoute} onNavigate={onNavigate} routes={routes} />
         <main className="min-w-0" id="route-content">
           <TestnetBanner />
-          <section className="mt-4 border border-[#c8d3ce] bg-white p-5 shadow-sm">
+          <section className="mt-4">
             {isNotFound ? (
               <RouteErrorState
                 message="This placeholder route is not part of the approved PP-040 shell."
@@ -29,7 +37,7 @@ export function AppShell({ activeRoute, isNotFound, onNavigate, routes }: AppShe
                 title="Route not found"
               />
             ) : (
-              <RoutePlaceholder route={activeRoute} />
+              <RouteContent route={activeRoute} />
             )}
           </section>
         </main>
@@ -40,9 +48,36 @@ export function AppShell({ activeRoute, isNotFound, onNavigate, routes }: AppShe
   );
 }
 
+function RouteContent({ route }: { route: AppRoute }) {
+  switch (route.id) {
+    case 'dashboard':
+      return <DashboardPage />;
+    case 'markets':
+      return <MarketIntelligencePage />;
+    case 'svi':
+      return <SVISurfacePage />;
+    case 'oracle-status':
+      return <OracleStatusPage />;
+    case 'portfolio':
+      return <PortfolioPage />;
+    case 'pnl':
+      return <PnlPage />;
+    case 'history':
+      return <HistoryPage />;
+    case 'vault':
+      return <VaultPage />;
+    case 'demo':
+    case 'manager':
+    case 'market-detail':
+    case 'not-found':
+    case 'strategy':
+      return <RoutePlaceholder route={route} />;
+  }
+}
+
 function RoutePlaceholder({ route }: { route: AppRoute }) {
   return (
-    <article aria-labelledby="route-title" className="min-h-[420px]">
+    <article aria-labelledby="route-title" className="min-h-[420px] border border-[#c8d3ce] bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-2 border-b border-[#d9dfdc] pb-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#446b5e]">
