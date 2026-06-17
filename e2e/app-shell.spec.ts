@@ -39,6 +39,20 @@ test('reaches mounted and placeholder routes from navigation', async ({ page }) 
   await expect(page.getByRole('heading', { level: 1, name: 'Demo Mode' })).toBeVisible();
 });
 
+test('desktop primary navigation stays visible while scrolling route content', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/dashboard');
+
+  const primaryNav = page.getByRole('navigation', { name: /Primary navigation/i });
+  const activeDashboardLink = primaryNav.getByRole('link', { name: /Dashboard/i });
+
+  await expect(primaryNav).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+
+  await expect(primaryNav).toBeInViewport();
+  await expect(activeDashboardLink).toBeInViewport();
+});
+
 test('demo mode is visibly offline and never claims execution proof', async ({ page }) => {
   await page.goto('/demo');
 

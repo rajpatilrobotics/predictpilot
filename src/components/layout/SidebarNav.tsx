@@ -18,7 +18,7 @@ export function SidebarNav({ activeRoute, onNavigate, routes }: SidebarNavProps)
   return (
     <nav
       aria-label="Primary navigation"
-      className="hidden min-h-[calc(100vh-130px)] border border-[#c8d3ce] bg-white p-3 shadow-sm lg:flex lg:flex-col"
+      className="hidden border border-[#c8d3ce] bg-white p-3 shadow-sm lg:sticky lg:top-4 lg:flex lg:h-[calc(100vh-2rem)] lg:self-start lg:overflow-y-auto lg:flex-col"
     >
       <div className="border-b border-[#d9dfdc] pb-3">
         <p className="text-sm font-semibold text-[#17211d]">Navigation</p>
