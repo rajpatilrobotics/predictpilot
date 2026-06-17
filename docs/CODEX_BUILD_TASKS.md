@@ -780,6 +780,7 @@ Phase ordering:
   - Required tests: doc review plus setup replay on fresh machine
   - Failure modes to avoid: README that promises unsupported features
   - Definition of done: docs match actual implementation status
+  - PP-059 status note: submission-package scaffolding should include proof digest tracking, screenshot folders, final form copy, and explicit `TODO VERIFY` placeholders for live URL, demo video, final oracle/market, and funded Testnet proof. Do not replace those placeholders with invented proof.
 
 - **PP-060 | Run final release candidate gate**
   - Priority: MUST

@@ -10,8 +10,9 @@ PredictPilot is a DeepBook-focused submission for **Sui Overflow 2026**, the glo
 
 ### Project status
 
-**Status:** Active hackathon build  
-**README status:** Draft intended to become the public repository `README.md` once the implementation is finalized.
+**Status:** Submission-prep build on Sui Testnet
+
+**README status:** Current repository guide. Live demo URL, video URL, final demo oracle, and real transaction proof artifacts remain `TODO VERIFY` until the funded Testnet rehearsal is complete.
 
 ### One-line description
 
@@ -150,10 +151,16 @@ Example markdown placeholders:
 
 ### Demo video
 
-- Demo video: `TODO ADD VIDEO URL`
-- Live demo: `TODO ADD LIVE DEMO URL`
-- Repository: `TODO ADD REPOSITORY URL`
+- Demo video: `TODO VERIFY`
+- Live demo: `TODO VERIFY`
+- Repository: [`https://github.com/rajpatilrobotics/predictpilot`](https://github.com/rajpatilrobotics/predictpilot)
 - Deployment runbook: [`docs/DEPLOYMENT_RUNBOOK.md`](./docs/DEPLOYMENT_RUNBOOK.md)
+
+### Implementation status
+
+PredictPilot currently includes the full static Vite terminal shell, Sui Testnet wallet wiring, read-only market/oracle/portfolio/vault/history screens, risk and transaction preview UI, binary/range/vault PTB builders, binary/range/vault execution-flow wiring, post-transaction refresh orchestration, honest demo mode, and automated unit/integration/PTB/E2E coverage.
+
+The repository does **not** yet include public proof artifacts for a funded live Testnet rehearsal. Before final submission, add the public deployment URL, demo video URL, chosen oracle/market IDs, and at least one real transaction digest to `docs/submission/proof/digests.md`. Until then, docs must describe execution as implemented and ready for funded Testnet proof, not as already proven in the submitted package.
 
 ### Main user flows
 
@@ -314,7 +321,7 @@ The vault takes the opposite side of every Predict trade, tracks balance and exp
 - **Sui TypeScript SDK** for transaction building and chain interactions. citeturn7search18turn1search6
 - **gRPC / GraphQL-era Sui architecture** instead of building new dependencies on deprecated JSON-RPC. citeturn13view0turn13view1
 
-**Planned local project stack**
+**Current local project stack**
 
 - React
 - TypeScript
@@ -325,11 +332,9 @@ The vault takes the opposite side of every Predict trade, tracks balance and exp
 - Vitest
 - Playwright
 
-> If the repository later standardizes on **Next.js** instead of **Vite**, update environment variable prefixes from `VITE_` to `NEXT_PUBLIC_` and adjust start/build commands accordingly. `@mysten/create-dapp` currently documents both React and Next.js paths. citeturn12view0
-
 ### Repository structure
 
-Proposed structure for the public repo:
+Current repository structure:
 
 ```text
 .
@@ -339,17 +344,21 @@ Proposed structure for the public repo:
 │  ├─ config/
 │  ├─ features/
 │  │  ├─ dashboard/
+│  │  ├─ demo/
+│  │  ├─ history/
+│  │  ├─ manager/
 │  │  ├─ markets/
+│  │  ├─ oracle/
 │  │  ├─ portfolio/
-│  │  ├─ predict-manager/
-│  │  ├─ trade-binary/
-│  │  ├─ trade-range/
+│  │  ├─ trade/
+│  │  ├─ tx/
+│  │  ├─ wallet/
 │  │  └─ vault/
 │  ├─ hooks/
 │  ├─ integrations/
 │  │  └─ deepbook-predict/
 │  │     ├─ api/
-│  │     ├─ readers/
+│  │     ├─ onchain/
 │  │     ├─ tx/
 │  │     └─ schemas/
 │  ├─ lib/
@@ -358,9 +367,7 @@ Proposed structure for the public repo:
 │  └─ types/
 ├─ e2e/
 ├─ docs/
-│  ├─ screenshots/
-│  └─ diagrams/
-├─ public/
+│  └─ submission/
 └─ README.md
 ```
 
@@ -549,24 +556,22 @@ Sui now recommends current data access through **gRPC** and **GraphQL**. JSON-RP
 - Public Sui RPC endpoints are rate-limited and unsuitable for serious production load. citeturn12view5
 - Testnet data may be reset and is not permanent. citeturn12view4
 - dUSDC acquisition flow is not fully documented in the same official contract reference and remains **TODO VERIFY**.
-- Exact default oracle IDs, market IDs, and explorer URL conventions remain **TODO VERIFY** for this README draft.
-- If the final app uses Next.js instead of Vite, environment variable names and local commands in this draft must be updated.
+- Exact default oracle and market IDs for the recorded demo remain **TODO VERIFY**.
+- Live deployment URL, demo video URL, screenshots, and transaction proof artifacts are still pending final rehearsal.
+- The app is a static Vite frontend. It does not include a custom backend, Mainnet deployment, admin/operator oracle controls, or private-key custody.
 
 ### `TODO VERIFY`
 
-Before turning this draft into the final public README, verify:
+Before final submission, verify:
 
-- final repository URL
 - final demo URL
 - final demo video URL
 - final screenshot paths
-- final local framework choice: **Vite** vs **Next.js**
 - final wallet list to highlight in README
-- final `PredictManager` deposit/withdraw helper function names if referenced explicitly
 - final default oracle/market IDs used by demos
-- final explorer base URL
-- final package manager / Node version constraints
 - final dUSDC request instructions for judges and testers
+- at least one real Testnet digest and matching explorer proof
+- final Sui Overflow 2026 deadline, submission form fields, and video limits from the live portal
 
 ### Security notes
 
@@ -597,9 +602,11 @@ This repository is designed to be documentation-driven. Core docs include:
 - `WIREFRAMES.md`
 - `TESTING_STRATEGY.md`
 - `DEMO_SCRIPT.md`
+- `DEPLOYMENT_RUNBOOK.md`
+- `SUBMISSION_CHECKLIST.md`
 - `CODEX_BUILD_TASKS.md`
 - `ENVIRONMENT_SETUP.md`
-- `README.md` (finalized from this draft)
+- `README.md`
 
 ### Hackathon submission checklist
 
@@ -608,7 +615,7 @@ This repository is designed to be documentation-driven. Core docs include:
 - [ ] At least one real transaction is executed on Testnet.
 - [ ] Transaction digest is shown in the demo.
 - [ ] Portfolio/history refresh after execution is visible.
-- [ ] README is updated from draft to final.
+- [x] README is updated to reflect current implementation status.
 - [ ] Demo video URL is added.
 - [ ] Live demo URL is added.
 - [ ] Screenshots are added.
@@ -629,12 +636,11 @@ After the hackathon, PredictPilot can grow into:
 
 ### Contributors
 
-- **Raj Patil** — `TODO ADD ROLE / LINKS`
-- `TODO ADD TEAM MEMBERS`
+- **Raj Patil** — project owner and builder
 
 ### License
 
-`TODO ADD LICENSE`
+MIT. See [`LICENSE`](./LICENSE).
 
 ### Acknowledgements
 

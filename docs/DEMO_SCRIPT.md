@@ -86,6 +86,18 @@ Freeze these items before the final live demo or recording:
 
 DeepBook Predict is currently documented for Sui Testnet and recommends builders request Predict Testnet tokens, including DUSDC and other assets, through the project’s token request flow. Sui also documents Testnet faucet usage for SUI balances, which you need for gas. citeturn8search0turn7search1
 
+### Current repository demo status
+
+The app now includes the terminal shell, market/oracle/portfolio/vault/history pages, strategy builder, risk preview, transaction preview, wallet-connected execution wiring for binary, range, and vault flows, honest demo mode, and automated test coverage. The final submission package still needs a public deployment URL, demo video URL, selected live oracle/market, screenshots, and real Testnet transaction digests.
+
+Store final proof artifacts in:
+
+* `docs/submission/proof/digests.md`
+* `docs/submission/screenshots/`
+* `docs/submission/final-form-copy.md`
+
+Do not treat demo-mode fixtures or mocked tests as live Testnet proof.
+
 ### Verified integration targets
 
 Use the current official Testnet integration targets below unless a newer official deployment supersedes them. The docs and the repository quickstart match on these identifiers. citeturn8search3turn19view0
@@ -947,7 +959,7 @@ Prepare three backup assets:
 * A screenshot of updated portfolio after that mint
 * A screenshot or clip of a successful vault supply flow
 
-Use them only if live execution is at risk.
+Use them only if live execution is at risk, and label them as backup proof. Store public-safe screenshots under `docs/submission/screenshots/` and record matching digests in `docs/submission/proof/digests.md`.
 
 ### Final submission video structure
 
@@ -1057,6 +1069,8 @@ Use this as the last gate before submission:
 * Transaction digest shown
 * Portfolio refresh shown
 * History row shown
+* Digest recorded in `docs/submission/proof/digests.md`
+* Screenshot proof stored in `docs/submission/screenshots/`
 * DeepBook track fit explained
 * No invented package IDs, APIs, or market IDs
 * All unresolved values marked `TODO VERIFY`

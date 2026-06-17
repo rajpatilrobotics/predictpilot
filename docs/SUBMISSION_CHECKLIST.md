@@ -129,11 +129,12 @@ These are the minimum submission standards for PredictPilot if you want judges t
 
 - [ ] Default branch builds from a clean clone.
 - [ ] `README.md` exists at repo root and matches the final product.
-- [ ] `LICENSE` exists. If final license is undecided, add **`TODO VERIFY`** and resolve before submission.
+- [x] `LICENSE` exists and is MIT.
 - [ ] `.env.example` exists and contains **only placeholder values**, never live secrets.
 - [ ] `package.json` scripts are accurate and tested.
 - [ ] `src/` has no dead demo-only code that contradicts the final product.
 - [ ] `docs/` contains the core planning docs that explain the build clearly.
+- [x] `docs/submission/` contains the proof, screenshot, and final-form-copy scaffolding.
 - [ ] The repo includes no generated junk, accidental screen recordings, node_modules, or large binary artifacts that are not needed for judging.
 
 ### README readiness checklist
@@ -201,7 +202,8 @@ DeepBook Predict’s recommended app integration model is to use the **official 
 
 ### Environment readiness checklist
 
-- [ ] `NEXT_PUBLIC_SUI_NETWORK` is `testnet`.
+- [ ] `VITE_SUI_NETWORK` is `testnet`.
+- [ ] `VITE_SUI_GRPC_URL` points to the Sui Testnet fullnode.
 - [ ] Predict server URL points to the official documented server.
 - [ ] Package/object IDs match official docs.
 - [ ] Explorer base URL is valid.
@@ -528,6 +530,7 @@ If a flow is incomplete, do not fabricate proof. Reduce scope and adjust the pit
 
 Store final screenshots here:
 
+- `docs/submission/screenshots/official-deadline-proof.png`
 - `docs/submission/screenshots/home-market.png`
 - `docs/submission/screenshots/wallet-connected.png`
 - `docs/submission/screenshots/predict-manager.png`
@@ -804,8 +807,10 @@ PredictPilot uses Sui the way the protocol is meant to be used: wallet-connected
 
 **Project:** PredictPilot  
 **Target track:** DeepBook specialized track  
-**Submission owner:** `TODO VERIFY`  
-**Repository URL:** `TODO VERIFY`  
+**Submission owner:** Raj Patil
+
+**Repository URL:** `https://github.com/rajpatilrobotics/predictpilot`
+
 **Live app URL:** `TODO VERIFY`  
 **Demo video URL:** `TODO VERIFY`  
 **Final submitted commit SHA:** `TODO VERIFY`  

@@ -12,6 +12,10 @@ Two important caveats remain. First, I verified the **DeepSurge platform** as th
 
 ## How to Use This File
 
+### Current Implementation Checkpoint
+
+As of PP-059, PredictPilot has a static Vite deployment runbook, implemented terminal routes, read surfaces, transaction preview UI, binary/range/vault execution-flow wiring, demo mode, and automated test coverage. The final public deployment URL, demo video URL, chosen demo oracle/market, screenshots, and real Testnet digest proof remain `TODO VERIFY` until the funded rehearsal is complete. Future Codex work must not claim those proof artifacts exist until they are added under `docs/submission/`.
+
 ### Purpose
 
 Use this file in two ways:
@@ -290,24 +294,24 @@ e2e/
 Use config-driven values like these. Anything unverified stays `TODO VERIFY`.
 
 ```env
-NEXT_PUBLIC_SUI_NETWORK=testnet
-NEXT_PUBLIC_SUI_RPC_URL=https://fullnode.testnet.sui.io:443
-NEXT_PUBLIC_PREDICT_SERVER_URL=https://predict-server.testnet.mystenlabs.com
+VITE_SUI_NETWORK=testnet
+VITE_SUI_GRPC_URL=https://fullnode.testnet.sui.io:443
+VITE_PREDICT_SERVER_URL=https://predict-server.testnet.mystenlabs.com
 
-NEXT_PUBLIC_PREDICT_PACKAGE_ID=0xf5ea2b3749c65d6e56507cc35388719aadb28f9cab873696a2f8687f5c785138
-NEXT_PUBLIC_PREDICT_REGISTRY_ID=0x43af14fed5480c20ff77e2263d5f794c35b9fab7e2212903127062f4fe2a6e64
-NEXT_PUBLIC_PREDICT_OBJECT_ID=0xc8736204d12f0a7277c86388a68bf8a194b0a14c5538ad13f22cbd8e2a38028a
+VITE_PREDICT_PACKAGE_ID=0xf5ea2b3749c65d6e56507cc35388719aadb28f9cab873696a2f8687f5c785138
+VITE_PREDICT_REGISTRY_ID=0x43af14fed5480c20ff77e2263d5f794c35b9fab7e2212903127062f4fe2a6e64
+VITE_PREDICT_OBJECT_ID=0xc8736204d12f0a7277c86388a68bf8a194b0a14c5538ad13f22cbd8e2a38028a
 
-NEXT_PUBLIC_DUSDC_COIN_TYPE=0xe95040085976bfd54a1a07225cd46c8a2b4e8e2b6732f140a0fc49850ba73e1a::dusdc::DUSDC
-NEXT_PUBLIC_DUSDC_CURRENCY_ID=0xf3000dff421833d4bb8ed58fac146d691a3aaba2785aa1989af65a7089ca3e9c
-NEXT_PUBLIC_PLP_COIN_TYPE=0xf5ea2b3749c65d6e56507cc35388719aadb28f9cab873696a2f8687f5c785138::plp::PLP
+VITE_PREDICT_QUOTE_TYPE=0xe95040085976bfd54a1a07225cd46c8a2b4e8e2b6732f140a0fc49850ba73e1a::dusdc::DUSDC
+VITE_PREDICT_QUOTE_CURRENCY_ID=0xf3000dff421833d4bb8ed58fac146d691a3aaba2785aa1989af65a7089ca3e9c
+VITE_PREDICT_QUOTE_DECIMALS=6
+VITE_PLP_TYPE=0xf5ea2b3749c65d6e56507cc35388719aadb28f9cab873696a2f8687f5c785138::plp::PLP
 
-NEXT_PUBLIC_DEFAULT_ORACLE_ID=TODO VERIFY
-NEXT_PUBLIC_DEFAULT_MARKET_ID=TODO VERIFY
-NEXT_PUBLIC_SUI_EXPLORER_URL=TODO VERIFY
+VITE_DEFAULT_ORACLE_ID=TODO VERIFY
+VITE_DEFAULT_MARKET_ID=TODO VERIFY
+VITE_SUI_EXPLORER_URL=https://explorer.sui.io
+VITE_ENABLE_JUDGE_MODE=true
 
-TESTNET_PRIVATE_KEY=DO_NOT_COMMIT
-TESTNET_WALLET_ADDRESS=TODO_VERIFY
 E2E_BASE_URL=http://localhost:5173
 PLAYWRIGHT_HEADLESS=true
 ```
@@ -698,20 +702,20 @@ Server endpoints you may depend on:
 - GET /trades/:oracle_id
 
 Use config-driven environment variables with names like:
-- NEXT_PUBLIC_SUI_NETWORK
-- NEXT_PUBLIC_SUI_RPC_URL
-- NEXT_PUBLIC_PREDICT_SERVER_URL
-- NEXT_PUBLIC_PREDICT_PACKAGE_ID
-- NEXT_PUBLIC_PREDICT_REGISTRY_ID
-- NEXT_PUBLIC_PREDICT_OBJECT_ID
-- NEXT_PUBLIC_DUSDC_COIN_TYPE
-- NEXT_PUBLIC_DUSDC_CURRENCY_ID
-- NEXT_PUBLIC_PLP_COIN_TYPE
-- NEXT_PUBLIC_DEFAULT_ORACLE_ID
-- NEXT_PUBLIC_DEFAULT_MARKET_ID
-- NEXT_PUBLIC_SUI_EXPLORER_URL
-- TESTNET_PRIVATE_KEY
-- TESTNET_WALLET_ADDRESS
+- VITE_SUI_NETWORK
+- VITE_SUI_GRPC_URL
+- VITE_PREDICT_SERVER_URL
+- VITE_PREDICT_PACKAGE_ID
+- VITE_PREDICT_REGISTRY_ID
+- VITE_PREDICT_OBJECT_ID
+- VITE_PREDICT_QUOTE_TYPE
+- VITE_PREDICT_QUOTE_CURRENCY_ID
+- VITE_PREDICT_QUOTE_DECIMALS
+- VITE_PLP_TYPE
+- VITE_DEFAULT_ORACLE_ID
+- VITE_DEFAULT_MARKET_ID
+- VITE_SUI_EXPLORER_URL
+- VITE_ENABLE_JUDGE_MODE
 - E2E_BASE_URL
 - PLAYWRIGHT_HEADLESS
 
@@ -878,12 +882,12 @@ If any critical verification is missing, stop the affected flow and report the b
 - [ ] Existing framework choice is detected and preserved.
 - [ ] `KNOWN_ISSUES_AND_TODO_VERIFY.md` is reviewed for blockers.
 - [ ] Current DeepBook Predict Testnet values match the published contract information page. citeturn13view0
-- [ ] `NEXT_PUBLIC_PREDICT_PACKAGE_ID`, `NEXT_PUBLIC_PREDICT_REGISTRY_ID`, `NEXT_PUBLIC_PREDICT_OBJECT_ID`, `NEXT_PUBLIC_DUSDC_COIN_TYPE`, and `NEXT_PUBLIC_PLP_COIN_TYPE` are config-driven, not component constants. citeturn13view0
+- [ ] `VITE_PREDICT_PACKAGE_ID`, `VITE_PREDICT_REGISTRY_ID`, `VITE_PREDICT_OBJECT_ID`, `VITE_PREDICT_QUOTE_TYPE`, and `VITE_PLP_TYPE` are config-driven, not component constants. citeturn13view0
 - [ ] Chosen wallet integration pattern is based on current dApp Kit and Transaction docs. citeturn15view3turn15view5turn2view0
 - [ ] Node, pnpm, and Sui CLI meet the version policy in `ENVIRONMENT_SETUP.md`, or default to a Node 22+ baseline if no pin exists. citeturn5view1turn27view0turn26view4turn27view2
 - [ ] Testnet SUI funding path is known and working.
 - [ ] DUSDC acquisition path is known and working or explicitly blocked behind `TODO VERIFY`. citeturn12view0turn16view4
-- [ ] `NEXT_PUBLIC_SUI_EXPLORER_URL` is either verified or marked `TODO VERIFY`.
+- [ ] `VITE_SUI_EXPLORER_URL` is verified.
 
 ### Build Checklist
 
