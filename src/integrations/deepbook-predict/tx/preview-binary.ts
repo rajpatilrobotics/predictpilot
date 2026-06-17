@@ -3,17 +3,18 @@ import { predictDeploymentConfig, type PredictQuoteAssetConfig } from '@/config/
 import { buildBinaryMarketKey, type StrikeInput } from '@/features/markets/lib/market-keys';
 import type { PredictPilotError } from '@/lib/errors';
 import { getOracleStatus, type OracleStatusModel } from '@/lib/oracle-status';
-import { predictInvalidationKeys } from '@/lib/query-keys';
 import type { OracleAskBoundsModel, OracleStateModel } from '@/types/oracle';
 import type { BinaryDirection, MarketKeyModel, QuoteAmount, TimestampMs } from '@/types/predict';
 import type { BinaryPositionSummaryModel, ManagerSummaryModel } from '@/types/portfolio';
 import {
+  absorbEstimateWarnings,
+  createCommonTradePreviewFields,
+  getInsufficientManagerBalanceFailure,
   getOracleAvailabilityErrorCode,
   hasPositiveQuoteAmount,
   isSameMarketKey,
   mapMarketKeyWarning,
   previewFailure,
-  pushEstimateRefreshWarning,
   pushOracleRefreshWarning,
   verifyTradeEstimate,
   type TradePreviewWarning,
@@ -218,24 +219,19 @@ export async function previewBinaryTrade({
     return estimate;
   }
 
-  warnings.push(...(estimate.value.warnings ?? []));
+  absorbEstimateWarnings(estimate.value, warnings);
 
-  if (estimate.value.requiresAuthoritativeRefresh) {
-    pushEstimateRefreshWarning(warnings);
-  }
+  const balanceFailure = getInsufficientManagerBalanceFailure({
+    action,
+    estimatedCostQuote:
+      estimate.value.action === 'MINT' ? estimate.value.estimatedCostQuote : undefined,
+    managerBalanceQuote: manager.tradingBalanceQuote,
+    managerId: manager.managerId,
+    warnings,
+  });
 
-  if (
-    estimate.value.action === 'MINT' &&
-    estimate.value.estimatedCostQuote > manager.tradingBalanceQuote
-  ) {
-    return previewFailure('INSUFFICIENT_MANAGER_DUSDC', warnings, {
-      context: {
-        action,
-        estimatedCostQuote: estimate.value.estimatedCostQuote,
-        managerBalanceQuote: manager.tradingBalanceQuote,
-        managerId: manager.managerId,
-      },
-    });
+  if (balanceFailure !== null) {
+    return balanceFailure;
   }
 
   return {
@@ -243,28 +239,21 @@ export async function previewBinaryTrade({
     preview: {
       action,
       direction,
-      estimateRequiresAuthoritativeRefresh: estimate.value.requiresAuthoritativeRefresh,
-      estimateSource: estimate.value.source,
       ...(estimate.value.action === 'MINT'
         ? { estimatedCostQuote: estimate.value.estimatedCostQuote }
         : { estimatedPayoutQuote: estimate.value.estimatedPayoutQuote }),
       expiryMs: marketKeyResult.key.expiryMs,
-      managerBalanceQuote: manager.tradingBalanceQuote,
-      managerId: manager.managerId,
       marketKey: marketKeyResult.key,
-      oracleId: oracleState.oracle.oracleId,
       oracleStatus,
-      postTransactionRefreshKeys: predictInvalidationKeys.afterManagerWrite({
-        managerId: manager.managerId,
-        oracleId: oracleState.oracle.oracleId,
+      ...createCommonTradePreviewFields({
+        availabilityRequiresAuthoritativeRefresh: availability.requiresAuthoritativeRefresh,
+        estimate: estimate.value,
+        manager,
+        oracleState,
+        quantityQuote,
+        warnings,
       }),
-      quantityQuote,
-      quoteAsset: predictDeploymentConfig.quoteAsset,
-      requiresAuthoritativeRefresh:
-        availability.requiresAuthoritativeRefresh || estimate.value.requiresAuthoritativeRefresh,
       strike1e9: marketKeyResult.key.strike1e9,
-      underlyingAsset: oracleState.oracle.underlyingAsset,
-      warnings,
     },
   };
 }

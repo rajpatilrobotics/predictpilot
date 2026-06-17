@@ -1,8 +1,13 @@
 import type { MarketKeyValidationWarning } from '@/features/markets/lib/market-keys';
+import { predictDeploymentConfig } from '@/config/predict';
 import type { PredictPilotError } from '@/lib/errors';
 import { createAppError } from '@/lib/errors';
 import type { OracleActionAvailability } from '@/lib/oracle-status';
+import { predictInvalidationKeys } from '@/lib/query-keys';
+import type { QueryKey } from '@tanstack/react-query';
+import type { OracleStateModel } from '@/types/oracle';
 import type { MarketKeyModel, ObjectId, QuoteAmount, RangeKeyModel } from '@/types/predict';
+import type { ManagerSummaryModel } from '@/types/portfolio';
 
 export type TradePreviewWarningCode =
   | 'ASK_BOUNDS_PRESENT_UNMAPPED'
@@ -93,7 +98,23 @@ export function pushEstimateRefreshWarning(warnings: TradePreviewWarning[]) {
 export interface VerifiableTradeEstimate<TAction extends string> {
   action: TAction;
   isVerified: boolean;
+  requiresAuthoritativeRefresh: boolean;
   source: string;
+  warnings?: TradePreviewWarning[];
+}
+
+export interface CommonTradePreviewFields {
+  estimateRequiresAuthoritativeRefresh: boolean;
+  estimateSource: string;
+  managerBalanceQuote: QuoteAmount;
+  managerId: ObjectId;
+  oracleId: ObjectId;
+  postTransactionRefreshKeys: QueryKey[];
+  quantityQuote: QuoteAmount;
+  quoteAsset: typeof predictDeploymentConfig.quoteAsset;
+  requiresAuthoritativeRefresh: boolean;
+  underlyingAsset: string;
+  warnings: TradePreviewWarning[];
 }
 
 export async function verifyTradeEstimate<
@@ -185,4 +206,76 @@ export async function verifyTradeEstimate<
       },
     });
   }
+}
+
+export function absorbEstimateWarnings(
+  estimate: VerifiableTradeEstimate<string>,
+  warnings: TradePreviewWarning[],
+) {
+  warnings.push(...(estimate.warnings ?? []));
+
+  if (estimate.requiresAuthoritativeRefresh) {
+    pushEstimateRefreshWarning(warnings);
+  }
+}
+
+export function getInsufficientManagerBalanceFailure<TAction extends string>({
+  action,
+  estimatedCostQuote,
+  managerBalanceQuote,
+  managerId,
+  warnings,
+}: {
+  action: TAction;
+  estimatedCostQuote?: QuoteAmount;
+  managerBalanceQuote: QuoteAmount;
+  managerId: ObjectId;
+  warnings: TradePreviewWarning[];
+}) {
+  if (estimatedCostQuote === undefined || estimatedCostQuote <= managerBalanceQuote) {
+    return null;
+  }
+
+  return previewFailure('INSUFFICIENT_MANAGER_DUSDC', warnings, {
+    context: {
+      action,
+      estimatedCostQuote,
+      managerBalanceQuote,
+      managerId,
+    },
+  });
+}
+
+export function createCommonTradePreviewFields({
+  availabilityRequiresAuthoritativeRefresh,
+  estimate,
+  manager,
+  oracleState,
+  quantityQuote,
+  warnings,
+}: {
+  availabilityRequiresAuthoritativeRefresh: boolean;
+  estimate: VerifiableTradeEstimate<string>;
+  manager: ManagerSummaryModel;
+  oracleState: OracleStateModel;
+  quantityQuote: QuoteAmount;
+  warnings: TradePreviewWarning[];
+}): CommonTradePreviewFields {
+  return {
+    estimateRequiresAuthoritativeRefresh: estimate.requiresAuthoritativeRefresh,
+    estimateSource: estimate.source,
+    managerBalanceQuote: manager.tradingBalanceQuote,
+    managerId: manager.managerId,
+    oracleId: oracleState.oracle.oracleId,
+    postTransactionRefreshKeys: predictInvalidationKeys.afterManagerWrite({
+      managerId: manager.managerId,
+      oracleId: oracleState.oracle.oracleId,
+    }),
+    quantityQuote,
+    quoteAsset: predictDeploymentConfig.quoteAsset,
+    requiresAuthoritativeRefresh:
+      availabilityRequiresAuthoritativeRefresh || estimate.requiresAuthoritativeRefresh,
+    underlyingAsset: oracleState.oracle.underlyingAsset,
+    warnings,
+  };
 }

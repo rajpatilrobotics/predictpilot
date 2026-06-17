@@ -7,17 +7,18 @@ import {
 } from '@/features/markets/lib/market-keys';
 import type { PredictPilotError } from '@/lib/errors';
 import { getOracleStatus, type OracleStatusModel } from '@/lib/oracle-status';
-import { predictInvalidationKeys } from '@/lib/query-keys';
 import type { OracleAskBoundsModel, OracleStateModel } from '@/types/oracle';
 import type { QuoteAmount, RangeKeyModel, TimestampMs } from '@/types/predict';
 import type { ManagerSummaryModel, RangePositionModel } from '@/types/portfolio';
 import {
+  absorbEstimateWarnings,
+  createCommonTradePreviewFields,
+  getInsufficientManagerBalanceFailure,
   getOracleAvailabilityErrorCode,
   hasPositiveQuoteAmount,
   isSameRangeKey,
   mapMarketKeyWarning,
   previewFailure,
-  pushEstimateRefreshWarning,
   pushOracleRefreshWarning,
   verifyTradeEstimate,
   type TradePreviewWarning,
@@ -223,53 +224,41 @@ export async function previewRangeTrade({
     return estimate;
   }
 
-  warnings.push(...(estimate.value.warnings ?? []));
+  absorbEstimateWarnings(estimate.value, warnings);
 
-  if (estimate.value.requiresAuthoritativeRefresh) {
-    pushEstimateRefreshWarning(warnings);
-  }
+  const balanceFailure = getInsufficientManagerBalanceFailure({
+    action,
+    estimatedCostQuote:
+      estimate.value.action === 'MINT_RANGE' ? estimate.value.estimatedCostQuote : undefined,
+    managerBalanceQuote: manager.tradingBalanceQuote,
+    managerId: manager.managerId,
+    warnings,
+  });
 
-  if (
-    estimate.value.action === 'MINT_RANGE' &&
-    estimate.value.estimatedCostQuote > manager.tradingBalanceQuote
-  ) {
-    return previewFailure('INSUFFICIENT_MANAGER_DUSDC', warnings, {
-      context: {
-        action,
-        estimatedCostQuote: estimate.value.estimatedCostQuote,
-        managerBalanceQuote: manager.tradingBalanceQuote,
-        managerId: manager.managerId,
-      },
-    });
+  if (balanceFailure !== null) {
+    return balanceFailure;
   }
 
   return {
     ok: true,
     preview: {
       action,
-      estimateRequiresAuthoritativeRefresh: estimate.value.requiresAuthoritativeRefresh,
-      estimateSource: estimate.value.source,
       ...(estimate.value.action === 'MINT_RANGE'
         ? { estimatedCostQuote: estimate.value.estimatedCostQuote }
         : { estimatedPayoutQuote: estimate.value.estimatedPayoutQuote }),
       expiryMs: rangeKeyResult.key.expiryMs,
       higherStrike1e9: rangeKeyResult.key.higherStrike1e9,
       lowerStrike1e9: rangeKeyResult.key.lowerStrike1e9,
-      managerBalanceQuote: manager.tradingBalanceQuote,
-      managerId: manager.managerId,
-      oracleId: oracleState.oracle.oracleId,
       oracleStatus,
-      postTransactionRefreshKeys: predictInvalidationKeys.afterManagerWrite({
-        managerId: manager.managerId,
-        oracleId: oracleState.oracle.oracleId,
+      ...createCommonTradePreviewFields({
+        availabilityRequiresAuthoritativeRefresh: availability.requiresAuthoritativeRefresh,
+        estimate: estimate.value,
+        manager,
+        oracleState,
+        quantityQuote,
+        warnings,
       }),
-      quantityQuote,
-      quoteAsset: predictDeploymentConfig.quoteAsset,
       rangeKey: rangeKeyResult.key,
-      requiresAuthoritativeRefresh:
-        availability.requiresAuthoritativeRefresh || estimate.value.requiresAuthoritativeRefresh,
-      underlyingAsset: oracleState.oracle.underlyingAsset,
-      warnings,
     },
   };
 }
