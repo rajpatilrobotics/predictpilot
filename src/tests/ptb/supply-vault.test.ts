@@ -1,124 +1,43 @@
 import { describe, expect, it } from 'vitest';
 import { predictDeploymentConfig } from '@/config/predict';
-import {
-  predictProtocolTypes,
-  predictTxTargets,
-} from '@/integrations/deepbook-predict/targets';
+import { predictProtocolTypes, predictTxTargets } from '@/integrations/deepbook-predict/targets';
 import { buildSupplyVaultTx } from '@/integrations/deepbook-predict/tx/supply-vault';
-import type { QuoteAmount, SuiAddress } from '@/types/predict';
-import type { VaultModel } from '@/types/vault';
+import {
+  createVaultFixture,
+  expectPtbError,
+  expectPtbOk,
+  expectVaultFlowTransaction,
+  expectWalletDisconnected,
+  ptbSender,
+  ptbVaultAmountQuote,
+} from './ptb-test-helpers';
 
-const sender =
-  '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
-const amountQuote = 1_500_000n as QuoteAmount;
 const otherQuoteType = '0x2::other::COIN';
-
-function createVault(overrides: Partial<VaultModel> = {}): VaultModel {
-  return {
-    assetBalanceQuote: 5_000_000n,
-    availableLiquidityQuote: 4_000_000n,
-    availableWithdrawalQuote: 3_000_000n,
-    lastRefreshedAtMs: 100_000n,
-    maxPayoutUtilizationRatio: 0.25,
-    netDepositsQuote: 5_000_000n,
-    plpSharePrice: 1.02,
-    plpTotalSupplyAtomic: 5_000_000n,
-    predictId: predictDeploymentConfig.predictObjectId,
-    quoteAssetType: predictProtocolTypes.quoteAssetType,
-    quoteAssetTypes: [predictProtocolTypes.quoteAssetType],
-    totalMaxPayoutQuote: 1_000_000n,
-    totalMtmQuote: 50_000n,
-    totalSuppliedQuote: 6_000_000n,
-    totalWithdrawnQuote: 1_000_000n,
-    utilizationRatio: 0.2,
-    vaultBalanceQuote: 5_000_000n,
-    vaultValueQuote: 5_100_000n,
-    ...overrides,
-  };
-}
 
 describe('buildSupplyVaultTx', () => {
   it('builds a DUSDC coin intent, predicts supply, and transfers returned PLP', () => {
-    const result = buildSupplyVaultTx({ amountQuote, sender, vault: createVault() });
+    const result = expectPtbOk(
+      buildSupplyVaultTx({
+        amountQuote: ptbVaultAmountQuote,
+        sender: ptbSender,
+        vault: createVaultFixture(),
+      }),
+    );
 
-    expect(result.ok).toBe(true);
-
-    if (!result.ok) {
-      throw new Error(result.error.message);
-    }
-
-    const transactionData = result.transaction.getData();
-
-    expect(transactionData.inputs).toMatchObject([
-      {
-        $kind: 'UnresolvedObject',
-        UnresolvedObject: {
-          objectId: predictDeploymentConfig.predictObjectId,
-        },
-      },
-      {
-        $kind: 'Object',
-        Object: {
-          SharedObject: {
-            initialSharedVersion: 1,
-            mutable: false,
-            objectId: '0x0000000000000000000000000000000000000000000000000000000000000006',
-          },
-        },
-      },
-      { $kind: 'Pure' },
-    ]);
-    expect(transactionData.commands).toMatchObject([
-      {
-        $Intent: {
-          data: {
-            balance: amountQuote,
-            outputKind: 'coin',
-            type: predictProtocolTypes.quoteAssetType,
-          },
-          name: 'CoinWithBalance',
-        },
-        $kind: '$Intent',
-      },
-      {
-        $kind: 'MoveCall',
-        MoveCall: {
-          arguments: [
-            { $kind: 'Input', Input: 0, type: 'object' },
-            { $kind: 'Result', Result: 0 },
-            { $kind: 'Input', Input: 1, type: 'object' },
-          ],
-          function: 'supply',
-          module: 'predict',
-          package: predictDeploymentConfig.packageId,
-          typeArguments: [predictProtocolTypes.quoteAssetType],
-        },
-      },
-      {
-        $kind: 'TransferObjects',
-        TransferObjects: {
-          address: { $kind: 'Input', Input: 2, type: 'pure' },
-          objects: [{ $kind: 'Result', Result: 1 }],
-        },
-      },
-    ]);
-
-    const supplyCommand = transactionData.commands[1];
-    const moveCall = supplyCommand?.MoveCall;
-    const target = `${moveCall?.package}::${moveCall?.module}::${moveCall?.function}`;
-
-    expect(target).toBe(predictTxTargets.predict.supply);
+    expectVaultFlowTransaction({
+      coinAmount: ptbVaultAmountQuote,
+      coinType: predictProtocolTypes.quoteAssetType,
+      data: result.transaction.getData(),
+      functionName: 'supply',
+      target: predictTxTargets.predict.supply,
+    });
   });
 
   it('returns a preview and execution request for later signing', () => {
-    const vault = createVault();
-    const result = buildSupplyVaultTx({ amountQuote, sender, vault });
-
-    expect(result.ok).toBe(true);
-
-    if (!result.ok) {
-      throw new Error(result.error.message);
-    }
+    const vault = createVaultFixture();
+    const result = expectPtbOk(
+      buildSupplyVaultTx({ amountQuote: ptbVaultAmountQuote, sender: ptbSender, vault }),
+    );
 
     expect(result.preview).toMatchObject({
       action: 'SUPPLY',
@@ -137,8 +56,9 @@ describe('buildSupplyVaultTx', () => {
           label: 'Wallet PLP',
         },
       ],
-      amountQuote,
-      description: 'Supply wallet DUSDC to the Predict vault and receive PLP shares in the connected wallet.',
+      amountQuote: ptbVaultAmountQuote,
+      description:
+        'Supply wallet DUSDC to the Predict vault and receive PLP shares in the connected wallet.',
       exactOutputStatus: 'SIMULATION_OR_CONFIRMATION_REQUIRED',
       expectedNetwork: 'testnet',
       plpConsequence: {
@@ -148,7 +68,7 @@ describe('buildSupplyVaultTx', () => {
       },
       predictId: predictDeploymentConfig.predictObjectId,
       quoteAsset: predictDeploymentConfig.quoteAsset,
-      sender,
+      sender: ptbSender,
       target: predictTxTargets.predict.supply,
       title: 'Supply DUSDC to Predict vault',
       vaultSnapshot: {
@@ -162,98 +82,62 @@ describe('buildSupplyVaultTx', () => {
       action: 'SUPPLY',
       affectedObjects: result.preview.affectedObjects,
       description: result.preview.description,
-      sender,
+      sender: ptbSender,
     });
     expect(result.executionRequest.transaction).toBe(result.transaction);
   });
 
   it('fails safely for missing sender, missing config, and missing vault state', () => {
-    const missingSender = buildSupplyVaultTx({ amountQuote, vault: createVault() });
+    const missingSender = buildSupplyVaultTx({
+      amountQuote: ptbVaultAmountQuote,
+      vault: createVaultFixture(),
+    });
     const missingConfig = buildSupplyVaultTx({
-      amountQuote,
+      amountQuote: ptbVaultAmountQuote,
       protocolConfig: {
         plpType: predictProtocolTypes.plpType,
         quoteAsset: predictDeploymentConfig.quoteAsset,
         quoteAssetType: predictProtocolTypes.quoteAssetType,
         supplyTarget: predictTxTargets.predict.supply,
       },
-      sender,
-      vault: createVault(),
+      sender: ptbSender,
+      vault: createVaultFixture(),
     });
-    const missingVault = buildSupplyVaultTx({ amountQuote, sender });
+    const missingVault = buildSupplyVaultTx({
+      amountQuote: ptbVaultAmountQuote,
+      sender: ptbSender,
+    });
 
-    expect(missingSender).toMatchObject({
-      error: {
-        code: 'WALLET_NOT_CONNECTED',
-        context: {
-          action: 'SUPPLY',
-          builder: 'buildSupplyVaultTx',
-        },
-      },
-      ok: false,
+    expectWalletDisconnected(missingSender, {
+      action: 'SUPPLY',
+      builder: 'buildSupplyVaultTx',
     });
-    expect(missingConfig).toMatchObject({
-      error: {
-        code: 'TODO_VERIFY_PATH_USED',
-        context: {
-          field: 'predictObjectId',
-        },
-      },
-      ok: false,
-    });
-    expect(missingVault).toMatchObject({
-      error: {
-        code: 'TODO_VERIFY_PATH_USED',
-        context: {
-          field: 'vault',
-        },
-      },
-      ok: false,
-    });
+    expectPtbError(missingConfig, { code: 'TODO_VERIFY_PATH_USED', field: 'predictObjectId' });
+    expectPtbError(missingVault, { code: 'TODO_VERIFY_PATH_USED', field: 'vault' });
   });
 
   it('fails safely for invalid amounts and incompatible vault quote assets', () => {
-    const zeroAmount = buildSupplyVaultTx({ amountQuote: 0n, sender, vault: createVault() });
+    const zeroAmount = buildSupplyVaultTx({
+      amountQuote: 0n,
+      sender: ptbSender,
+      vault: createVaultFixture(),
+    });
     const negativeAmount = buildSupplyVaultTx({
       amountQuote: -1n,
-      sender,
-      vault: createVault(),
+      sender: ptbSender,
+      vault: createVaultFixture(),
     });
     const incompatibleQuote = buildSupplyVaultTx({
-      amountQuote,
-      sender,
-      vault: createVault({
+      amountQuote: ptbVaultAmountQuote,
+      sender: ptbSender,
+      vault: createVaultFixture({
         quoteAssetType: otherQuoteType,
         quoteAssetTypes: [otherQuoteType],
       }),
     });
 
-    expect(zeroAmount).toMatchObject({
-      error: {
-        code: 'INVALID_INPUT',
-        context: {
-          field: 'amountQuote',
-        },
-      },
-      ok: false,
-    });
-    expect(negativeAmount).toMatchObject({
-      error: {
-        code: 'INVALID_INPUT',
-        context: {
-          field: 'amountQuote',
-        },
-      },
-      ok: false,
-    });
-    expect(incompatibleQuote).toMatchObject({
-      error: {
-        code: 'INVALID_INPUT',
-        context: {
-          field: 'quoteAssetType',
-        },
-      },
-      ok: false,
-    });
+    expectPtbError(zeroAmount, { code: 'INVALID_INPUT', field: 'amountQuote' });
+    expectPtbError(negativeAmount, { code: 'INVALID_INPUT', field: 'amountQuote' });
+    expectPtbError(incompatibleQuote, { code: 'INVALID_INPUT', field: 'quoteAssetType' });
   });
 });
