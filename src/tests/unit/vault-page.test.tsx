@@ -1,12 +1,56 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { predictDeploymentConfig } from '@/config/predict';
 import { VaultPage } from '@/features/vault/VaultPage';
 import type { VaultReadClient } from '@/integrations/deepbook-predict/api/vault';
+import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
 import { HttpClientError } from '@/lib/http';
+import type { PredictTransactionTransport } from '@/lib/tx-executor';
 import type { SuiAddress } from '@/types/predict';
+import {
+  createReadyTradeSimulationTransport,
+  createTradeExecutionTransport,
+} from './trade-test-helpers';
+
+const dAppKitMocks = vi.hoisted(() => ({
+  currentAccount: {
+    address: '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c',
+  },
+  currentNetwork: 'testnet',
+  currentWallet: {
+    name: 'Test Wallet',
+  },
+  signAndExecuteTransaction: vi.fn(),
+  simulateTransaction: vi.fn(),
+  waitForTransaction: vi.fn(),
+  walletConnection: {
+    isConnected: true,
+    isConnecting: false,
+    isDisconnected: false,
+    isReconnecting: false,
+    status: 'connected',
+    supportedIntents: ['sui:signAndExecuteTransaction'],
+    wallet: {
+      name: 'Test Wallet',
+    },
+  },
+}));
+
+vi.mock('@mysten/dapp-kit-react', () => ({
+  useCurrentAccount: () => dAppKitMocks.currentAccount,
+  useCurrentClient: () => ({
+    simulateTransaction: dAppKitMocks.simulateTransaction,
+    waitForTransaction: dAppKitMocks.waitForTransaction,
+  }),
+  useCurrentNetwork: () => dAppKitMocks.currentNetwork,
+  useCurrentWallet: () => dAppKitMocks.currentWallet,
+  useDAppKit: () => ({
+    signAndExecuteTransaction: dAppKitMocks.signAndExecuteTransaction,
+  }),
+  useWalletConnection: () => dAppKitMocks.walletConnection,
+}));
 
 const predictId = predictDeploymentConfig.predictObjectId;
 const quoteAsset = 'e95040085976bfd54a1a07225cd46c8a2b4e8e2b6732f140a0fc49850ba73e1a::dusdc::DUSDC';
@@ -89,25 +133,37 @@ function performancePoints() {
 function renderVaultPage({
   client = createVaultClient(),
   currentNetwork = 'testnet',
+  executionTransport = createTradeExecutionTransport(),
+  simulationTransport = createReadyTradeSimulationTransport(),
   walletDusdcBalanceQuote = 2_000_000n,
   walletPlpBalanceAtomic = 2_000_000n,
 }: {
   client?: VaultReadClient;
   currentNetwork?: string | null;
+  executionTransport?: PredictTransactionTransport;
+  simulationTransport?: PredictSimulationTransport;
   walletDusdcBalanceQuote?: bigint | null;
   walletPlpBalanceAtomic?: bigint | null;
 } = {}) {
   return render(
     <VaultPage
       currentNetwork={currentNetwork}
+      executionTransport={executionTransport}
       readClient={client}
       sender={sender}
+      simulationTransport={simulationTransport}
       walletDusdcBalanceQuote={walletDusdcBalanceQuote}
       walletPlpBalanceAtomic={walletPlpBalanceAtomic}
     />,
     { wrapper: createTestWrapper() },
   );
 }
+
+beforeEach(() => {
+  dAppKitMocks.signAndExecuteTransaction.mockReset();
+  dAppKitMocks.simulateTransaction.mockReset();
+  dAppKitMocks.waitForTransaction.mockReset();
+});
 
 describe('VaultPage', () => {
   it('renders loading states for the summary and performance panels', () => {
@@ -198,7 +254,7 @@ describe('VaultPage', () => {
     expect(await screen.findByText('Predict server unavailable')).toBeInTheDocument();
   });
 
-  it('blocks LP preparation when vault state is missing', async () => {
+  it('blocks LP execution review when vault state is missing', async () => {
     const summaryFailureClient = createVaultClient({
       fetchVaultSummaryDto: vi.fn().mockRejectedValue(
         new HttpClientError({
@@ -217,24 +273,35 @@ describe('VaultPage', () => {
 
     expect(screen.getByText('Vault state required')).toBeInTheDocument();
     expect(
-      screen.getByText('Refresh the vault summary before preparing vault LP actions.'),
+      screen.getByText('Refresh the vault summary before opening vault LP execution review.'),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/Preparing unsigned supply preview/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Preparing supply execution review/i)).not.toBeInTheDocument();
   });
 
-  it('prepares supply as an unsigned preview and keeps exact PLP output simulation-gated', async () => {
-    renderVaultPage();
+  it('opens the supply execution review, requests signature, and shows digest proof', async () => {
+    const executionTransport = createTradeExecutionTransport();
+    const simulationTransport = createReadyTradeSimulationTransport();
+    renderVaultPage({ executionTransport, simulationTransport });
 
     await screen.findByRole('status', { name: /Vault summary loaded/i });
     fireEvent.change(screen.getByLabelText('Supply amount'), { target: { value: '1.5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Review supply execution' }));
 
-    expect(await screen.findByText(/Supply preparation ready/i)).toBeInTheDocument();
+    expect(
+      await screen.findByRole('dialog', { name: 'Vault supply execution review' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Request wallet signature' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Request wallet signature' }));
+
+    expect(await screen.findByText('View transaction on Sui Explorer')).toBeInTheDocument();
+    expect(await screen.findByText(/Supply transaction submitted/i)).toBeInTheDocument();
     expect(screen.getByText('Exact PLP shares out require simulation or onchain confirmation.')).toBeInTheDocument();
-    expect(screen.getByText('SUPPLY')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Supply signing not wired' })).toBeDisabled();
+    expect(screen.getAllByText('SUPPLY').length).toBeGreaterThan(0);
+    expect(simulationTransport.simulateTransaction).toHaveBeenCalledOnce();
+    expect(executionTransport.signAndExecuteTransaction).toHaveBeenCalledOnce();
   });
 
-  it('blocks supply preparation when wallet DUSDC is insufficient', async () => {
+  it('blocks supply execution review when wallet DUSDC is insufficient', async () => {
     renderVaultPage({ walletDusdcBalanceQuote: 1n });
 
     await screen.findByRole('status', { name: /Vault summary loaded/i });
@@ -248,19 +315,30 @@ describe('VaultPage', () => {
     );
   });
 
-  it('prepares withdraw as an unsigned preview and keeps exact DUSDC output simulation-gated', async () => {
-    renderVaultPage();
+  it('opens the withdraw execution review, requests signature, and shows digest proof', async () => {
+    const executionTransport = createTradeExecutionTransport();
+    const simulationTransport = createReadyTradeSimulationTransport();
+    renderVaultPage({ executionTransport, simulationTransport });
 
     await screen.findByRole('status', { name: /Vault summary loaded/i });
     fireEvent.change(screen.getByLabelText('Burn PLP amount'), { target: { value: '1.5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Review withdraw execution' }));
 
-    expect(await screen.findByText(/Withdraw preparation ready/i)).toBeInTheDocument();
+    expect(
+      await screen.findByRole('dialog', { name: 'Vault withdraw execution review' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Request wallet signature' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Request wallet signature' }));
+
+    expect(await screen.findByText('View transaction on Sui Explorer')).toBeInTheDocument();
+    expect(await screen.findByText(/Withdraw transaction submitted/i)).toBeInTheDocument();
     expect(screen.getByText('Exact DUSDC returned requires simulation or onchain confirmation.')).toBeInTheDocument();
-    expect(screen.getByText('WITHDRAW')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Withdraw signing not wired' })).toBeDisabled();
+    expect(screen.getAllByText('WITHDRAW').length).toBeGreaterThan(0);
+    expect(simulationTransport.simulateTransaction).toHaveBeenCalledOnce();
+    expect(executionTransport.signAndExecuteTransaction).toHaveBeenCalledOnce();
   });
 
-  it('blocks withdraw preparation when wallet PLP is insufficient', async () => {
+  it('blocks withdraw execution review when wallet PLP is insufficient', async () => {
     renderVaultPage({ walletPlpBalanceAtomic: 1n });
 
     await screen.findByRole('status', { name: /Vault summary loaded/i });
@@ -274,7 +352,7 @@ describe('VaultPage', () => {
     );
   });
 
-  it('blocks withdraw preparation when vault withdrawal is unavailable', async () => {
+  it('blocks withdraw execution review when vault withdrawal is unavailable', async () => {
     const client = createVaultClient({
       fetchVaultSummaryDto: vi.fn().mockResolvedValue(
         vaultSummaryDto({
@@ -298,7 +376,7 @@ describe('VaultPage', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('blocks LP preparation on the wrong network before preparing a PTB preview', async () => {
+  it('blocks LP execution review on the wrong network before building a PTB', async () => {
     renderVaultPage({ currentNetwork: 'mainnet' });
 
     await screen.findByRole('status', { name: /Vault summary loaded/i });
@@ -306,6 +384,8 @@ describe('VaultPage', () => {
 
     expect(screen.getByText('Wrong network: mainnet')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('Wrong network');
-    expect(screen.getByText('Switch to testnet before preparing vault LP actions.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Switch to testnet before opening vault LP execution review.'),
+    ).toBeInTheDocument();
   });
 });

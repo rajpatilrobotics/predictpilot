@@ -31,8 +31,10 @@ export type PredictTradeFlowPhase =
 export interface PredictTradeTxPreviewBase {
   action: PredictTransactionAction;
   affectedObjects: AffectedObjectHint[];
+  amountQuote?: QuoteAmount;
   postTransactionRefreshKeys: QueryKey[];
-  quantityQuote: QuoteAmount;
+  plpAmountAtomic?: bigint;
+  quantityQuote?: QuoteAmount;
   sender: SuiAddress;
 }
 

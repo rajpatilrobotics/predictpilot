@@ -12,7 +12,9 @@ type RiskWarningInput =
 
 export interface RiskPreviewModel {
   action?: string;
+  amountQuote?: bigint;
   askBoundsStatus?: string;
+  availableWithdrawalQuote?: bigint;
   blockers?: string[];
   estimatedCostQuote?: bigint;
   estimatedPayoutQuote?: bigint;
@@ -22,12 +24,14 @@ export interface RiskPreviewModel {
   oracleFreshness?: string;
   oracleId?: string;
   oracleStatus?: string;
+  plpAmountAtomic?: bigint;
   quantityQuote?: bigint;
   quoteAsset?: {
     symbol: string;
   };
   title?: string;
   underlyingAsset?: string;
+  vaultValueQuote?: bigint;
   warnings?: RiskWarningInput[];
 }
 
@@ -91,7 +95,9 @@ function normalizeRiskPreview(
 
   return {
     action: preview.action,
+    amountQuote: getManualField(preview, 'amountQuote'),
     askBoundsStatus: getManualField(preview, 'askBoundsStatus'),
+    availableWithdrawalQuote: getManualField(preview, 'availableWithdrawalQuote'),
     estimatedCostQuote: preview.estimatedCostQuote,
     estimatedPayoutQuote: preview.estimatedPayoutQuote,
     expiryMs: preview.expiryMs,
@@ -104,9 +110,11 @@ function normalizeRiskPreview(
     oracleStatus: hasOracleStatusModel(preview)
       ? preview.oracleStatus.lifecycleStatus
       : getManualField(preview, 'oracleStatus'),
+    plpAmountAtomic: getManualField(preview, 'plpAmountAtomic'),
     quantityQuote: preview.quantityQuote,
     quoteAsset: preview.quoteAsset,
     underlyingAsset: preview.underlyingAsset,
+    vaultValueQuote: getManualField(preview, 'vaultValueQuote'),
     warnings: preview.warnings,
     ...('blockers' in preview && preview.blockers !== undefined
       ? { blockers: preview.blockers }
@@ -143,8 +151,15 @@ function createRiskRows(model: RiskPreviewModel) {
       label: 'Manager balance',
       value: formatOptionalQuote(model.managerBalanceQuote, quoteSymbol),
     },
+    { label: 'Quote amount', value: formatOptionalQuote(model.amountQuote, quoteSymbol) },
+    { label: 'PLP amount', value: formatOptionalValue(model.plpAmountAtomic, 'PLP') },
     { label: 'Quantity', value: formatOptionalQuote(model.quantityQuote, quoteSymbol) },
     estimatedAmount,
+    { label: 'Vault value', value: formatOptionalQuote(model.vaultValueQuote, quoteSymbol) },
+    {
+      label: 'Available withdrawal',
+      value: formatOptionalQuote(model.availableWithdrawalQuote, quoteSymbol),
+    },
     { label: 'Manager', value: model.managerId ?? unavailableCopy },
     { label: 'Oracle', value: model.oracleId ?? unavailableCopy },
   ];
