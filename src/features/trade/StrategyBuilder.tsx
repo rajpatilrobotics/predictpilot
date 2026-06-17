@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react';
+import { ExecutionModal } from '@/components/modals/ExecutionModal';
 import { InlineStateNotice, StatePanel } from '@/components/states/StatePrimitives';
+import { TxDigestLink } from '@/components/tx/TxDigestLink';
 import { TerminalMetricCard, TerminalPanel } from '@/components/terminal/TerminalPanels';
 import { RiskPreview } from '@/features/tx/RiskPreview';
 import { useWalletStatus, type WalletStatusModel } from '@/features/wallet/useWalletStatus';
 import type { UsePredictManagerResult } from '@/features/manager/hooks/usePredictManager';
+import { useBinaryMintFlow } from '@/features/trade/actions/useBinaryMintFlow';
 import {
   buildBinaryMarketKey,
   buildRangeKey,
@@ -86,6 +89,14 @@ export function StrategyBuilder({
   const [initialNowMs] = useState(() => Date.now());
   const effectiveAskBounds = askBounds ?? oracleState.askBounds;
   const renderNowMs = nowMs ?? initialNowMs;
+  const binaryMintFlow = useBinaryMintFlow({
+    askBounds: effectiveAskBounds,
+    manager,
+    managerSummary,
+    nowMs: renderNowMs,
+    oracleState,
+    walletStatus: wallet,
+  });
 
   const quantityQuote = parseQuoteAmountInput(quantityInput);
   const binaryKeyResult = useMemo(
@@ -117,6 +128,25 @@ export function StrategyBuilder({
   async function handlePreviewSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPreviewState({ status: 'loading' });
+
+    if (mode === 'binary' && binaryAction === 'MINT') {
+      const result = await binaryMintFlow.beginMintReview({
+        marketKey: binaryKeyResult.ok ? binaryKeyResult.key : null,
+        quantityQuote,
+      });
+
+      if (!result.ok) {
+        setPreviewState({
+          error: result.error,
+          status: 'blocked',
+          warnings: result.warnings,
+        });
+        return;
+      }
+
+      setPreviewState({ status: 'idle' });
+      return;
+    }
 
     const result =
       mode === 'binary'
@@ -206,6 +236,7 @@ export function StrategyBuilder({
                   onClick={() => {
                     setMode('binary');
                     resetPreview();
+                    binaryMintFlow.reset();
                   }}
                 />
                 <ModeButton
@@ -214,6 +245,7 @@ export function StrategyBuilder({
                   onClick={() => {
                     setMode('range');
                     resetPreview();
+                    binaryMintFlow.reset();
                   }}
                 />
               </div>
@@ -226,14 +258,17 @@ export function StrategyBuilder({
                 onActionChange={(value) => {
                   setBinaryAction(value);
                   resetPreview();
+                  binaryMintFlow.reset();
                 }}
                 onDirectionChange={(value) => {
                   setDirection(value);
                   resetPreview();
+                  binaryMintFlow.reset();
                 }}
                 onStrikeChange={(value) => {
                   setStrikeInput(value);
                   resetPreview();
+                  binaryMintFlow.reset();
                 }}
                 strikeInput={strikeInput}
               />
@@ -267,6 +302,7 @@ export function StrategyBuilder({
                 onChange={(event) => {
                   setQuantityInput(event.target.value);
                   resetPreview();
+                  binaryMintFlow.reset();
                 }}
                 value={quantityInput}
               />
@@ -285,15 +321,34 @@ export function StrategyBuilder({
                 Preview strategy
               </button>
               <p className="text-sm leading-6 text-[#53645f]">
-                PP-043 never requests a wallet signature. PP-050 will wire the binary mint signing
-                path after this builder is reviewed.
+                Binary mint opens a pre-sign execution review after simulation. Redeem and range
+                flows remain preview-only until their later execution tasks.
               </p>
             </div>
           </form>
         </div>
       </TerminalPanel>
 
-      <PreviewResult previewState={previewState} />
+      <BinaryMintFlowStatus state={binaryMintFlow.state} />
+      {binaryMintFlow.state.simulationPreview === null ? (
+        <PreviewResult previewState={previewState} />
+      ) : null}
+      {binaryMintFlow.state.simulationPreview === null ? null : (
+        <ExecutionModal
+          completedDigest={binaryMintFlow.state.completedDigest ?? undefined}
+          onClose={binaryMintFlow.closeModal}
+          onRequestSignature={
+            binaryMintFlow.canRequestSignature
+              ? () => void binaryMintFlow.requestSignature()
+              : undefined
+          }
+          onSimulate={() => void binaryMintFlow.rerunSimulation()}
+          open={binaryMintFlow.state.modalOpen}
+          preview={binaryMintFlow.state.simulationPreview}
+          risk={binaryMintFlow.state.riskPreview}
+          title="Binary mint execution review"
+        />
+      )}
     </section>
   );
 }
@@ -460,7 +515,7 @@ function ReadinessNotices({
     });
   } else {
     notices.push({
-      copy: `Wallet ready on ${wallet.expectedNetwork}; PP-043 still does not request signatures.`,
+      copy: `Wallet ready on ${wallet.expectedNetwork}; binary mint can open a simulated pre-sign review.`,
       tone: 'success',
     });
   }
@@ -503,8 +558,8 @@ function ValidationPanel({
   if (errors.length === 0 && warnings.length === 0) {
     return (
       <InlineStateNotice tone="success">
-        Market key inputs are locally valid. Exact cost or payout still requires a verified
-        estimator or simulation path.
+        Market key inputs are locally valid. Binary mint still requires simulation before wallet
+        signing.
       </InlineStateNotice>
     );
   }
@@ -527,7 +582,7 @@ function PreviewResult({ previewState }: { previewState: PreviewState }) {
   if (previewState.status === 'idle') {
     return (
       <StatePanel
-        description="Choose market parameters, then preview. This route intentionally has no wallet signing button."
+        description="Choose market parameters, then preview. Binary mint can open the pre-sign modal; redeem and range remain preview-only."
         label="Strategy preview idle"
         title="Preview waiting"
         tone="empty"
@@ -550,7 +605,7 @@ function PreviewResult({ previewState }: { previewState: PreviewState }) {
     return (
       <div className="space-y-4">
         <StatePanel
-          description="Risk preview is available from verified inputs. Wallet signature remains out of scope for PP-043."
+          description="Risk preview is available from verified inputs. This preview-only path does not request a wallet signature."
           label="Strategy preview ready"
           title="Risk preview ready"
           tone="success"
@@ -588,6 +643,89 @@ function PreviewResult({ previewState }: { previewState: PreviewState }) {
           }}
         />
       </div>
+    </StatePanel>
+  );
+}
+
+function BinaryMintFlowStatus({ state }: { state: ReturnType<typeof useBinaryMintFlow>['state'] }) {
+  if (state.phase === 'idle') {
+    return null;
+  }
+
+  if (state.phase === 'building' || state.phase === 'simulating') {
+    return (
+      <StatePanel
+        description="Preparing the binary mint PTB and running simulation before any wallet prompt."
+        label="Binary mint execution status"
+        title={state.phase === 'building' ? 'Building binary mint PTB' : 'Simulating binary mint'}
+        tone="loading"
+      />
+    );
+  }
+
+  if (state.phase === 'ready') {
+    return (
+      <StatePanel
+        description="Simulation is ready. Review the modal before requesting the wallet signature."
+        label="Binary mint execution status"
+        title="Binary mint ready for signature"
+        tone="success"
+      />
+    );
+  }
+
+  if (state.phase === 'signing') {
+    return (
+      <StatePanel
+        description="Wallet signature request is in progress. Do not resubmit this PTB while the wallet is open."
+        label="Binary mint execution status"
+        title="Waiting for wallet signature"
+        tone="loading"
+      />
+    );
+  }
+
+  if (state.phase === 'success' && state.completedDigest !== null) {
+    return (
+      <StatePanel
+        description="The wallet returned a transaction digest. PredictPilot invalidated affected manager, oracle, and history reads."
+        label="Binary mint execution status"
+        title="Binary mint transaction submitted"
+        tone="success"
+      >
+        <div className="grid gap-2">
+          <p>
+            Digest:{' '}
+            <TxDigestLink
+              className="font-semibold underline underline-offset-2"
+              digest={state.completedDigest}
+            />
+          </p>
+          {state.refreshWarning === null ? null : (
+            <InlineStateNotice tone="warning">{state.refreshWarning.message}</InlineStateNotice>
+          )}
+        </div>
+      </StatePanel>
+    );
+  }
+
+  return (
+    <StatePanel
+      description={state.error?.message ?? 'Binary mint could not continue.'}
+      label="Binary mint execution status"
+      title={state.error?.title ?? 'Binary mint blocked'}
+      tone={state.error?.code === 'TRANSACTION_REJECTED' ? 'warning' : 'blocked'}
+    >
+      {state.error === null ? null : <p>{state.error.recovery}</p>}
+      {state.completedDigest === null ? null : (
+        <p>
+          Digest:{' '}
+          <TxDigestLink
+            className="font-semibold underline underline-offset-2"
+            digest={state.completedDigest}
+          />
+        </p>
+      )}
     </StatePanel>
   );
 }

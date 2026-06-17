@@ -68,6 +68,8 @@ test('core mounted routes remain usable on mobile viewport', async ({ page }) =>
   for (const route of [
     { heading: 'Dashboard', path: '/dashboard' },
     { heading: 'Market Intelligence', path: '/markets' },
+    { heading: 'Market Detail / Strategy', path: '/strategy' },
+    { heading: 'Market Detail / Strategy', path: '/markets/0x123' },
     { heading: 'Portfolio', path: '/portfolio' },
     { heading: 'Vault / PLP', path: '/vault' },
   ]) {
