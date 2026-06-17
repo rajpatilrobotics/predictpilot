@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { predictDeploymentConfig } from '@/config/predict';
 import {
+  listWalletPlpCoins,
   listWalletQuoteCoins,
   readAuthoritativeManagerObject,
   readAuthoritativeOracleObject,
   readAuthoritativeQuoteCoinObject,
+  readWalletPlpBalance,
   selectWalletQuoteCoinsForAmount,
   type AuthoritativeSuiClient,
 } from '@/integrations/deepbook-predict/onchain/objects';
@@ -38,13 +40,13 @@ function mockObjectResponse(objectId: ObjectId, type: string) {
   };
 }
 
-function mockCoin(objectId: ObjectId, balance: string) {
+function mockCoin(objectId: ObjectId, balance: string, coinType = predictDeploymentConfig.quoteAsset.type) {
   return {
     balance,
     digest: `digest-${objectId.slice(2, 8)}`,
     objectId,
     owner: { AddressOwner: owner },
-    type: `0x2::coin::Coin<${predictDeploymentConfig.quoteAsset.type}>`,
+    type: `0x2::coin::Coin<${coinType}>`,
     version: '7',
   };
 }
@@ -217,6 +219,49 @@ describe('DeepBook Predict authoritative onchain object helpers', () => {
       context: {
         availableQuote: '100',
         requestedQuote: '101',
+      },
+    });
+  });
+
+  it('lists wallet PLP coins with the configured PLP type and totals the balance', async () => {
+    const client = createMockClient();
+    vi.mocked(client.listCoins).mockResolvedValue({
+      cursor: null,
+      hasNextPage: false,
+      objects: [
+        mockCoin(coinA, '100', predictDeploymentConfig.plpType),
+        mockCoin(coinB, '500', predictDeploymentConfig.plpType),
+      ],
+    });
+
+    const coins = await listWalletPlpCoins({ client, owner });
+    const balance = await readWalletPlpBalance({ client, owner });
+
+    expect(client.listCoins).toHaveBeenNthCalledWith(1, {
+      coinType: predictDeploymentConfig.plpType,
+      cursor: null,
+      limit: 50,
+      owner,
+    });
+    expect(coins.map((coin) => coin.coinObjectId)).toEqual([coinB, coinA]);
+    expect(coins.map((coin) => coin.balanceAtomic)).toEqual([500n, 100n]);
+    expect(balance).toMatchObject({
+      owner,
+      plpType: predictDeploymentConfig.plpType,
+      totalBalanceAtomic: 600n,
+    });
+  });
+
+  it('normalizes PLP coin read failures through the app error layer', async () => {
+    const client = createMockClient();
+    vi.mocked(client.listCoins).mockRejectedValue(new Error('transport failed'));
+
+    await expect(listWalletPlpCoins({ client, owner })).rejects.toMatchObject({
+      code: 'UNKNOWN_ERROR',
+      context: {
+        owner,
+        plpType: predictDeploymentConfig.plpType,
+        readPath: 'wallet-plp-coins',
       },
     });
   });

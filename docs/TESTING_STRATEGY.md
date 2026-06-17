@@ -495,6 +495,21 @@ Required tests:
 - `PLP` balance decreases
 - quote balance updates correctly
 
+### Manual funded Testnet vault smoke checklist
+
+This smoke path is intentionally manual until a funded wallet and current DeepBook Predict Testnet state are available. CI must not fake this proof.
+
+- wallet is connected on Sui Testnet and has SUI gas
+- wallet has current DeepBook Predict `DUSDC`
+- vault summary loads and includes the configured quote asset
+- wallet `PLP` balance loads before and after the flow
+- supply preview shows `DUSDC` in and `PLP` output as simulation/onchain-confirmed
+- supply transaction is signed, returns a digest, and `waitForTransaction` confirms success
+- vault summary, LP supply history, and wallet `PLP` balance refresh after supply
+- if withdrawing, wallet has enough `PLP` and vault withdrawal availability is positive
+- withdraw transaction is signed, returns a digest, and `waitForTransaction` confirms success
+- vault summary, LP withdrawal history, wallet `PLP`, and wallet `DUSDC` refresh after withdraw
+
 ### Portfolio analytics testing
 
 The server docs expose manager summary, positions summary, and PnL endpoints, and the design docs recommend using the server for portfolio rendering. PredictPilot portfolio tests should verify successful aggregation across binary positions, range positions, and LP exposure. citeturn13view0turn6view1

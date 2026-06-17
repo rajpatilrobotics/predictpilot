@@ -80,6 +80,23 @@ export interface QuoteCoinSelectionModel {
   selectedAmount: QuoteAmount;
 }
 
+export interface PlpCoinModel {
+  balanceAtomic: bigint;
+  coinObjectId: ObjectId;
+  digest: string;
+  owner: SuiObjectOwner;
+  plpType: MoveType;
+  type: string;
+  version: string;
+}
+
+export interface WalletPlpBalanceModel {
+  coins: PlpCoinModel[];
+  owner: SuiAddress;
+  plpType: MoveType;
+  totalBalanceAtomic: bigint;
+}
+
 export interface ReadAuthoritativeObjectOptions {
   client?: AuthoritativeSuiClient;
   includeJson?: boolean;
@@ -105,6 +122,12 @@ export interface ListWalletQuoteCoinsOptions {
 
 export interface SelectWalletQuoteCoinsOptions extends ListWalletQuoteCoinsOptions {
   amount: QuoteAmount;
+}
+
+export interface ListWalletPlpCoinsOptions {
+  client?: AuthoritativeSuiClient;
+  owner: SuiAddress;
+  pageSize?: number;
 }
 
 export async function readAuthoritativeManagerObject({
@@ -226,6 +249,59 @@ export async function selectWalletQuoteCoinsForAmount({
   };
 }
 
+export async function listWalletPlpCoins({
+  client = appSuiClient,
+  owner,
+  pageSize = 50,
+}: ListWalletPlpCoinsOptions): Promise<PlpCoinModel[]> {
+  validateSuiAddress(owner);
+
+  const plpType = predictDeploymentConfig.plpType;
+  const coins: PlpCoinModel[] = [];
+  let cursor: string | null = null;
+
+  try {
+    do {
+      const page = await client.listCoins({
+        coinType: plpType,
+        cursor,
+        limit: pageSize,
+        owner,
+      });
+
+      coins.push(...page.objects.map((coin) => mapPlpCoin(coin, plpType)));
+      cursor = page.hasNextPage ? page.cursor : null;
+    } while (cursor !== null);
+  } catch (error) {
+    throw toThrowableAppError(
+      normalizeAppError(error, {
+        context: {
+          owner,
+          plpType,
+          readPath: 'wallet-plp-coins',
+        },
+      }),
+    );
+  }
+
+  return coins.sort(comparePlpCoinsForDisplay);
+}
+
+export async function readWalletPlpBalance({
+  client,
+  owner,
+  pageSize,
+}: ListWalletPlpCoinsOptions): Promise<WalletPlpBalanceModel> {
+  const coins = await listWalletPlpCoins({ client, owner, pageSize });
+
+  return {
+    coins,
+    owner,
+    plpType: predictDeploymentConfig.plpType,
+    totalBalanceAtomic: coins.reduce((total, coin) => total + coin.balanceAtomic, 0n),
+  };
+}
+
 interface ReadAuthoritativeObjectInternalOptions {
   client?: AuthoritativeSuiClient;
   id: ObjectId;
@@ -292,9 +368,29 @@ function mapQuoteCoin(coin: SuiCoinResponse, quoteAssetType: MoveType): QuoteCoi
   };
 }
 
+function mapPlpCoin(coin: SuiCoinResponse, plpType: MoveType): PlpCoinModel {
+  return {
+    balanceAtomic: BigInt(coin.balance),
+    coinObjectId: normalizeObjectId(coin.objectId),
+    digest: coin.digest,
+    owner: coin.owner,
+    plpType,
+    type: coin.type,
+    version: coin.version,
+  };
+}
+
 function compareQuoteCoinsForSelection(left: QuoteCoinModel, right: QuoteCoinModel) {
   if (left.balance !== right.balance) {
     return left.balance > right.balance ? -1 : 1;
+  }
+
+  return left.coinObjectId.localeCompare(right.coinObjectId);
+}
+
+function comparePlpCoinsForDisplay(left: PlpCoinModel, right: PlpCoinModel) {
+  if (left.balanceAtomic !== right.balanceAtomic) {
+    return left.balanceAtomic > right.balanceAtomic ? -1 : 1;
   }
 
   return left.coinObjectId.localeCompare(right.coinObjectId);
