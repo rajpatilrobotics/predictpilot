@@ -333,37 +333,57 @@ function OracleList({
             oracle.lifecycleStatus === 'ACTIVE' && oracle.expiryMs > BigInt(nowMs);
 
           return (
-            <button
-              aria-pressed={isSelected}
-              className={`grid w-full gap-3 p-4 text-left transition hover:bg-[#f8fbfa] ${
-                isSelected ? 'bg-[#edf5f1]' : 'bg-white'
-              }`}
-              key={oracle.oracleId}
-              onClick={() => onSelect(oracle.oracleId)}
-              type="button"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold text-[#17211d]">{oracle.underlyingAsset} Oracle</h3>
-                  <p className="mt-1 font-mono text-xs text-[#64736e]">
-                    {shortId(oracle.oracleId)}
-                  </p>
+            <div className={isSelected ? 'bg-[#edf5f1]' : 'bg-white'} key={oracle.oracleId}>
+              <button
+                aria-pressed={isSelected}
+                className="grid w-full gap-3 p-4 text-left transition hover:bg-[#f8fbfa]"
+                onClick={() => onSelect(oracle.oracleId)}
+                type="button"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold text-[#17211d]">
+                      {oracle.underlyingAsset} Oracle
+                    </h3>
+                    <p className="mt-1 font-mono text-xs text-[#64736e]">
+                      {shortId(oracle.oracleId)}
+                    </p>
+                  </div>
+                  <LifecycleBadge status={oracle.lifecycleStatus} />
                 </div>
-                <LifecycleBadge status={oracle.lifecycleStatus} />
-              </div>
-              <dl className="grid gap-3 text-xs sm:grid-cols-3">
-                <CompactDatum label="Expiry" value={formatTimestamp(oracle.expiryMs)} />
-                <CompactDatum label="Min strike" value={formatPrice1e9(oracle.minStrike1e9)} />
-                <CompactDatum
-                  label="Tradeability"
-                  value={isPotentiallyTradeable ? 'Potentially live' : 'Inspect state'}
+                <dl className="grid gap-3 text-xs sm:grid-cols-3">
+                  <CompactDatum label="Expiry" value={formatTimestamp(oracle.expiryMs)} />
+                  <CompactDatum label="Min strike" value={formatPrice1e9(oracle.minStrike1e9)} />
+                  <CompactDatum
+                    label="Tradeability"
+                    value={isPotentiallyTradeable ? 'Potentially live' : 'Inspect state'}
+                  />
+                </dl>
+              </button>
+              <div className="flex flex-wrap gap-2 px-4 pb-4">
+                <MarketActionLink href={`/markets/${oracle.oracleId}`} label="Strategy" />
+                <MarketActionLink href={`/svi?oracleId=${oracle.oracleId}`} label="SVI" />
+                <MarketActionLink
+                  href={`/oracle-status?oracleId=${oracle.oracleId}`}
+                  label="Oracle status"
                 />
-              </dl>
-            </button>
+              </div>
+            </div>
           );
         })}
       </div>
     </section>
+  );
+}
+
+function MarketActionLink({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      className="border border-[#b8c6c0] bg-[#fbfcfc] px-2 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-[#315447] hover:border-[#6c8f82] hover:bg-[#edf5f1]"
+      href={href}
+    >
+      {label}
+    </a>
   );
 }
 
@@ -432,7 +452,19 @@ function SelectedMarketPanel({
               className="border border-[#6c8f82] bg-[#edf5f1] px-3 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-[#244a3c]"
               href={`/markets/${oracle.oracleId}`}
             >
-              View Oracle
+              Strategy
+            </a>
+            <a
+              className="border border-[#b8c6c0] bg-[#fbfcfc] px-3 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-[#315447]"
+              href={`/svi?oracleId=${oracle.oracleId}`}
+            >
+              SVI
+            </a>
+            <a
+              className="border border-[#b8c6c0] bg-[#fbfcfc] px-3 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-[#315447]"
+              href={`/oracle-status?oracleId=${oracle.oracleId}`}
+            >
+              Oracle Status
             </a>
             <button
               className="border border-[#b8c6c0] bg-[#fbfcfc] px-3 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-[#315447]"

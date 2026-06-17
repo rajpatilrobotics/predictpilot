@@ -2,6 +2,7 @@ import {
   ManagerIdList as ManagerList,
   TerminalKeyValue as KeyValue,
   TerminalMetricCard as MetricCard,
+  TerminalNextSteps,
   TerminalPageHeader as PageHeader,
   TerminalState as PortfolioState,
 } from '@/components/terminal/TerminalPanels';
@@ -42,7 +43,15 @@ export function PortfolioPage() {
       <PortfolioState
         description="Connect a Sui Testnet wallet before loading manager-held balances and positions."
         title="Connect wallet to view portfolio"
-      />
+      >
+        <TerminalNextSteps
+          steps={[
+            'Create or discover your reusable PredictManager.',
+            'Deposit DeepBook Predict dUSDC into the manager.',
+            'After a trade, this page shows manager balances and open binary/range quantities.',
+          ]}
+        />
+      </PortfolioState>
     );
   } else if (manager.isLoading || manager.isConfirming) {
     content = (

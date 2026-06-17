@@ -53,19 +53,21 @@ vi.mock('@/features/manager/PredictManagerPage', () => ({
 }));
 
 vi.mock('@/features/oracle/OracleStatusPage', () => ({
-  OracleStatusPage: () => (
+  OracleStatusPage: ({ oracleId }: { oracleId?: string }) => (
     <article aria-label="Oracle status page">
       <h1>Oracle Status</h1>
       <p>Oracle status page mounted</p>
+      {oracleId === undefined ? null : <p>Oracle status selected {oracleId}</p>}
     </article>
   ),
 }));
 
 vi.mock('@/features/oracle/SVISurfacePage', () => ({
-  SVISurfacePage: () => (
+  SVISurfacePage: ({ oracleId }: { oracleId?: string }) => (
     <article aria-label="SVI surface page">
       <h1>SVI Surface</h1>
       <p>SVI surface page mounted</p>
+      {oracleId === undefined ? null : <p>SVI selected {oracleId}</p>}
     </article>
   ),
 }));
@@ -282,6 +284,18 @@ describe('App shell', () => {
       expect(screen.getByRole('heading', { name: route.railTitle })).toBeInTheDocument();
       unmount();
     }
+  });
+
+  it('passes query-selected oracle IDs into SVI and oracle status pages', () => {
+    const oracleId = '0x9c2da49c103556e6def22273d716f81f3d206c2a5823ea49c5bb6bf425a3238d';
+
+    const sviRender = renderAppAt(`/svi?oracleId=${oracleId}`);
+    expect(screen.getByText(`SVI selected ${oracleId}`)).toBeInTheDocument();
+    sviRender.unmount();
+
+    const oracleStatusRender = renderAppAt(`/oracle-status?oracleId=${oracleId}`);
+    expect(screen.getByText(`Oracle status selected ${oracleId}`)).toBeInTheDocument();
+    oracleStatusRender.unmount();
   });
 
   it('renders a route error state for unknown paths', () => {

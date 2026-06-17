@@ -920,9 +920,9 @@ function MetricCard({
 
 function ExposureRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-3">
+    <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
       <span className="text-[#64736e]">{label}</span>
-      <span className="break-all text-right font-semibold text-[#17211d]">{value}</span>
+      <span className="break-words font-semibold text-[#17211d] sm:text-right">{value}</span>
     </div>
   );
 }

@@ -124,3 +124,25 @@ export function TerminalNotice({
 }) {
   return <InlineStateNotice className={className}>{children}</InlineStateNotice>;
 }
+
+export function TerminalNextSteps({
+  steps,
+  title = 'After wallet connection',
+}: {
+  steps: readonly string[];
+  title?: string;
+}) {
+  return (
+    <section aria-label={title} className="mt-4 border border-[#d9dfdc] bg-[#fbfcfc] p-4">
+      <p className="text-sm font-semibold text-[#17211d]">{title}</p>
+      <ol className="mt-3 grid gap-2 text-sm leading-6 text-[#3f514b]">
+        {steps.map((step, index) => (
+          <li className="flex gap-2" key={step}>
+            <span className="font-semibold text-[#315447]">{index + 1}.</span>
+            <span>{step}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}

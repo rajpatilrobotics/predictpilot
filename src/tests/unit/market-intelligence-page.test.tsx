@@ -100,8 +100,16 @@ describe('MarketIntelligencePage', () => {
     ).toBeInTheDocument();
     expect(within(selectedMarket).getByText(ORACLE_LIVE_TAPE_SOURCE)).toBeInTheDocument();
 
-    const detailLink = within(selectedMarket).getByRole('link', { name: 'View Oracle' });
+    const detailLink = within(selectedMarket).getByRole('link', { name: 'Strategy' });
     expect(detailLink).toHaveAttribute('href', `/markets/${btcOracleId}`);
+    expect(within(selectedMarket).getByRole('link', { name: 'SVI' })).toHaveAttribute(
+      'href',
+      `/svi?oracleId=${btcOracleId}`,
+    );
+    expect(within(selectedMarket).getByRole('link', { name: 'Oracle Status' })).toHaveAttribute(
+      'href',
+      `/oracle-status?oracleId=${btcOracleId}`,
+    );
 
     fireEvent.click(within(selectedMarket).getByRole('button', { name: 'Copy Oracle ID' }));
     expect(

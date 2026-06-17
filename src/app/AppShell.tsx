@@ -16,6 +16,7 @@ import { PortfolioPage } from '@/features/portfolio/PortfolioPage';
 import { MarketDetailPage } from '@/features/trade/MarketDetailPage';
 import { VaultPage } from '@/features/vault/VaultPage';
 import type { AppRoute } from '@/app/routes';
+import type { ObjectId } from '@/types/predict';
 
 interface AppShellProps {
   activeRoute: AppRoute;
@@ -64,9 +65,9 @@ function RouteContent({
     case 'markets':
       return <MarketIntelligencePage />;
     case 'svi':
-      return <SVISurfacePage />;
+      return <SVISurfacePage oracleId={getOracleIdFromQuery(route.href)} />;
     case 'oracle-status':
-      return <OracleStatusPage />;
+      return <OracleStatusPage oracleId={getOracleIdFromQuery(route.href)} />;
     case 'portfolio':
       return <PortfolioPage />;
     case 'pnl':
@@ -91,7 +92,21 @@ function RouteContent({
 function getOracleIdFromMarketRoute(pathname: string) {
   const prefix = '/markets/';
 
-  return pathname.startsWith(prefix) ? decodeURIComponent(pathname.slice(prefix.length)) : null;
+  const pathOnly = pathname.split('?')[0] ?? pathname;
+
+  return pathOnly.startsWith(prefix) ? decodeURIComponent(pathOnly.slice(prefix.length)) : null;
+}
+
+function getOracleIdFromQuery(pathname: string): ObjectId | undefined {
+  const search = pathname.split('?')[1];
+
+  if (search === undefined) {
+    return undefined;
+  }
+
+  const oracleId = new URLSearchParams(search).get('oracleId');
+
+  return oracleId === null ? undefined : (oracleId as ObjectId);
 }
 
 function RoutePlaceholder({ route }: { route: AppRoute }) {

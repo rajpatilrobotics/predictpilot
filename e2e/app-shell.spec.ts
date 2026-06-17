@@ -80,6 +80,24 @@ test('legacy oracle route resolves to the oracle status page empty state', async
   await expect(page.getByLabel('Persistent execution rail')).toBeVisible();
 });
 
+test('query-selected oracle routes do not fall back to empty selection state', async ({ page }) => {
+  const dummyOracleId = '0x123';
+
+  await page.goto(`/svi?oracleId=${dummyOracleId}`);
+  await expect(page.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'No oracle selected' })).toHaveCount(0);
+  await expect(
+    page.getByRole('heading', { level: 1, name: /Loading SVI surface|SVI state unavailable|SVI Surface Explorer/ }),
+  ).toBeVisible();
+
+  await page.goto(`/oracle-status?oracleId=${dummyOracleId}`);
+  await expect(page.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'No oracle selected' })).toHaveCount(0);
+  await expect(
+    page.getByRole('heading', { level: 1, name: /Loading oracle status|Oracle state unavailable|Oracle Status/ }),
+  ).toBeVisible();
+});
+
 test('unknown routes render the safe route error state', async ({ page }) => {
   await page.goto('/not-a-real-route');
 

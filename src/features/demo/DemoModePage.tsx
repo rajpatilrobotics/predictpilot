@@ -91,6 +91,18 @@ function DemoModePageContent({ onNavigate }: { onNavigate?: (path: string) => vo
         />
       </section>
 
+      <TerminalPanel title="Jump to live proof routes">
+        <div className="flex flex-wrap gap-2">
+          <DemoRouteButton label="Open live markets" onClick={() => onNavigate?.('/markets')} />
+          <DemoRouteButton label="Open PredictManager" onClick={() => onNavigate?.('/manager')} />
+          <DemoRouteButton label="Open Vault / PLP" onClick={() => onNavigate?.('/vault')} />
+        </div>
+        <p className="mt-3 text-sm leading-6 text-[#52615c]">
+          These routes use the real Testnet app state. Demo fixtures stay isolated and never seed
+          live wallet, digest, or query state.
+        </p>
+      </TerminalPanel>
+
       <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
         <TerminalPanel title="Judge timeline">
           <ol className="space-y-2">
@@ -196,6 +208,18 @@ function DemoModePageContent({ onNavigate }: { onNavigate?: (path: string) => vo
         tone="warning"
       />
     </article>
+  );
+}
+
+function DemoRouteButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      className="border border-[#315447] bg-[#edf5f1] px-3 py-2 text-sm font-semibold text-[#17211d]"
+      onClick={onClick}
+      type="button"
+    >
+      {label}
+    </button>
   );
 }
 

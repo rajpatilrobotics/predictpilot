@@ -11,6 +11,7 @@ import {
   ManagerIdList,
   TerminalDatum,
   TerminalMetricCard,
+  TerminalNextSteps,
   TerminalPanel,
 } from '@/components/terminal/TerminalPanels';
 import { TxDigestLink } from '@/components/tx/TxDigestLink';
@@ -312,9 +313,19 @@ function ManagerLifecyclePanel({
       </div>
 
       {manager.status === 'NO_WALLET' ? (
-        <InlineStateNotice className="mt-4" tone="blocked">
-          Connect a Sui Testnet wallet before creating or inspecting a PredictManager.
-        </InlineStateNotice>
+        <>
+          <InlineStateNotice className="mt-4" tone="blocked">
+            Connect a Sui Testnet wallet before creating or inspecting a PredictManager.
+          </InlineStateNotice>
+          <TerminalNextSteps
+            steps={[
+              'Connect the funded Testnet wallet through the standard Sui wallet button.',
+              'Create one reusable PredictManager, then wait for the manager ID to resolve.',
+              'Deposit DeepBook Predict dUSDC before minting binary or range positions.',
+            ]}
+            title="Manager proof path"
+          />
+        </>
       ) : null}
 
       {manager.requiresCreateManager ? (

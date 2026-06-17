@@ -62,6 +62,22 @@ describe('market read adapters', () => {
     expect(oracles[0]?.expiryMs).toBe(1_781_641_800_000n);
   });
 
+  it('maps live server created oracle status to inactive without failing the full market list', async () => {
+    const client: MarketReadClient = {
+      fetchPredictOraclesDto: vi.fn().mockResolvedValue([
+        {
+          ...oracleFixture,
+          status: 'created',
+        },
+      ]),
+      fetchPredictStateDto: vi.fn(),
+    };
+
+    const oracles = await getPredictOracles({ client, predictId });
+
+    expect(oracles[0]?.lifecycleStatus).toBe('INACTIVE');
+  });
+
   it('rejects unknown oracle lifecycle status instead of guessing', async () => {
     const client: MarketReadClient = {
       fetchPredictOraclesDto: vi.fn().mockResolvedValue([

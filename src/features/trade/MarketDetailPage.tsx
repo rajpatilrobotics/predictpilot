@@ -75,8 +75,8 @@ export function MarketDetailPage({ nowMs, oracleId }: MarketDetailPageProps = {}
               Market Detail / Strategy
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-[#52615c]">
-              Inspect one OracleSVI market, stage binary or range parameters, and stop at an honest
-              preview boundary. This screen does not sign or execute transactions.
+              Inspect one OracleSVI market, stage binary or range parameters, and open guarded
+              simulation review only after wallet, manager, and funding checks pass.
             </p>
           </div>
           <div className="grid gap-2 text-xs sm:grid-cols-2 xl:min-w-[360px]">

@@ -553,7 +553,7 @@ function ReadinessNotices({
 
   if (!wallet.isConnected) {
     notices.push({
-      copy: 'Connect wallet before any future signing flow. This builder can still show input validation.',
+      copy: 'Connect wallet before opening a guarded simulation review. This builder can still show input validation.',
       tone: 'blocked',
     });
   } else if (wallet.isWrongNetwork) {

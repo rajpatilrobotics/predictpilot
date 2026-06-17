@@ -362,7 +362,7 @@ describe('MarketDetailPage and StrategyBuilder', () => {
 
     render(<MarketDetailPage nowMs={tradeTestNowMs} oracleId={tradeTestOracleId} />);
 
-    expect(screen.getByText(/Connect wallet before any future signing flow/i)).toBeInTheDocument();
+    expect(screen.getByText(/Connect wallet before opening a guarded simulation review/i)).toBeInTheDocument();
     expect(screen.getByText(/PredictManager is not ready/i)).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Request wallet signature' }),

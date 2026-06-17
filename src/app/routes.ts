@@ -33,7 +33,7 @@ const routeSpecs = [
   'markets|/markets|Overview|Markets|Markets|Oracle discovery and market scanning|Live market intelligence for oracle discovery, expiry scanning, freshness, and market selection.|Market actions|Select an active oracle, inspect freshness, then open its strategy builder for pre-sign review.',
   'svi|/svi|Overview|SVI Surface|SVI|SVI parameters, surface context, and market structure|SVI surface view for volatility context, latest price/SVI availability, and oracle pricing shape.|SVI context|Choose a focused oracle from Markets to inspect SVI data before staging a strategy.',
   'oracle-status|/oracle-status|Overview|Oracle Status|Oracle|Oracle lifecycle, freshness, and settlement state|Oracle status view for lifecycle, freshness, settlement, and action availability checks.|Oracle status|Choose a focused market to verify lifecycle and freshness before minting or redeeming.',
-  'strategy|/strategy|Execute|Market Detail / Strategy|Build|Binary and range strategy preparation|Focused market and strategy builder for binary and range preparation without signing.|Strategy builder|Stage strikes, quantity, risk, and TODO VERIFY simulation boundaries before execution wiring.',
+  'strategy|/strategy|Execute|Market Detail / Strategy|Build|Binary and range strategy preparation|Focused market and strategy builder for binary and range preparation with guarded pre-sign review.|Strategy builder|Stage strikes, quantity, and risk; valid flows open simulation before wallet signature.',
   'manager|/manager|Execute|PredictManager|Manager|Manager readiness and quote balance actions|PredictManager control center for discovery, creation, DUSDC deposit, and withdrawal review.|Manager actions|Create a manager or prepare DUSDC deposit/withdraw review after wallet and Testnet checks pass.',
   'portfolio|/portfolio|Assets|Portfolio|Portfolio|Manager-backed positions and PnL|Manager-backed portfolio view for balances, open positions, and readiness to redeem.|Position actions|Use open positions to decide whether to inspect markets, redeem, or refresh indexed manager state.',
   'pnl|/pnl|Assets|PnL|PnL|Manager PnL, performance series, and realized activity|Manager PnL view for performance, realized activity, and empty/error wallet states.|PnL context|Review manager performance after trades; final proof still comes from digest and refreshed history.',
@@ -112,7 +112,10 @@ function isRouteSection(section: string | undefined): section is AppRoute['secti
 }
 
 export function resolveAppRoute(pathname: string): AppRoute {
-  const normalizedPath = normalizePathname(pathname);
+  const normalizedInput = normalizePathname(pathname);
+  const [pathOnly, search = ''] = normalizedInput.split('?');
+  const normalizedPath = normalizePathname(pathOnly ?? '/');
+  const resolvedHref = search.length === 0 ? normalizedPath : `${normalizedPath}?${search}`;
 
   if (normalizedPath === '/' || normalizedPath === '/dashboard') {
     return appRoutes[0];
@@ -121,7 +124,7 @@ export function resolveAppRoute(pathname: string): AppRoute {
   if (normalizedPath.startsWith('/markets/')) {
     return {
       ...getAppRouteById('strategy'),
-      href: normalizedPath,
+      href: resolvedHref,
       id: 'market-detail',
       title: 'Market Detail / Strategy',
     };
@@ -131,7 +134,13 @@ export function resolveAppRoute(pathname: string): AppRoute {
     return getAppRouteById('oracle-status');
   }
 
-  return appRoutes.find((route) => route.href === normalizedPath) ?? notFoundRoute;
+  const route = appRoutes.find((item) => item.href === normalizedPath);
+
+  if (route === undefined) {
+    return notFoundRoute;
+  }
+
+  return resolvedHref === route.href ? route : { ...route, href: resolvedHref };
 }
 
 function getAppRouteById(id: ListedAppRouteId): AppRoute {

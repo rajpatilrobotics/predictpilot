@@ -36,7 +36,8 @@ describe('DemoModePage', () => {
 
     render(<DemoModePage onNavigate={onNavigate} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open live markets' }));
+    const proofRoutes = screen.getByLabelText('Jump to live proof routes');
+    fireEvent.click(within(proofRoutes).getByRole('button', { name: 'Open live markets' }));
 
     expect(onNavigate).toHaveBeenCalledWith('/markets');
     expect(screen.queryByRole('button', { name: /request wallet signature/i })).not.toBeInTheDocument();

@@ -133,6 +133,7 @@ function mapOracleSviParametersDtoToModel(dto: OracleSviUpdateDto): OracleSviPar
 
 function mapOracleLifecycleStatus(status: string): OracleLifecycleStatus {
   switch (status.toLowerCase()) {
+    case 'created':
     case 'inactive':
       return 'INACTIVE';
     case 'active':

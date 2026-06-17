@@ -31,5 +31,5 @@ export function AppRouter() {
 }
 
 function getCurrentPathname() {
-  return window.location.pathname;
+  return `${window.location.pathname}${window.location.search}`;
 }

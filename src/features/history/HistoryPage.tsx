@@ -1,6 +1,7 @@
 import {
   ManagerIdList as ManagerList,
   TerminalMetricCard as MetricCard,
+  TerminalNextSteps,
   TerminalPageHeader as PageHeader,
   TerminalState as HistoryState,
 } from '@/components/terminal/TerminalPanels';
@@ -35,7 +36,15 @@ export function HistoryPage() {
       <HistoryState
         description="Connect a Sui Testnet wallet before loading indexed manager and LP activity."
         title="Connect wallet to view history"
-      />
+      >
+        <TerminalNextSteps
+          steps={[
+            'Sign a real Testnet transaction through the pre-sign review modal.',
+            'Keep the returned digest visible as the authoritative proof anchor.',
+            'Refresh indexed history to show matching mint, redeem, supply, or withdraw events.',
+          ]}
+        />
+      </HistoryState>
     );
   } else if (manager.isLoading || manager.isConfirming) {
     content = (

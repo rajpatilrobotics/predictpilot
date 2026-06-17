@@ -164,7 +164,7 @@ export function DashboardView({ model }: { model: DashboardViewModel }) {
           tone={model.oracles.status === 'error' ? 'warning' : 'default'}
         >
           {oracleRows.length === 0 ? (
-            <EmptyState copy="No markets indexed yet. Retry or use Demo Mode when it is mounted." />
+            <EmptyState copy="No markets indexed yet. Retry the live read or open Demo Mode for the guided offline walkthrough." />
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">

@@ -1,6 +1,7 @@
 import {
   ManagerIdList as ManagerList,
   TerminalMetricCard as MetricCard,
+  TerminalNextSteps,
   TerminalPageHeader as PageHeader,
   TerminalState as PnlState,
 } from '@/components/terminal/TerminalPanels';
@@ -33,7 +34,15 @@ export function PnlPage() {
       <PnlState
         description="Connect a Sui Testnet wallet before loading manager-level PnL."
         title="Connect wallet to view PnL"
-      />
+      >
+        <TerminalNextSteps
+          steps={[
+            'Resolve the wallet PredictManager from indexed manager discovery.',
+            'Load manager PnL with the verified range=ALL query.',
+            'Use PnL only as indexed context; final proof still comes from digest and history.',
+          ]}
+        />
+      </PnlState>
     );
   } else if (manager.isLoading || manager.isConfirming) {
     content = (
