@@ -1,7 +1,8 @@
 import type { MarketKeyValidationWarning } from '@/features/markets/lib/market-keys';
+import type { PredictPilotError } from '@/lib/errors';
 import { createAppError } from '@/lib/errors';
 import type { OracleActionAvailability } from '@/lib/oracle-status';
-import type { MarketKeyModel, QuoteAmount, RangeKeyModel } from '@/types/predict';
+import type { MarketKeyModel, ObjectId, QuoteAmount, RangeKeyModel } from '@/types/predict';
 
 export type TradePreviewWarningCode =
   | 'ASK_BOUNDS_PRESENT_UNMAPPED'
@@ -87,4 +88,101 @@ export function pushEstimateRefreshWarning(warnings: TradePreviewWarning[]) {
     message: 'The estimate requires an authoritative refresh before wallet signing.',
     severity: 'warning',
   });
+}
+
+export interface VerifiableTradeEstimate<TAction extends string> {
+  action: TAction;
+  isVerified: boolean;
+  source: string;
+}
+
+export async function verifyTradeEstimate<
+  TAction extends string,
+  TEstimate extends VerifiableTradeEstimate<TAction>,
+  TInput,
+  TWarning extends TradePreviewWarning,
+>({
+  action,
+  estimator,
+  input,
+  invalidEstimateMessage,
+  isEstimateUsable,
+  managerId,
+  oracleId,
+  previewPath,
+  warnings,
+}: {
+  action: TAction;
+  estimator?: ((input: TInput) => Promise<TEstimate> | TEstimate) | undefined;
+  input: TInput;
+  invalidEstimateMessage: string;
+  isEstimateUsable: (action: TAction, estimate: TEstimate) => boolean;
+  managerId: ObjectId;
+  oracleId: ObjectId;
+  previewPath: string;
+  warnings: TWarning[];
+}): Promise<
+  | {
+      ok: true;
+      value: TEstimate;
+    }
+  | {
+      error: PredictPilotError;
+      ok: false;
+      warnings: TWarning[];
+    }
+> {
+  if (estimator === undefined) {
+    return previewFailure('TODO_VERIFY_PATH_USED', warnings, {
+      context: {
+        action,
+        managerId,
+        oracleId,
+        previewPath,
+      },
+    });
+  }
+
+  try {
+    const estimate = await estimator(input);
+
+    if (!estimate.isVerified) {
+      return previewFailure('TODO_VERIFY_PATH_USED', warnings, {
+        context: {
+          action,
+          estimatorSource: estimate.source,
+          managerId,
+          oracleId,
+          previewPath,
+        },
+      });
+    }
+
+    if (!isEstimateUsable(action, estimate)) {
+      return previewFailure('SIMULATION_FAILED', warnings, {
+        context: {
+          action,
+          estimatorSource: estimate.source,
+          managerId,
+          oracleId,
+        },
+        message: invalidEstimateMessage,
+        recovery: 'Refresh the preview inputs and retry with a verified estimator.',
+      });
+    }
+
+    return {
+      ok: true,
+      value: estimate,
+    };
+  } catch (error) {
+    return previewFailure('SIMULATION_FAILED', warnings, {
+      context: {
+        action,
+        errorName: error instanceof Error ? error.name : typeof error,
+        managerId,
+        oracleId,
+      },
+    });
+  }
 }

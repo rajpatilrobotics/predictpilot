@@ -15,6 +15,7 @@ import {
   previewFailure,
   pushEstimateRefreshWarning,
   pushOracleRefreshWarning,
+  verifyTradeEstimate,
   type TradePreviewWarning,
   type TradePreviewWarningCode,
 } from './preview-shared';
@@ -194,24 +195,22 @@ export async function previewBinaryTrade({
     });
   }
 
-  if (estimateTradeAmounts === undefined) {
-    return previewFailure('TODO_VERIFY_PATH_USED', warnings, {
-      context: {
-        action,
-        managerId: manager.managerId,
-        oracleId: oracleState.oracle.oracleId,
-        previewPath: 'binary-trade-amount-estimator',
-      },
-    });
-  }
-
-  const estimate = await getVerifiedEstimate({
+  const estimate = await verifyTradeEstimate({
     action,
-    estimateTradeAmounts,
-    manager,
-    marketKey: marketKeyResult.key,
-    oracleState,
-    quantityQuote,
+    estimator: estimateTradeAmounts,
+    input: {
+      action,
+      manager,
+      marketKey: marketKeyResult.key,
+      oracleState,
+      quantityQuote,
+      quoteAsset: predictDeploymentConfig.quoteAsset,
+    },
+    invalidEstimateMessage: 'Binary trade estimator returned an invalid result.',
+    isEstimateUsable: isEstimateUsableForAction,
+    managerId: manager.managerId,
+    oracleId: oracleState.oracle.oracleId,
+    previewPath: 'binary-trade-amount-estimator',
     warnings,
   });
 
@@ -268,84 +267,6 @@ export async function previewBinaryTrade({
       warnings,
     },
   };
-}
-
-async function getVerifiedEstimate({
-  action,
-  estimateTradeAmounts,
-  manager,
-  marketKey,
-  oracleState,
-  quantityQuote,
-  warnings,
-}: {
-  action: BinaryTradePreviewAction;
-  estimateTradeAmounts: BinaryTradeAmountEstimator;
-  manager: ManagerSummaryModel;
-  marketKey: MarketKeyModel;
-  oracleState: OracleStateModel;
-  quantityQuote: QuoteAmount;
-  warnings: BinaryTradePreviewWarning[];
-}): Promise<
-  | {
-      ok: true;
-      value: BinaryTradeAmountEstimate;
-    }
-  | {
-      error: PredictPilotError;
-      ok: false;
-      warnings: BinaryTradePreviewWarning[];
-    }
-> {
-  try {
-    const estimate = await estimateTradeAmounts({
-      action,
-      manager,
-      marketKey,
-      oracleState,
-      quantityQuote,
-      quoteAsset: predictDeploymentConfig.quoteAsset,
-    });
-
-    if (!estimate.isVerified) {
-      return previewFailure('TODO_VERIFY_PATH_USED', warnings, {
-        context: {
-          action,
-          estimatorSource: estimate.source,
-          managerId: manager.managerId,
-          oracleId: oracleState.oracle.oracleId,
-          previewPath: 'binary-trade-amount-estimator',
-        },
-      });
-    }
-
-    if (!isEstimateUsableForAction(action, estimate)) {
-      return previewFailure('SIMULATION_FAILED', warnings, {
-        context: {
-          action,
-          estimatorSource: estimate.source,
-          managerId: manager.managerId,
-          oracleId: oracleState.oracle.oracleId,
-        },
-        message: 'Binary trade estimator returned an invalid result.',
-        recovery: 'Refresh the preview inputs and retry with a verified estimator.',
-      });
-    }
-
-    return {
-      ok: true,
-      value: estimate,
-    };
-  } catch (error) {
-    return previewFailure('SIMULATION_FAILED', warnings, {
-      context: {
-        action,
-        errorName: error instanceof Error ? error.name : typeof error,
-        managerId: manager.managerId,
-        oracleId: oracleState.oracle.oracleId,
-      },
-    });
-  }
 }
 
 function hasEnoughOwnedQuantity(

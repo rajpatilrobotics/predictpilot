@@ -19,6 +19,7 @@ import {
   previewFailure,
   pushEstimateRefreshWarning,
   pushOracleRefreshWarning,
+  verifyTradeEstimate,
   type TradePreviewWarning,
   type TradePreviewWarningCode,
 } from './preview-shared';
@@ -199,24 +200,22 @@ export async function previewRangeTrade({
     });
   }
 
-  if (estimateTradeAmounts === undefined) {
-    return previewFailure('TODO_VERIFY_PATH_USED', warnings, {
-      context: {
-        action,
-        managerId: manager.managerId,
-        oracleId: oracleState.oracle.oracleId,
-        previewPath: 'range-trade-amount-estimator',
-      },
-    });
-  }
-
-  const estimate = await getVerifiedEstimate({
+  const estimate = await verifyTradeEstimate({
     action,
-    estimateTradeAmounts,
-    manager,
-    oracleState,
-    quantityQuote,
-    rangeKey: rangeKeyResult.key,
+    estimator: estimateTradeAmounts,
+    input: {
+      action,
+      manager,
+      oracleState,
+      quantityQuote,
+      quoteAsset: predictDeploymentConfig.quoteAsset,
+      rangeKey: rangeKeyResult.key,
+    },
+    invalidEstimateMessage: 'Range trade estimator returned an invalid result.',
+    isEstimateUsable: isEstimateUsableForAction,
+    managerId: manager.managerId,
+    oracleId: oracleState.oracle.oracleId,
+    previewPath: 'range-trade-amount-estimator',
     warnings,
   });
 
@@ -273,84 +272,6 @@ export async function previewRangeTrade({
       warnings,
     },
   };
-}
-
-async function getVerifiedEstimate({
-  action,
-  estimateTradeAmounts,
-  manager,
-  oracleState,
-  quantityQuote,
-  rangeKey,
-  warnings,
-}: {
-  action: RangeTradePreviewAction;
-  estimateTradeAmounts: RangeTradeAmountEstimator;
-  manager: ManagerSummaryModel;
-  oracleState: OracleStateModel;
-  quantityQuote: QuoteAmount;
-  rangeKey: RangeKeyModel;
-  warnings: RangeTradePreviewWarning[];
-}): Promise<
-  | {
-      ok: true;
-      value: RangeTradeAmountEstimate;
-    }
-  | {
-      error: PredictPilotError;
-      ok: false;
-      warnings: RangeTradePreviewWarning[];
-    }
-> {
-  try {
-    const estimate = await estimateTradeAmounts({
-      action,
-      manager,
-      oracleState,
-      quantityQuote,
-      quoteAsset: predictDeploymentConfig.quoteAsset,
-      rangeKey,
-    });
-
-    if (!estimate.isVerified) {
-      return previewFailure('TODO_VERIFY_PATH_USED', warnings, {
-        context: {
-          action,
-          estimatorSource: estimate.source,
-          managerId: manager.managerId,
-          oracleId: oracleState.oracle.oracleId,
-          previewPath: 'range-trade-amount-estimator',
-        },
-      });
-    }
-
-    if (!isEstimateUsableForAction(action, estimate)) {
-      return previewFailure('SIMULATION_FAILED', warnings, {
-        context: {
-          action,
-          estimatorSource: estimate.source,
-          managerId: manager.managerId,
-          oracleId: oracleState.oracle.oracleId,
-        },
-        message: 'Range trade estimator returned an invalid result.',
-        recovery: 'Refresh the preview inputs and retry with a verified estimator.',
-      });
-    }
-
-    return {
-      ok: true,
-      value: estimate,
-    };
-  } catch (error) {
-    return previewFailure('SIMULATION_FAILED', warnings, {
-      context: {
-        action,
-        errorName: error instanceof Error ? error.name : typeof error,
-        managerId: manager.managerId,
-        oracleId: oracleState.oracle.oracleId,
-      },
-    });
-  }
 }
 
 function getRangeKeyErrorCode(
