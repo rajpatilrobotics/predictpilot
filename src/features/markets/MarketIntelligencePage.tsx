@@ -825,7 +825,11 @@ function getAskBoundsTone(askBounds: OracleAskBoundsModel | undefined) {
     return 'neutral';
   }
 
-  return askBounds.status === 'UNAVAILABLE' ? 'warning' : 'warning';
+  switch (askBounds.status) {
+    case 'PRESENT_UNMAPPED':
+    case 'UNAVAILABLE':
+      return 'warning';
+  }
 }
 
 function getLifecycleTone(status: OracleLifecycleStatus) {

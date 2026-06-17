@@ -1,5 +1,8 @@
 import { useMemo } from 'react';
-import { usePredictManager, type UsePredictManagerResult } from '@/features/manager/hooks/usePredictManager';
+import {
+  usePredictManager,
+  type UsePredictManagerResult,
+} from '@/features/manager/hooks/usePredictManager';
 import { usePredictOracles } from '@/features/markets/hooks/usePredictOracles';
 import { usePredictState } from '@/features/markets/hooks/usePredictState';
 import { useManagerSummary } from '@/features/portfolio/hooks/useManagerSummary';
@@ -7,6 +10,7 @@ import { usePositionsSummary } from '@/features/portfolio/hooks/usePositionsSumm
 import { useVaultSummary } from '@/features/vault/hooks/useVaultSummary';
 import { useWalletStatus, type WalletStatusModel } from '@/features/wallet/useWalletStatus';
 import type { PredictPilotError } from '@/lib/errors';
+import { formatDecimalBigint } from '@/lib/formatters';
 import type { OracleSummaryModel } from '@/types/oracle';
 import type { PredictStateModel, QuoteAmount, TimestampMs } from '@/types/predict';
 import type { VaultModel } from '@/types/vault';
@@ -51,7 +55,8 @@ export function DashboardPage() {
   const predictState = usePredictState();
   const oracles = usePredictOracles();
   const vault = useVaultSummary();
-  const resolvedManagerId = manager.isReady && manager.managerId !== null ? manager.managerId : undefined;
+  const resolvedManagerId =
+    manager.isReady && manager.managerId !== null ? manager.managerId : undefined;
   const managerSummary = useManagerSummary({
     enabled: manager.isReady,
     managerId: resolvedManagerId,
@@ -92,12 +97,15 @@ export function DashboardView({ model }: { model: DashboardViewModel }) {
         </p>
         <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-3xl font-semibold tracking-normal text-[#17211d]" id="dashboard-title">
+            <h1
+              className="text-3xl font-semibold tracking-normal text-[#17211d]"
+              id="dashboard-title"
+            >
               Dashboard
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[#52615c]">
-              Open a live OracleSVI market, preview risk, then sign one PTB when execution
-              screens are mounted.
+              Open a live OracleSVI market, preview risk, then sign one PTB when execution screens
+              are mounted.
             </p>
           </div>
           <span className="w-fit border border-[#a8b7b0] bg-[#edf5f1] px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#315447]">
@@ -230,11 +238,19 @@ export function DashboardView({ model }: { model: DashboardViewModel }) {
           <div className="grid gap-3 md:grid-cols-2">
             <DashboardDatum
               label="Active oracles"
-              value={model.oracles.data === undefined ? unavailableValue(model.oracles.status) : countActiveOracles(model.oracles.data).toString()}
+              value={
+                model.oracles.data === undefined
+                  ? unavailableValue(model.oracles.status)
+                  : countActiveOracles(model.oracles.data).toString()
+              }
             />
             <DashboardDatum
               label="Blocked or settled"
-              value={model.oracles.data === undefined ? unavailableValue(model.oracles.status) : countNonActiveOracles(model.oracles.data).toString()}
+              value={
+                model.oracles.data === undefined
+                  ? unavailableValue(model.oracles.status)
+                  : countNonActiveOracles(model.oracles.data).toString()
+              }
             />
             <DashboardDatum
               label="Freshness source"
@@ -277,8 +293,8 @@ export function DashboardView({ model }: { model: DashboardViewModel }) {
           </div>
           {model.positions.data?.isEmpty === true ? (
             <p className="mt-4 border border-[#d9dfdc] bg-[#fbfcfc] p-3 text-sm text-[#52615c]">
-              No open positions yet. Mint a binary or range position after the preview and
-              execution surfaces are mounted.
+              No open positions yet. Mint a binary or range position after the preview and execution
+              surfaces are mounted.
             </p>
           ) : null}
         </Panel>
@@ -380,7 +396,12 @@ function createQuickStartSteps(model: DashboardViewModel): QuickStartStep[] {
     {
       copy: 'Connect a Sui wallet through the existing dApp Kit provider.',
       label: 'Connect Wallet',
-      state: currentStep === 'Connect Wallet' ? 'current' : model.wallet.isConnected ? 'ready' : 'blocked',
+      state:
+        currentStep === 'Connect Wallet'
+          ? 'current'
+          : model.wallet.isConnected
+            ? 'ready'
+            : 'blocked',
     },
     {
       copy: 'Use one PredictManager per wallet before deposits or trades.',
@@ -532,17 +553,6 @@ function formatScaledPrice(value: bigint) {
   return formatDecimalBigint(value, 9);
 }
 
-function formatDecimalBigint(value: bigint, decimals: number) {
-  const isNegative = value < 0n;
-  const absoluteValue = isNegative ? -value : value;
-  const padded = absoluteValue.toString().padStart(decimals + 1, '0');
-  const whole = padded.slice(0, -decimals);
-  const fraction = padded.slice(-decimals).replace(/0+$/, '');
-  const formatted = fraction.length === 0 ? whole : `${whole}.${fraction}`;
-
-  return isNegative ? `-${formatted}` : formatted;
-}
-
 function formatPercent(value: number) {
   return `${(value * 100).toFixed(2)}%`;
 }
@@ -637,7 +647,9 @@ function EmptyState({ copy }: { copy: string }) {
 function ErrorPanel({ error, label }: { error: PredictPilotError; label: string }) {
   return (
     <div className="border border-[#df9b9b] bg-[#fff4f4] p-4" role="alert">
-      <p className="text-sm font-semibold text-[#6d2b2b]">{label}: {error.title}</p>
+      <p className="text-sm font-semibold text-[#6d2b2b]">
+        {label}: {error.title}
+      </p>
       <p className="mt-1 text-sm leading-6 text-[#6d2b2b]">{error.message}</p>
       <p className="mt-2 text-xs font-semibold uppercase tracking-[0.1em] text-[#8a3f3f]">
         {error.recovery}

@@ -291,9 +291,10 @@ function summarizeSimulationResult(result: unknown): PredictSimulationSummary {
     };
   }
 
-  const rawKind = result.$kind === 'Transaction' || result.$kind === 'FailedTransaction'
-    ? result.$kind
-    : 'unknown';
+  const rawKind =
+    result.$kind === 'Transaction' || result.$kind === 'FailedTransaction'
+      ? result.$kind
+      : 'unknown';
   const payload =
     rawKind === 'Transaction' && isRecord(result.Transaction)
       ? result.Transaction
@@ -309,7 +310,9 @@ function summarizeSimulationResult(result: unknown): PredictSimulationSummary {
   const balanceChanges = Array.isArray(payload.balanceChanges) ? payload.balanceChanges : [];
   const events = Array.isArray(payload.events) ? payload.events : [];
   const objectTypes = isRecord(payload.objectTypes) ? payload.objectTypes : {};
-  const commandResultSummaries = commandResults.map(summarizeCommandResult);
+  const commandResultSummaries = commandResults.map((commandResult, commandIndex) =>
+    summarizeCommandResult(commandResult, commandIndex),
+  );
   const warnings = createSimulationWarnings({
     balanceChangeCount: balanceChanges.length,
     commandResultsPresent,
@@ -329,9 +332,7 @@ function summarizeSimulationResult(result: unknown): PredictSimulationSummary {
   };
 }
 
-function validateSimulationConfig(
-  config: PredictSimulationConfig,
-):
+function validateSimulationConfig(config: PredictSimulationConfig):
   | {
       config: PredictSimulationConfigIds;
       ok: true;
@@ -400,7 +401,9 @@ function fallbackSimulationConfig(): PredictSimulationConfigIds {
   };
 }
 
-function getPreviewAction(preview: Record<string, unknown>): PredictTransactionExecutionRequest['action'] {
+function getPreviewAction(
+  preview: Record<string, unknown>,
+): PredictTransactionExecutionRequest['action'] {
   return typeof preview.action === 'string'
     ? (preview.action as PredictTransactionExecutionRequest['action'])
     : 'CREATE_MANAGER';
@@ -469,7 +472,8 @@ function getObjectContext(
   affectedObjects: AffectedObjectHint[],
 ): Pick<PredictSimulationIntent, 'managerId' | 'oracleId'> {
   const managerId =
-    getObjectId(preview.managerId) ?? affectedObjects.find((object) => object.kind === 'manager')?.id;
+    getObjectId(preview.managerId) ??
+    affectedObjects.find((object) => object.kind === 'manager')?.id;
   const oracleId =
     getObjectId(preview.oracleId) ?? affectedObjects.find((object) => object.kind === 'oracle')?.id;
 
