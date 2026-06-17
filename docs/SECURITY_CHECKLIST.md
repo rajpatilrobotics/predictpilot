@@ -420,6 +420,17 @@
 - [ ] Demo mode must never reuse production or personal credentials.
 - [ ] If demo mode hides a temporary outage, it must preserve a clear “not live” label.
 
+## PP-057 MVP client hardening
+
+**Implemented client guards.**
+- `src/lib/security.ts` time-boxes pre-sign transaction previews and blocks wallet signature requests when the preview is missing, stale, not simulation-ready, or not in the ready phase.
+- Shared trade execution flow state uses a synchronous operation lock so repeated clicks cannot start overlapping review, simulation, or wallet-signature requests before React state settles.
+- Guard failures return sanitized `PredictPilotError` objects and never include raw PTBs, wallet objects, private keys, seed phrases, signed payloads, or unbounded external data.
+
+**Remaining manual security proof.**
+- The client still never handles private keys or seed phrases directly; wallet signing remains delegated to Sui dApp Kit and Wallet Standard wallets.
+- Funded Testnet smoke proof is still required before final submission to verify live digest-backed execution and post-transaction refresh against current DeepBook Predict deployment state.
+
 ## Testing, demo, and submission verification
 
 **Recommended implementation targets.**
@@ -429,9 +440,10 @@
 - `src/integrations/deepbook-predict/schemas.ts`
 - `src/integrations/deepbook-predict/errors.ts`
 - `src/integrations/deepbook-predict/tx/*`
-- `src/lib/security/*`
+- `src/lib/security.ts`
 - `src/lib/validation/*`
-- `src/tests/security/*`
+- `src/tests/unit/security.test.ts`
+- `src/tests/unit/trade-execution-security.test.tsx`
 - `e2e/security.spec.ts`
 - `.env.example`
 - `.gitignore`

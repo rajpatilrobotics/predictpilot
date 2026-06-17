@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useCurrentClient, useDAppKit } from '@mysten/dapp-kit-react';
 import { useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query';
 import type { Transaction } from '@mysten/sui/transactions';
@@ -11,6 +11,11 @@ import {
 } from '@/integrations/deepbook-predict/tx/simulate';
 import { createAppError, type PredictPilotError } from '@/lib/errors';
 import { runPostTransactionRefresh } from '@/lib/post-tx-refresh';
+import {
+  DEFAULT_PRE_SIGN_PREVIEW_TTL_MS,
+  validateNoConcurrentExecution,
+  validatePreSignSecurity,
+} from '@/lib/security';
 import { executePredictTransaction, type PredictTransactionTransport } from '@/lib/tx-executor';
 import type { QuoteAmount, SuiAddress, TransactionDigest } from '@/types/predict';
 import type {
@@ -28,6 +33,8 @@ export type PredictTradeFlowPhase =
   | 'signing'
   | 'simulating'
   | 'success';
+
+type PredictTradeOperationLock = 'review' | 'signature' | null;
 
 export interface PredictTradeTxPreviewBase {
   action: PredictTransactionAction;
@@ -49,6 +56,7 @@ export interface PredictTradeFlowState<TPreview extends PredictTradeTxPreviewBas
   executionResult: PredictTransactionExecutionResult | null;
   modalOpen: boolean;
   phase: PredictTradeFlowPhase;
+  previewPreparedAtMs: number | null;
   refreshWarning: PredictPilotError | null;
   riskPreview: PredictTradeRiskPreview | null;
   simulationPreview: PredictPtbSimulationPreview | null;
@@ -87,7 +95,9 @@ export interface UsePredictTradeExecutionFlowOptions<
   action: PredictTransactionAction;
   copy: PredictTradeExecutionCopy;
   executionTransport?: PredictTransactionTransport;
+  nowMs?: () => number;
   prepareReview: (input: TInput) => Promise<PreparePredictTradeReviewResult<TPreview>>;
+  previewTtlMs?: number;
   queryClient?: Pick<QueryClient, 'invalidateQueries'>;
   simulationTransport?: PredictSimulationTransport | null;
 }
@@ -103,6 +113,7 @@ export function createInitialPredictTradeFlowState<
     executionResult: null,
     modalOpen: false,
     phase: 'idle',
+    previewPreparedAtMs: null,
     refreshWarning: null,
     riskPreview: null,
     simulationPreview: null,
@@ -114,7 +125,9 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
   action,
   copy,
   executionTransport,
+  nowMs = Date.now,
   prepareReview,
+  previewTtlMs = DEFAULT_PRE_SIGN_PREVIEW_TTL_MS,
   queryClient,
   simulationTransport,
 }: UsePredictTradeExecutionFlowOptions<TInput, TPreview>) {
@@ -122,6 +135,7 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
   const currentClient = useCurrentClient();
   const defaultQueryClient = useQueryClient();
   const invalidationClient = queryClient ?? defaultQueryClient;
+  const operationLockRef = useRef<PredictTradeOperationLock>(null);
   const [state, setState] = useState<PredictTradeFlowState<TPreview>>(() =>
     createInitialPredictTradeFlowState<TPreview>(),
   );
@@ -137,9 +151,16 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
     [currentClient, dAppKit, executionTransport],
   );
   const canRequestSignature =
-    state.phase === 'ready' &&
-    state.executionRequest !== null &&
-    state.simulationPreview?.status === 'ready';
+    validatePreSignSecurity({
+      action,
+      nowMs: nowMs(),
+      phase: state.phase,
+      previewPreparedAtMs: state.previewPreparedAtMs,
+      previewTtlMs,
+      request: state.executionRequest,
+      service: `${copy.statusLabel}.canRequestSignature`,
+      simulationPreview: state.simulationPreview,
+    }).ok;
 
   const closeModal = useCallback(() => {
     setState((current) => ({
@@ -149,74 +170,122 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
   }, []);
 
   const reset = useCallback(() => {
+    operationLockRef.current = null;
     setState(createInitialPredictTradeFlowState<TPreview>());
   }, []);
 
   const beginReview = useCallback(
     async (input: TInput) => {
+      const lockValidation = validateOperationCanStart({
+        action,
+        lock: operationLockRef.current,
+        phase: state.phase,
+        service: `${copy.statusLabel}.beginReview`,
+      });
+
+      if (!lockValidation.ok) {
+        setState({
+          ...createInitialPredictTradeFlowState<TPreview>(),
+          error: lockValidation.error,
+          phase: 'failure',
+        });
+
+        return {
+          error: lockValidation.error,
+          ok: false as const,
+          warnings: [],
+        };
+      }
+
+      operationLockRef.current = 'review';
+
       setState({
         ...createInitialPredictTradeFlowState<TPreview>(),
         phase: 'building',
       });
 
-      const prepared = await prepareReview(input);
+      try {
+        const prepared = await prepareReview(input);
 
-      if (!prepared.ok) {
+        if (!prepared.ok) {
+          setState({
+            ...createInitialPredictTradeFlowState<TPreview>(),
+            error: prepared.error,
+            phase: 'failure',
+            riskPreview: prepared.riskPreview ?? null,
+            warnings: prepared.warnings,
+          });
+
+          return {
+            error: prepared.error,
+            ok: false as const,
+            warnings: prepared.warnings,
+          };
+        }
+
+        const preparedAtMs = nowMs();
+        const loadingPreview = createLoadingPtbPreview({
+          builderPreview: prepared.builderPreview,
+          request: prepared.executionRequest,
+        });
+
         setState({
           ...createInitialPredictTradeFlowState<TPreview>(),
-          error: prepared.error,
-          phase: 'failure',
-          riskPreview: prepared.riskPreview ?? null,
+          builderPreview: prepared.builderPreview,
+          executionRequest: prepared.executionRequest,
+          modalOpen: true,
+          phase: 'simulating',
+          previewPreparedAtMs: preparedAtMs,
+          riskPreview: prepared.riskPreview,
+          simulationPreview: loadingPreview,
           warnings: prepared.warnings,
         });
 
+        const simulationPreview = await previewPredictTransactionSimulation({
+          builderPreview: prepared.builderPreview,
+          request: prepared.executionRequest,
+          transport: defaultSimulationTransport,
+        });
+
+        setState((current) => ({
+          ...current,
+          error: 'error' in simulationPreview ? simulationPreview.error : null,
+          phase: simulationPreview.status === 'ready' ? 'ready' : 'failure',
+          simulationPreview,
+        }));
+
         return {
-          error: prepared.error,
-          ok: false as const,
-          warnings: prepared.warnings,
+          ok: true as const,
         };
+      } finally {
+        operationLockRef.current = null;
       }
-
-      const loadingPreview = createLoadingPtbPreview({
-        builderPreview: prepared.builderPreview,
-        request: prepared.executionRequest,
-      });
-
-      setState({
-        ...createInitialPredictTradeFlowState<TPreview>(),
-        builderPreview: prepared.builderPreview,
-        executionRequest: prepared.executionRequest,
-        modalOpen: true,
-        phase: 'simulating',
-        riskPreview: prepared.riskPreview,
-        simulationPreview: loadingPreview,
-        warnings: prepared.warnings,
-      });
-
-      const simulationPreview = await previewPredictTransactionSimulation({
-        builderPreview: prepared.builderPreview,
-        request: prepared.executionRequest,
-        transport: defaultSimulationTransport,
-      });
-
-      setState((current) => ({
-        ...current,
-        error: 'error' in simulationPreview ? simulationPreview.error : null,
-        phase: simulationPreview.status === 'ready' ? 'ready' : 'failure',
-        simulationPreview,
-      }));
-
-      return {
-        ok: true as const,
-      };
     },
-    [defaultSimulationTransport, prepareReview],
+    [action, copy.statusLabel, defaultSimulationTransport, nowMs, prepareReview, state.phase],
   );
 
   const rerunSimulation = useCallback(async () => {
     if (state.executionRequest === null || state.builderPreview === null) {
       return;
     }
+
+    const lockValidation = validateOperationCanStart({
+      action,
+      lock: operationLockRef.current,
+      phase: state.phase,
+      service: `${copy.statusLabel}.rerunSimulation`,
+    });
+
+    if (!lockValidation.ok) {
+      setState((current) => ({
+        ...current,
+        error: lockValidation.error,
+        phase: 'failure',
+      }));
+      return;
+    }
+
+    operationLockRef.current = 'review';
 
     const loadingPreview = createLoadingPtbPreview({
       builderPreview: state.builderPreview,
@@ -230,30 +299,73 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
       simulationPreview: loadingPreview,
     }));
 
-    const simulationPreview = await previewPredictTransactionSimulation({
-      builderPreview: state.builderPreview,
-      request: state.executionRequest,
-      transport: defaultSimulationTransport,
-    });
+    try {
+      const simulationPreview = await previewPredictTransactionSimulation({
+        builderPreview: state.builderPreview,
+        request: state.executionRequest,
+        transport: defaultSimulationTransport,
+      });
 
-    setState((current) => ({
-      ...current,
-      error: 'error' in simulationPreview ? simulationPreview.error : null,
-      phase: simulationPreview.status === 'ready' ? 'ready' : 'failure',
-      simulationPreview,
-    }));
-  }, [defaultSimulationTransport, state.builderPreview, state.executionRequest]);
+      setState((current) => ({
+        ...current,
+        error: 'error' in simulationPreview ? simulationPreview.error : null,
+        phase: simulationPreview.status === 'ready' ? 'ready' : 'failure',
+        previewPreparedAtMs: nowMs(),
+        simulationPreview,
+      }));
+    } finally {
+      operationLockRef.current = null;
+    }
+  }, [
+    action,
+    copy.statusLabel,
+    defaultSimulationTransport,
+    nowMs,
+    state.builderPreview,
+    state.executionRequest,
+    state.phase,
+  ]);
 
   const requestSignature = useCallback(async () => {
-    if (!canRequestSignature || state.executionRequest === null) {
-      const error = createAppError('INVALID_INPUT', {
-        context: {
-          action,
-          service: `${copy.statusLabel}.requestSignature`,
-        },
-        message: copy.signatureNotReadyMessage,
-        recovery: 'Run simulation and review the pre-sign modal before signing.',
-      });
+    const lockValidation = validateOperationCanStart({
+      action,
+      lock: operationLockRef.current,
+      phase: state.phase,
+      service: `${copy.statusLabel}.requestSignature`,
+    });
+
+    const signValidation = validatePreSignSecurity({
+      action,
+      nowMs: nowMs(),
+      phase: state.phase,
+      previewPreparedAtMs: state.previewPreparedAtMs,
+      previewTtlMs,
+      request: state.executionRequest,
+      service: `${copy.statusLabel}.requestSignature`,
+      simulationPreview: state.simulationPreview,
+    });
+
+    if (!lockValidation.ok) {
+      setState((current) => ({
+        ...current,
+        error: lockValidation.error,
+        phase: 'failure',
+      }));
+      return;
+    }
+
+    if (!signValidation.ok) {
+      const error =
+        signValidation.error.message === 'The transaction is not ready for wallet signature.'
+          ? createAppError('INVALID_INPUT', {
+              context: {
+                action,
+                service: `${copy.statusLabel}.requestSignature`,
+              },
+              message: copy.signatureNotReadyMessage,
+              recovery: 'Run simulation and review the pre-sign modal before signing.',
+            })
+          : signValidation.error;
 
       setState((current) => ({
         ...current,
@@ -263,53 +375,68 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
       return;
     }
 
+    const executionRequest = state.executionRequest;
+    if (executionRequest === null) {
+      return;
+    }
+
+    operationLockRef.current = 'signature';
+
     setState((current) => ({
       ...current,
       error: null,
       phase: 'signing',
     }));
 
-    const executionResult = await executePredictTransaction(
-      state.executionRequest,
-      defaultExecutionTransport,
-    );
+    try {
+      const executionResult = await executePredictTransaction(
+        executionRequest,
+        defaultExecutionTransport,
+      );
 
-    if (executionResult.status === 'failure') {
+      if (executionResult.status === 'failure') {
+        setState((current) => ({
+          ...current,
+          completedDigest: executionResult.digest ?? null,
+          error: executionResult.error,
+          executionResult,
+          phase: 'failure',
+        }));
+        return;
+      }
+
+      const refreshWarning = await runPostTransactionRefresh({
+        action,
+        affectedObjects: executionResult.affectedObjects,
+        digest: executionResult.digest,
+        queryClient: invalidationClient,
+        queryKeys: state.builderPreview?.postTransactionRefreshKeys ?? [],
+        service: `${copy.statusLabel}.postTransactionRefresh`,
+      });
+
       setState((current) => ({
         ...current,
-        completedDigest: executionResult.digest ?? null,
-        error: executionResult.error,
+        completedDigest: executionResult.digest,
         executionResult,
-        phase: 'failure',
+        phase: 'success',
+        refreshWarning: executionResult.postSubmitWarning ?? refreshWarning,
       }));
-      return;
+    } finally {
+      operationLockRef.current = null;
     }
-
-    const refreshWarning = await runPostTransactionRefresh({
-      action,
-      affectedObjects: executionResult.affectedObjects,
-      digest: executionResult.digest,
-      queryClient: invalidationClient,
-      queryKeys: state.builderPreview?.postTransactionRefreshKeys ?? [],
-      service: `${copy.statusLabel}.postTransactionRefresh`,
-    });
-
-    setState((current) => ({
-      ...current,
-      completedDigest: executionResult.digest,
-      executionResult,
-      phase: 'success',
-      refreshWarning: executionResult.postSubmitWarning ?? refreshWarning,
-    }));
   }, [
     action,
-    canRequestSignature,
     copy.signatureNotReadyMessage,
     copy.statusLabel,
     defaultExecutionTransport,
     invalidationClient,
+    nowMs,
+    previewTtlMs,
     state.builderPreview?.postTransactionRefreshKeys,
     state.executionRequest,
+    state.phase,
+    state.previewPreparedAtMs,
+    state.simulationPreview,
   ]);
 
   return {
@@ -320,6 +447,40 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
     rerunSimulation,
     reset,
     state,
+  };
+}
+
+function validateOperationCanStart({
+  action,
+  lock,
+  phase,
+  service,
+}: {
+  action: PredictTransactionAction;
+  lock: PredictTradeOperationLock;
+  phase: PredictTradeFlowPhase;
+  service: string;
+}) {
+  if (lock === null) {
+    return validateNoConcurrentExecution({
+      action,
+      phase,
+      service,
+    });
+  }
+
+  return {
+    error: createAppError('INVALID_INPUT', {
+      context: {
+        action,
+        operation: lock,
+        service,
+      },
+      message: 'Another transaction review or wallet request is already in progress.',
+      recovery: 'Wait for the current review or wallet request to finish before trying again.',
+      title: 'Action already in progress',
+    }),
+    ok: false as const,
   };
 }
 
