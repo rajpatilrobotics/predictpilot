@@ -5,6 +5,7 @@ import { RouteErrorState } from '@/components/layout/RouteStates';
 import { SidebarNav } from '@/components/layout/SidebarNav';
 import { TopBar } from '@/components/layout/TopBar';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
+import { DemoModePage } from '@/features/demo/DemoModePage';
 import { HistoryPage } from '@/features/history/HistoryPage';
 import { MarketIntelligencePage } from '@/features/markets/MarketIntelligencePage';
 import { OracleStatusPage } from '@/features/oracle/OracleStatusPage';
@@ -38,7 +39,7 @@ export function AppShell({ activeRoute, isNotFound, onNavigate, routes }: AppShe
                 title="Route not found"
               />
             ) : (
-              <RouteContent route={activeRoute} />
+              <RouteContent onNavigate={onNavigate} route={activeRoute} />
             )}
           </section>
         </main>
@@ -49,7 +50,13 @@ export function AppShell({ activeRoute, isNotFound, onNavigate, routes }: AppShe
   );
 }
 
-function RouteContent({ route }: { route: AppRoute }) {
+function RouteContent({
+  onNavigate,
+  route,
+}: {
+  onNavigate: (path: string) => void;
+  route: AppRoute;
+}) {
   switch (route.id) {
     case 'dashboard':
       return <DashboardPage />;
@@ -72,6 +79,7 @@ function RouteContent({ route }: { route: AppRoute }) {
     case 'strategy':
       return <MarketDetailPage />;
     case 'demo':
+      return <DemoModePage onNavigate={onNavigate} />;
     case 'manager':
     case 'not-found':
       return <RoutePlaceholder route={route} />;

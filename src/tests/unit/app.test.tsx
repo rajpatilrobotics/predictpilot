@@ -25,6 +25,15 @@ vi.mock('@/features/dashboard/DashboardPage', () => ({
   ),
 }));
 
+vi.mock('@/features/demo/DemoModePage', () => ({
+  DemoModePage: () => (
+    <article aria-label="Demo mode page">
+      <h1>Demo Mode</h1>
+      <p>Demo mode page mounted</p>
+    </article>
+  ),
+}));
+
 vi.mock('@/features/markets/MarketIntelligencePage', () => ({
   MarketIntelligencePage: () => (
     <article aria-label="Market intelligence page">
@@ -167,6 +176,7 @@ describe('App shell', () => {
   it('mounts implemented Phase 5 route pages inside the shared shell', () => {
     const mountedRouteTextById = {
       dashboard: 'Dashboard page mounted',
+      demo: 'Demo mode page mounted',
       history: 'History page mounted',
       markets: 'Market intelligence page mounted',
       'oracle-status': 'Oracle status page mounted',
@@ -195,7 +205,7 @@ describe('App shell', () => {
   });
 
   it('keeps unimplemented routes as safe placeholders', () => {
-    const placeholderRouteIds = new Set(['demo', 'manager']);
+    const placeholderRouteIds = new Set(['manager']);
 
     for (const route of appRoutes.filter((item) => placeholderRouteIds.has(item.id))) {
       window.history.pushState({}, '', route.href);

@@ -37,6 +37,29 @@ test('reaches mounted and placeholder routes from navigation', async ({ page }) 
   await expect(page.getByRole('heading', { level: 1, name: 'Demo Mode' })).toBeVisible();
 });
 
+test('demo mode is visibly offline and never claims execution proof', async ({ page }) => {
+  await page.goto('/demo');
+
+  await expect(page.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeVisible();
+  await expect(page.getByRole('status', { name: /Testnet status/i })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Demo Mode' })).toBeVisible();
+  await expect(page.getByText('Offline fixture').first()).toBeVisible();
+  await expect(page.getByText('Not live Testnet proof').first()).toBeVisible();
+  await expect(page.getByText('No wallet signature will be requested').first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Oracle readiness' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Next step' }).click();
+  await expect(page.getByRole('heading', { name: 'Strategy preview' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Step 5: Proof' }).click();
+  await expect(page.getByRole('heading', { name: 'Proof boundary' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Reset demo' }).click();
+  await expect(page.getByRole('heading', { name: 'Oracle readiness' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /request wallet signature/i })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /view transaction/i })).toHaveCount(0);
+});
+
 test('every approved shell route loads inside the terminal shell', async ({ page }) => {
   for (const route of shellRoutes) {
     await page.goto(route.path);
