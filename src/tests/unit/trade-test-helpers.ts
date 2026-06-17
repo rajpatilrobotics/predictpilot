@@ -16,6 +16,7 @@ import type {
   BinaryPositionSummaryModel,
   ManagerPositionsSummaryModel,
   ManagerSummaryModel,
+  RangePositionModel,
 } from '@/types/portfolio';
 
 export const tradeTestNowMs = 1_781_635_255_000;
@@ -170,16 +171,37 @@ export function createTradeBinaryPosition(
 
 export function createTradePositionsSummary({
   binaryPositions = [],
+  rangePositions = [],
 }: {
   binaryPositions?: BinaryPositionSummaryModel[];
+  rangePositions?: RangePositionModel[];
 } = {}) {
   const summary: ManagerPositionsSummaryModel = {
     binaryPositions,
     managerId: tradeTestManagerId,
-    rangePositions: [],
+    rangePositions,
   };
 
   return normalizeManagerPositionsSummary(summary);
+}
+
+export function createTradeRangePosition(
+  overrides: Partial<RangePositionModel> = {},
+): RangePositionModel {
+  const oracleState = createTradeOracleState();
+
+  return {
+    averageEntryQuote: 250_000n,
+    key: {
+      expiryMs: oracleState.oracle.expiryMs,
+      higherStrike1e9: oracleState.oracle.minStrike1e9 + oracleState.oracle.tickSize1e9,
+      lowerStrike1e9: oracleState.oracle.minStrike1e9,
+      oracleId: tradeTestOracleId,
+    },
+    quantityQuote: 2_000_000n,
+    unrealizedPnlQuote: 100_000n,
+    ...overrides,
+  };
 }
 
 export function createTradeManagerState(

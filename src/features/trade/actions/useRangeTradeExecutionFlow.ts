@@ -5,20 +5,20 @@ import type { RiskPreviewModel } from '@/features/tx/RiskPreview';
 import type { UsePredictManagerResult } from '@/features/manager/hooks/usePredictManager';
 import type { WalletStatusModel } from '@/features/wallet/useWalletStatus';
 import {
-  previewBinaryTrade,
-  type BinaryTradeAmountEstimator,
-  type BinaryTradePreviewAction,
-  type BinaryTradePreviewModel,
-  type BinaryTradePreviewWarning,
-} from '@/integrations/deepbook-predict/tx/preview-binary';
+  previewRangeTrade,
+  type RangeTradeAmountEstimator,
+  type RangeTradePreviewAction,
+  type RangeTradePreviewModel,
+  type RangeTradePreviewWarning,
+} from '@/integrations/deepbook-predict/tx/preview-range';
 import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
 import { predictDeploymentConfig } from '@/config/predict';
 import { createAppError, type PredictPilotError } from '@/lib/errors';
 import { getOracleStatus, type OracleStatusModel } from '@/lib/oracle-status';
 import type { PredictTransactionTransport } from '@/lib/tx-executor';
 import type { OracleAskBoundsModel, OracleStateModel } from '@/types/oracle';
-import type { MarketKeyModel, QuoteAmount, SuiAddress } from '@/types/predict';
-import type { BinaryPositionSummaryModel, ManagerSummaryModel } from '@/types/portfolio';
+import type { ObjectId, QuoteAmount, RangeKeyModel, SuiAddress } from '@/types/predict';
+import type { ManagerSummaryModel, RangePositionModel } from '@/types/portfolio';
 import type { AffectedObjectHint, PredictTransactionExecutionRequest } from '@/types/tx';
 import {
   createInitialPredictTradeFlowState,
@@ -29,23 +29,24 @@ import {
   type PreparePredictTradeReviewResult,
 } from './usePredictTradeExecutionFlow';
 
-export type BinaryTradeFlowPhase = PredictTradeFlowPhase;
+export type RangeTradeFlowPhase = PredictTradeFlowPhase;
 
-export interface BinaryTradeTxPreviewBase extends PredictTradeTxPreviewBase {
-  action: BinaryTradePreviewAction;
+export interface RangeTradeTxPreviewBase extends PredictTradeTxPreviewBase {
+  action: RangeTradePreviewAction;
   affectedObjects: AffectedObjectHint[];
-  marketKey: MarketKeyModel;
-  oracleId: MarketKeyModel['oracleId'];
+  managerId: ObjectId;
+  oracleId: ObjectId;
+  rangeKey: RangeKeyModel;
 }
 
-export interface BinaryTradeBuildOptions {
-  managerId?: MarketKeyModel['oracleId'] | null;
-  marketKey?: MarketKeyModel | null;
+export interface RangeTradeBuildOptions {
+  managerId?: ObjectId | null;
   quantityQuote?: QuoteAmount | null;
+  rangeKey?: RangeKeyModel | null;
   sender?: SuiAddress | null;
 }
 
-export type BinaryTradeBuildResult<TPreview extends BinaryTradeTxPreviewBase> =
+export type RangeTradeBuildResult<TPreview extends RangeTradeTxPreviewBase> =
   | {
       executionRequest: PredictTransactionExecutionRequest;
       ok: true;
@@ -57,12 +58,12 @@ export type BinaryTradeBuildResult<TPreview extends BinaryTradeTxPreviewBase> =
       ok: false;
     };
 
-export interface UseBinaryTradeExecutionFlowOptions<TPreview extends BinaryTradeTxPreviewBase> {
-  action: BinaryTradePreviewAction;
+export interface UseRangeTradeExecutionFlowOptions<TPreview extends RangeTradeTxPreviewBase> {
+  action: RangeTradePreviewAction;
   askBounds?: OracleAskBoundsModel;
-  buildTransaction: (options: BinaryTradeBuildOptions) => BinaryTradeBuildResult<TPreview>;
-  copy: BinaryTradeFlowCopy;
-  estimateTradeAmounts?: BinaryTradeAmountEstimator;
+  buildTransaction: (options: RangeTradeBuildOptions) => RangeTradeBuildResult<TPreview>;
+  copy: RangeTradeFlowCopy;
+  estimateTradeAmounts?: RangeTradeAmountEstimator;
   executionTransport?: PredictTransactionTransport;
   manager: UsePredictManagerResult;
   managerSummary?: ManagerSummaryModel | null;
@@ -73,11 +74,13 @@ export interface UseBinaryTradeExecutionFlowOptions<TPreview extends BinaryTrade
   walletStatus: WalletStatusModel;
 }
 
-export interface BinaryTradeFlowCopy {
+export interface RangeTradeFlowCopy {
   invalidKeyMessage: string;
   invalidKeyRecovery: string;
   invalidQuantityMessage: string;
   invalidQuantityRecovery: string;
+  invalidRangeMessage: string;
+  invalidRangeRecovery: string;
   missingManagerSummaryMessage: string;
   missingManagerSummaryRecovery: string;
   missingOwnedPositionMessage?: string;
@@ -90,32 +93,32 @@ export interface BinaryTradeFlowCopy {
   statusLabel: string;
 }
 
-export interface BeginBinaryTradeReviewInput {
-  marketKey?: MarketKeyModel | null;
-  ownedPosition?: Pick<BinaryPositionSummaryModel, 'key' | 'openQuantityQuote'> | null;
+export interface BeginRangeTradeReviewInput {
+  ownedRangePosition?: Pick<RangePositionModel, 'key' | 'quantityQuote'> | null;
   quantityQuote?: QuoteAmount | null;
+  rangeKey?: RangeKeyModel | null;
 }
 
-export type BeginBinaryTradeReviewResult =
+export type BeginRangeTradeReviewResult =
   | {
       ok: true;
     }
   | {
       error: PredictPilotError;
       ok: false;
-      warnings: BinaryTradePreviewWarning[];
+      warnings: RangeTradePreviewWarning[];
     };
 
-export type BinaryTradeFlowState<TPreview extends BinaryTradeTxPreviewBase> =
+export type RangeTradeFlowState<TPreview extends RangeTradeTxPreviewBase> =
   PredictTradeFlowState<TPreview>;
 
-export function createInitialBinaryTradeFlowState<
-  TPreview extends BinaryTradeTxPreviewBase,
->(): BinaryTradeFlowState<TPreview> {
+export function createInitialRangeTradeFlowState<
+  TPreview extends RangeTradeTxPreviewBase,
+>(): RangeTradeFlowState<TPreview> {
   return createInitialPredictTradeFlowState<TPreview>();
 }
 
-export function useBinaryTradeExecutionFlow<TPreview extends BinaryTradeTxPreviewBase>({
+export function useRangeTradeExecutionFlow<TPreview extends RangeTradeTxPreviewBase>({
   action,
   askBounds,
   buildTransaction,
@@ -129,25 +132,25 @@ export function useBinaryTradeExecutionFlow<TPreview extends BinaryTradeTxPrevie
   queryClient,
   simulationTransport,
   walletStatus,
-}: UseBinaryTradeExecutionFlowOptions<TPreview>) {
-  const initialNowMs = useStableInitialNowMs(nowMs);
+}: UseRangeTradeExecutionFlowOptions<TPreview>) {
+  const [initialNowMs] = useState(() => nowMs ?? Date.now());
   const effectiveNowMs = nowMs ?? initialNowMs;
   const prepareReview = useCallback(
     async ({
-      marketKey,
-      ownedPosition,
+      ownedRangePosition,
       quantityQuote,
-    }: BeginBinaryTradeReviewInput): Promise<PreparePredictTradeReviewResult<TPreview>> => {
-      const preconditions = validateBinaryTradePreconditions({
+      rangeKey,
+    }: BeginRangeTradeReviewInput): Promise<PreparePredictTradeReviewResult<TPreview>> => {
+      const preconditions = validateRangeTradePreconditions({
         action,
         copy,
         manager,
         managerSummary,
-        marketKey,
         nowMs: effectiveNowMs,
         oracleState,
-        ownedPosition,
+        ownedRangePosition,
         quantityQuote,
+        rangeKey,
         walletStatus,
       });
 
@@ -159,18 +162,18 @@ export function useBinaryTradeExecutionFlow<TPreview extends BinaryTradeTxPrevie
         };
       }
 
-      const riskResult = await createBinaryTradeRiskPreview({
+      const riskResult = await createRangeTradeRiskPreview({
         action,
         askBounds,
         copy,
         estimateTradeAmounts,
         managerSummary: preconditions.managerSummary,
-        marketKey: preconditions.marketKey,
         nowMs: effectiveNowMs,
         oracleState,
         oracleStatus: preconditions.oracleStatus,
-        ownedPosition: preconditions.ownedPosition,
+        ownedRangePosition: preconditions.ownedRangePosition,
         quantityQuote: preconditions.quantityQuote,
+        rangeKey: preconditions.rangeKey,
       });
 
       if (!riskResult.ok) {
@@ -182,10 +185,10 @@ export function useBinaryTradeExecutionFlow<TPreview extends BinaryTradeTxPrevie
             copy,
             error: riskResult.error,
             managerSummary: preconditions.managerSummary,
-            marketKey: preconditions.marketKey,
             oracleState,
             oracleStatus: preconditions.oracleStatus,
             quantityQuote: preconditions.quantityQuote,
+            rangeKey: preconditions.rangeKey,
             warnings: riskResult.warnings,
           }),
           warnings: riskResult.warnings,
@@ -194,8 +197,8 @@ export function useBinaryTradeExecutionFlow<TPreview extends BinaryTradeTxPrevie
 
       const builderResult = buildTransaction({
         managerId: preconditions.managerId,
-        marketKey: preconditions.marketKey,
         quantityQuote: preconditions.quantityQuote,
+        rangeKey: preconditions.rangeKey,
         sender: preconditions.sender,
       });
 
@@ -240,43 +243,37 @@ export function useBinaryTradeExecutionFlow<TPreview extends BinaryTradeTxPrevie
   });
 }
 
-function useStableInitialNowMs(nowMs: number | undefined) {
-  const [initialNowMs] = useState(() => nowMs ?? Date.now());
-
-  return initialNowMs;
-}
-
-function validateBinaryTradePreconditions({
+function validateRangeTradePreconditions({
   action,
   copy,
   manager,
   managerSummary,
-  marketKey,
   nowMs,
   oracleState,
-  ownedPosition,
+  ownedRangePosition,
   quantityQuote,
+  rangeKey,
   walletStatus,
 }: {
-  action: BinaryTradePreviewAction;
-  copy: BinaryTradeFlowCopy;
+  action: RangeTradePreviewAction;
+  copy: RangeTradeFlowCopy;
   manager: UsePredictManagerResult;
   managerSummary?: ManagerSummaryModel | null;
-  marketKey?: MarketKeyModel | null;
   nowMs: number;
   oracleState: OracleStateModel;
-  ownedPosition?: Pick<BinaryPositionSummaryModel, 'key' | 'openQuantityQuote'> | null;
+  ownedRangePosition?: Pick<RangePositionModel, 'key' | 'quantityQuote'> | null;
   quantityQuote?: QuoteAmount | null;
+  rangeKey?: RangeKeyModel | null;
   walletStatus: WalletStatusModel;
 }):
   | {
       managerId: NonNullable<UsePredictManagerResult['managerId']>;
       managerSummary: ManagerSummaryModel;
-      marketKey: MarketKeyModel;
       ok: true;
       oracleStatus: OracleStatusModel;
-      ownedPosition?: Pick<BinaryPositionSummaryModel, 'key' | 'openQuantityQuote'> | null;
+      ownedRangePosition?: Pick<RangePositionModel, 'key' | 'quantityQuote'> | null;
       quantityQuote: QuoteAmount;
+      rangeKey: RangeKeyModel;
       sender: SuiAddress;
     }
   | {
@@ -334,20 +331,36 @@ function validateBinaryTradePreconditions({
   }
 
   if (
-    marketKey === null ||
-    marketKey === undefined ||
-    marketKey.oracleId !== oracleState.oracle.oracleId
+    rangeKey === null ||
+    rangeKey === undefined ||
+    rangeKey.oracleId !== oracleState.oracle.oracleId
   ) {
     return {
       error: createAppError('INVALID_INPUT', {
         context: {
           action,
-          field: 'marketKey',
+          field: 'rangeKey',
           managerId: manager.managerId,
           oracleId: oracleState.oracle.oracleId,
         },
         message: copy.invalidKeyMessage,
         recovery: copy.invalidKeyRecovery,
+      }),
+      ok: false,
+    };
+  }
+
+  if (rangeKey.lowerStrike1e9 >= rangeKey.higherStrike1e9) {
+    return {
+      error: createAppError('INVALID_RANGE', {
+        context: {
+          action,
+          field: 'rangeKey',
+          managerId: manager.managerId,
+          oracleId: oracleState.oracle.oracleId,
+        },
+        message: copy.invalidRangeMessage,
+        recovery: copy.invalidRangeRecovery,
       }),
       ok: false,
     };
@@ -370,7 +383,7 @@ function validateBinaryTradePreconditions({
   }
 
   const oracleStatus = getOracleStatus({ nowMs, oracleState });
-  const availability = action === 'MINT' ? oracleStatus.mint : oracleStatus.redeem;
+  const availability = action === 'MINT_RANGE' ? oracleStatus.mintRange : oracleStatus.redeemRange;
 
   if (!availability.isAllowed) {
     const stale = availability.reasonCodes.some((code) =>
@@ -390,28 +403,28 @@ function validateBinaryTradePreconditions({
     };
   }
 
-  if (action === 'REDEEM') {
-    if (ownedPosition === null || ownedPosition === undefined) {
+  if (action === 'REDEEM_RANGE') {
+    if (ownedRangePosition === null || ownedRangePosition === undefined) {
       return {
         error: createAppError('INVALID_INPUT', {
           context: {
             action,
-            field: 'ownedPosition',
+            field: 'ownedRangePosition',
             managerId: manager.managerId,
             oracleId: oracleState.oracle.oracleId,
           },
-          message: copy.missingOwnedPositionMessage ?? 'An open binary position is required.',
+          message: copy.missingOwnedPositionMessage ?? 'An open range position is required.',
           recovery:
             copy.missingOwnedPositionRecovery ??
-            'Choose a binary market with an open position before redeeming.',
+            'Choose a range market with an open position before redeeming.',
         }),
         ok: false,
       };
     }
 
     if (
-      !isSameMarketKey(ownedPosition.key, marketKey) ||
-      ownedPosition.openQuantityQuote < quantityQuote
+      !isSameRangeKey(ownedRangePosition.key, rangeKey) ||
+      ownedRangePosition.quantityQuote < quantityQuote
     ) {
       return {
         error: createAppError('INVALID_INPUT', {
@@ -423,10 +436,10 @@ function validateBinaryTradePreconditions({
           },
           message:
             copy.quantityExceedsOwnedMessage ??
-            'Redeem quantity exceeds the open binary position quantity.',
+            'Redeem quantity exceeds the open range position quantity.',
           recovery:
             copy.quantityExceedsOwnedRecovery ??
-            'Choose a quantity that is less than or equal to the open position quantity.',
+            'Choose a quantity that is less than or equal to the open range position quantity.',
         }),
         ok: false,
       };
@@ -436,62 +449,62 @@ function validateBinaryTradePreconditions({
   return {
     managerId: manager.managerId,
     managerSummary,
-    marketKey,
     ok: true,
     oracleStatus,
-    ownedPosition,
+    ownedRangePosition,
     quantityQuote,
+    rangeKey,
     sender: walletStatus.accountAddress as SuiAddress,
   };
 }
 
-async function createBinaryTradeRiskPreview({
+async function createRangeTradeRiskPreview({
   action,
   askBounds,
   copy,
   estimateTradeAmounts,
   managerSummary,
-  marketKey,
   nowMs,
   oracleState,
   oracleStatus,
-  ownedPosition,
+  ownedRangePosition,
   quantityQuote,
+  rangeKey,
 }: {
-  action: BinaryTradePreviewAction;
+  action: RangeTradePreviewAction;
   askBounds?: OracleAskBoundsModel;
-  copy: BinaryTradeFlowCopy;
-  estimateTradeAmounts?: BinaryTradeAmountEstimator;
+  copy: RangeTradeFlowCopy;
+  estimateTradeAmounts?: RangeTradeAmountEstimator;
   managerSummary: ManagerSummaryModel;
-  marketKey: MarketKeyModel;
   nowMs: number;
   oracleState: OracleStateModel;
   oracleStatus: OracleStatusModel;
-  ownedPosition?: Pick<BinaryPositionSummaryModel, 'key' | 'openQuantityQuote'> | null;
+  ownedRangePosition?: Pick<RangePositionModel, 'key' | 'quantityQuote'> | null;
   quantityQuote: QuoteAmount;
+  rangeKey: RangeKeyModel;
 }): Promise<
   | {
       ok: true;
-      preview: BinaryTradePreviewModel | RiskPreviewModel;
-      warnings: BinaryTradePreviewWarning[];
+      preview: RangeTradePreviewModel | RiskPreviewModel;
+      warnings: RangeTradePreviewWarning[];
     }
   | {
       error: PredictPilotError;
       ok: false;
-      warnings: BinaryTradePreviewWarning[];
+      warnings: RangeTradePreviewWarning[];
     }
 > {
-  const previewResult = await previewBinaryTrade({
+  const previewResult = await previewRangeTrade({
     action,
     askBounds,
-    direction: marketKey.direction,
     estimateTradeAmounts,
+    higherStrike1e9: rangeKey.higherStrike1e9,
+    lowerStrike1e9: rangeKey.lowerStrike1e9,
     manager: managerSummary,
     nowMs,
     oracleState,
-    ownedPosition,
+    ownedRangePosition,
     quantityQuote,
-    strike1e9: marketKey.strike1e9,
   });
 
   if (previewResult.ok) {
@@ -512,10 +525,10 @@ async function createBinaryTradeRiskPreview({
       action,
       copy,
       managerSummary,
-      marketKey,
       oracleState,
       oracleStatus,
       quantityQuote,
+      rangeKey,
       warnings: previewResult.warnings,
     }),
     warnings: previewResult.warnings,
@@ -526,25 +539,25 @@ function createSimulationRequiredRiskPreview({
   action,
   copy,
   managerSummary,
-  marketKey,
   oracleState,
   oracleStatus,
   quantityQuote,
+  rangeKey,
   warnings,
 }: {
-  action: BinaryTradePreviewAction;
-  copy: BinaryTradeFlowCopy;
+  action: RangeTradePreviewAction;
+  copy: RangeTradeFlowCopy;
   managerSummary: ManagerSummaryModel;
-  marketKey: MarketKeyModel;
   oracleState: OracleStateModel;
   oracleStatus: OracleStatusModel;
   quantityQuote: QuoteAmount;
-  warnings: BinaryTradePreviewWarning[];
+  rangeKey: RangeKeyModel;
+  warnings: RangeTradePreviewWarning[];
 }): RiskPreviewModel {
   return {
     action,
     askBoundsStatus: oracleState.askBounds.status,
-    expiryMs: marketKey.expiryMs,
+    expiryMs: rangeKey.expiryMs,
     managerBalanceQuote: managerSummary.tradingBalanceQuote,
     managerId: managerSummary.managerId,
     oracleFreshness: oracleStatus.freshness.aggregateStatus,
@@ -569,42 +582,42 @@ function createBlockedRiskPreview({
   copy,
   error,
   managerSummary,
-  marketKey,
   oracleState,
   oracleStatus,
   quantityQuote,
+  rangeKey,
   warnings,
 }: {
-  action: BinaryTradePreviewAction;
-  copy: BinaryTradeFlowCopy;
+  action: RangeTradePreviewAction;
+  copy: RangeTradeFlowCopy;
   error: PredictPilotError;
   managerSummary: ManagerSummaryModel;
-  marketKey: MarketKeyModel;
   oracleState: OracleStateModel;
   oracleStatus: OracleStatusModel;
   quantityQuote: QuoteAmount;
-  warnings: BinaryTradePreviewWarning[];
+  rangeKey: RangeKeyModel;
+  warnings: RangeTradePreviewWarning[];
 }): RiskPreviewModel {
   return {
     ...createSimulationRequiredRiskPreview({
       action,
       copy,
       managerSummary,
-      marketKey,
       oracleState,
       oracleStatus,
       quantityQuote,
+      rangeKey,
       warnings,
     }),
     blockers: [error.message],
   };
 }
 
-function isSameMarketKey(left: MarketKeyModel, right: MarketKeyModel) {
+function isSameRangeKey(left: RangeKeyModel, right: RangeKeyModel) {
   return (
     left.oracleId === right.oracleId &&
     left.expiryMs === right.expiryMs &&
-    left.strike1e9 === right.strike1e9 &&
-    left.direction === right.direction
+    left.lowerStrike1e9 === right.lowerStrike1e9 &&
+    left.higherStrike1e9 === right.higherStrike1e9
   );
 }

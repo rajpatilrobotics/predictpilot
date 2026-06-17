@@ -19,6 +19,18 @@ import {
   type BeginBinaryRedeemReviewResult,
   type BinaryRedeemFlowState,
 } from '@/features/trade/actions/useBinaryRedeemFlow';
+import {
+  useRangeMintFlow,
+  type BeginRangeMintReviewInput,
+  type BeginRangeMintReviewResult,
+  type RangeMintFlowState,
+} from '@/features/trade/actions/useRangeMintFlow';
+import {
+  useRangeRedeemFlow,
+  type BeginRangeRedeemReviewInput,
+  type BeginRangeRedeemReviewResult,
+  type RangeRedeemFlowState,
+} from '@/features/trade/actions/useRangeRedeemFlow';
 import { MarketDetailPage } from '@/features/trade/MarketDetailPage';
 import { useWalletStatus } from '@/features/wallet/useWalletStatus';
 import { createAppError, type PredictPilotError } from '@/lib/errors';
@@ -30,6 +42,7 @@ import {
   createTradeManagerSummaryPortfolio,
   createTradeOracleState,
   createTradePositionsSummary,
+  createTradeRangePosition,
   createTradeWalletStatus,
   presentAskBounds,
   querySuccess,
@@ -71,6 +84,14 @@ vi.mock('@/features/trade/actions/useBinaryRedeemFlow', () => ({
   useBinaryRedeemFlow: vi.fn(),
 }));
 
+vi.mock('@/features/trade/actions/useRangeMintFlow', () => ({
+  useRangeMintFlow: vi.fn(),
+}));
+
+vi.mock('@/features/trade/actions/useRangeRedeemFlow', () => ({
+  useRangeRedeemFlow: vi.fn(),
+}));
+
 interface HookState {
   askBounds: UseQueryResult<OracleAskBoundsModel, PredictPilotError>;
   manager: ReturnType<typeof createTradeManagerState>;
@@ -99,26 +120,48 @@ const beginMintReview =
   vi.fn<(input: BeginBinaryMintReviewInput) => Promise<BeginBinaryMintReviewResult>>();
 const beginRedeemReview =
   vi.fn<(input: BeginBinaryRedeemReviewInput) => Promise<BeginBinaryRedeemReviewResult>>();
+const beginMintRangeReview =
+  vi.fn<(input: BeginRangeMintReviewInput) => Promise<BeginRangeMintReviewResult>>();
+const beginRedeemRangeReview =
+  vi.fn<(input: BeginRangeRedeemReviewInput) => Promise<BeginRangeRedeemReviewResult>>();
 const closeBinaryMintModal = vi.fn();
 const closeBinaryRedeemModal = vi.fn();
+const closeRangeMintModal = vi.fn();
+const closeRangeRedeemModal = vi.fn();
 const requestBinaryMintSignature = vi.fn();
 const requestBinaryRedeemSignature = vi.fn();
+const requestRangeMintSignature = vi.fn();
+const requestRangeRedeemSignature = vi.fn();
 const rerunBinaryMintSimulation = vi.fn();
 const rerunBinaryRedeemSimulation = vi.fn();
+const rerunRangeMintSimulation = vi.fn();
+const rerunRangeRedeemSimulation = vi.fn();
 const resetBinaryMintFlow = vi.fn();
 const resetBinaryRedeemFlow = vi.fn();
+const resetRangeMintFlow = vi.fn();
+const resetRangeRedeemFlow = vi.fn();
 
 beforeEach(() => {
   beginMintReview.mockResolvedValue({ ok: true });
   beginRedeemReview.mockResolvedValue({ ok: true });
+  beginMintRangeReview.mockResolvedValue({ ok: true });
+  beginRedeemRangeReview.mockResolvedValue({ ok: true });
   closeBinaryMintModal.mockReset();
   closeBinaryRedeemModal.mockReset();
+  closeRangeMintModal.mockReset();
+  closeRangeRedeemModal.mockReset();
   requestBinaryMintSignature.mockReset();
   requestBinaryRedeemSignature.mockReset();
+  requestRangeMintSignature.mockReset();
+  requestRangeRedeemSignature.mockReset();
   rerunBinaryMintSimulation.mockReset();
   rerunBinaryRedeemSimulation.mockReset();
+  rerunRangeMintSimulation.mockReset();
+  rerunRangeRedeemSimulation.mockReset();
   resetBinaryMintFlow.mockReset();
   resetBinaryRedeemFlow.mockReset();
+  resetRangeMintFlow.mockReset();
+  resetRangeRedeemFlow.mockReset();
 
   hookState.askBounds = querySuccess<OracleAskBoundsModel>(presentAskBounds());
   hookState.manager = createTradeManagerState();
@@ -135,6 +178,8 @@ beforeEach(() => {
   vi.mocked(usePositionsSummary).mockImplementation(() => hookState.positionsSummary);
   vi.mocked(useBinaryMintFlow).mockImplementation(() => createBinaryMintFlowMock());
   vi.mocked(useBinaryRedeemFlow).mockImplementation(() => createBinaryRedeemFlowMock());
+  vi.mocked(useRangeMintFlow).mockImplementation(() => createRangeMintFlowMock());
+  vi.mocked(useRangeRedeemFlow).mockImplementation(() => createRangeRedeemFlowMock());
 });
 
 describe('MarketDetailPage and StrategyBuilder', () => {
@@ -205,6 +250,55 @@ describe('MarketDetailPage and StrategyBuilder', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('opens the range mint review with a locally valid range key', async () => {
+    render(<MarketDetailPage nowMs={tradeTestNowMs} oracleId={tradeTestOracleId} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Range' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Preview strategy' }));
+
+    await waitFor(() => expect(beginMintRangeReview).toHaveBeenCalledTimes(1));
+    const reviewInput = beginMintRangeReview.mock.calls[0]?.[0];
+    expect(reviewInput?.rangeKey).toMatchObject({
+      oracleId: tradeTestOracleId,
+    });
+    expect(reviewInput?.quantityQuote).toBe(1_000_000n);
+    expect(beginMintReview).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('button', { name: 'Request wallet signature' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('opens the range redeem review with a matching owned range fixture', async () => {
+    const ownedRangePosition = createTradeRangePosition();
+    hookState.positionsSummary = querySuccess(
+      createTradePositionsSummary({
+        rangePositions: [ownedRangePosition],
+      }),
+    );
+
+    render(<MarketDetailPage nowMs={tradeTestNowMs} oracleId={tradeTestOracleId} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Range' }));
+    fireEvent.change(screen.getByLabelText('Range action'), {
+      target: { value: 'REDEEM_RANGE' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview strategy' }));
+
+    await waitFor(() => expect(beginRedeemRangeReview).toHaveBeenCalledTimes(1));
+    const reviewInput = beginRedeemRangeReview.mock.calls[0]?.[0];
+    expect(reviewInput?.rangeKey).toMatchObject({
+      oracleId: tradeTestOracleId,
+    });
+    expect(reviewInput?.ownedRangePosition).toMatchObject({
+      quantityQuote: ownedRangePosition.quantityQuote,
+    });
+    expect(reviewInput?.quantityQuote).toBe(1_000_000n);
+    expect(beginRedeemReview).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('button', { name: 'Request wallet signature' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('validates binary quantity before any signing flow exists', async () => {
     beginMintReview.mockResolvedValueOnce({
       error: createAppError('INVALID_INPUT', {
@@ -227,6 +321,14 @@ describe('MarketDetailPage and StrategyBuilder', () => {
   });
 
   it('validates range strike order distinctly from binary mode', async () => {
+    beginMintRangeReview.mockResolvedValueOnce({
+      error: createAppError('INVALID_INPUT', {
+        message: 'A valid range key is required before mint range execution.',
+      }),
+      ok: false,
+      warnings: [],
+    });
+
     render(<MarketDetailPage nowMs={tradeTestNowMs} oracleId={tradeTestOracleId} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Range' }));
@@ -237,7 +339,7 @@ describe('MarketDetailPage and StrategyBuilder', () => {
 
     expect(
       await screen.findByRole('alert', { name: 'Strategy preview blocked' }),
-    ).toHaveTextContent('Range strike inputs are invalid for this oracle.');
+    ).toHaveTextContent('A valid range key is required before mint range execution.');
   });
 
   it('surfaces wallet and manager blockers without signing controls', () => {
@@ -325,6 +427,27 @@ describe('MarketDetailPage and StrategyBuilder', () => {
     expect(screen.getByRole('button', { name: 'Request wallet signature' })).toBeEnabled();
   });
 
+  it('enables wallet signature only when range mint simulation is ready', () => {
+    vi.mocked(useRangeMintFlow).mockImplementation(() =>
+      createRangeMintFlowMock({
+        canRequestSignature: true,
+        state: {
+          completedDigest: null,
+          modalOpen: true,
+          phase: 'ready',
+          simulationPreview: createReadySimulationPreview('MINT_RANGE'),
+        },
+      }),
+    );
+
+    render(<MarketDetailPage nowMs={tradeTestNowMs} oracleId={tradeTestOracleId} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Range' }));
+
+    expect(screen.getByRole('dialog', { name: 'Range mint execution review' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Request wallet signature' })).toBeEnabled();
+  });
+
   it('does not call read hooks for invalid dynamic route IDs', () => {
     render(<MarketDetailPage oracleId="0x123" />);
 
@@ -401,10 +524,74 @@ function createBinaryRedeemFlowMock({
   };
 }
 
-function createReadySimulationPreview(): PredictPtbSimulationPreview {
+function createRangeMintFlowMock({
+  canRequestSignature = false,
+  state,
+}: {
+  canRequestSignature?: boolean;
+  state?: Partial<RangeMintFlowState>;
+} = {}) {
+  return {
+    beginMintRangeReview,
+    canRequestSignature,
+    closeModal: closeRangeMintModal,
+    requestSignature: requestRangeMintSignature,
+    rerunSimulation: rerunRangeMintSimulation,
+    reset: resetRangeMintFlow,
+    state: {
+      builderPreview: null,
+      completedDigest: null,
+      error: null,
+      executionRequest: null,
+      executionResult: null,
+      modalOpen: false,
+      phase: 'idle',
+      refreshWarning: null,
+      riskPreview: null,
+      simulationPreview: null,
+      warnings: [],
+      ...state,
+    } satisfies RangeMintFlowState,
+  };
+}
+
+function createRangeRedeemFlowMock({
+  canRequestSignature = false,
+  state,
+}: {
+  canRequestSignature?: boolean;
+  state?: Partial<RangeRedeemFlowState>;
+} = {}) {
+  return {
+    beginRedeemRangeReview,
+    canRequestSignature,
+    closeModal: closeRangeRedeemModal,
+    requestSignature: requestRangeRedeemSignature,
+    rerunSimulation: rerunRangeRedeemSimulation,
+    reset: resetRangeRedeemFlow,
+    state: {
+      builderPreview: null,
+      completedDigest: null,
+      error: null,
+      executionRequest: null,
+      executionResult: null,
+      modalOpen: false,
+      phase: 'idle',
+      refreshWarning: null,
+      riskPreview: null,
+      simulationPreview: null,
+      warnings: [],
+      ...state,
+    } satisfies RangeRedeemFlowState,
+  };
+}
+
+function createReadySimulationPreview(
+  action: PredictPtbSimulationPreview['intent']['action'] = 'MINT',
+): PredictPtbSimulationPreview {
   return {
     intent: {
-      action: 'MINT',
+      action,
       affectedObjects: [
         { id: tradeTestManagerId, kind: 'manager', label: 'PredictManager' },
         { id: tradeTestOracleId, kind: 'oracle', label: 'OracleSVI' },
