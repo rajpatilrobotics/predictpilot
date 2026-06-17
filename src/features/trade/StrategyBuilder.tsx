@@ -7,6 +7,7 @@ import { RiskPreview } from '@/features/tx/RiskPreview';
 import { useWalletStatus, type WalletStatusModel } from '@/features/wallet/useWalletStatus';
 import type { UsePredictManagerResult } from '@/features/manager/hooks/usePredictManager';
 import { useBinaryMintFlow } from '@/features/trade/actions/useBinaryMintFlow';
+import { useBinaryRedeemFlow } from '@/features/trade/actions/useBinaryRedeemFlow';
 import {
   buildBinaryMarketKey,
   buildRangeKey,
@@ -27,7 +28,6 @@ import type {
 } from '@/types/portfolio';
 import type { NormalizedManagerPositionsSummaryModel } from '@/features/portfolio/lib/portfolio-selectors';
 import {
-  previewBinaryTrade,
   type BinaryTradePreviewModel,
   type BinaryTradePreviewWarning,
 } from '@/integrations/deepbook-predict/tx/preview-binary';
@@ -97,6 +97,18 @@ export function StrategyBuilder({
     oracleState,
     walletStatus: wallet,
   });
+  const binaryRedeemFlow = useBinaryRedeemFlow({
+    askBounds: effectiveAskBounds,
+    manager,
+    managerSummary,
+    nowMs: renderNowMs,
+    oracleState,
+    walletStatus: wallet,
+  });
+  const activeBinaryFlow = binaryAction === 'MINT' ? binaryMintFlow : binaryRedeemFlow;
+  const activeBinaryFlowState = activeBinaryFlow.state;
+  const activeBinaryFlowTitle =
+    binaryAction === 'MINT' ? 'Binary mint execution review' : 'Binary redeem execution review';
 
   const quantityQuote = parseQuoteAmountInput(quantityInput);
   const binaryKeyResult = useMemo(
@@ -125,15 +137,32 @@ export function StrategyBuilder({
     setPreviewState({ status: 'idle' });
   }
 
+  function resetBinaryFlows() {
+    binaryMintFlow.reset();
+    binaryRedeemFlow.reset();
+  }
+
   async function handlePreviewSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPreviewState({ status: 'loading' });
 
-    if (mode === 'binary' && binaryAction === 'MINT') {
-      const result = await binaryMintFlow.beginMintReview({
-        marketKey: binaryKeyResult.ok ? binaryKeyResult.key : null,
-        quantityQuote,
-      });
+    if (mode === 'binary') {
+      const marketKey = binaryKeyResult.ok ? binaryKeyResult.key : null;
+      const ownedPosition =
+        binaryAction === 'REDEEM' && marketKey !== null
+          ? findOwnedBinaryPosition(positionsSummary, marketKey)
+          : null;
+      const result =
+        binaryAction === 'MINT'
+          ? await binaryMintFlow.beginMintReview({
+              marketKey,
+              quantityQuote,
+            })
+          : await binaryRedeemFlow.beginRedeemReview({
+              marketKey,
+              ownedPosition,
+              quantityQuote,
+            });
 
       if (!result.ok) {
         setPreviewState({
@@ -148,36 +177,20 @@ export function StrategyBuilder({
       return;
     }
 
-    const result =
-      mode === 'binary'
-        ? await previewBinaryTrade({
-            action: binaryAction,
-            askBounds: effectiveAskBounds,
-            direction,
-            manager: managerSummary,
-            nowMs: renderNowMs,
-            oracleState,
-            ownedPosition:
-              binaryAction === 'REDEEM' && binaryKeyResult.ok
-                ? findOwnedBinaryPosition(positionsSummary, binaryKeyResult.key)
-                : null,
-            quantityQuote,
-            strike1e9: strikeInput,
-          })
-        : await previewRangeTrade({
-            action: rangeAction,
-            askBounds: effectiveAskBounds,
-            higherStrike1e9: higherStrikeInput,
-            lowerStrike1e9: lowerStrikeInput,
-            manager: managerSummary,
-            nowMs: renderNowMs,
-            oracleState,
-            ownedRangePosition:
-              rangeAction === 'REDEEM_RANGE' && rangeKeyResult.ok
-                ? findOwnedRangePosition(positionsSummary, rangeKeyResult.key)
-                : null,
-            quantityQuote,
-          });
+    const result = await previewRangeTrade({
+      action: rangeAction,
+      askBounds: effectiveAskBounds,
+      higherStrike1e9: higherStrikeInput,
+      lowerStrike1e9: lowerStrikeInput,
+      manager: managerSummary,
+      nowMs: renderNowMs,
+      oracleState,
+      ownedRangePosition:
+        rangeAction === 'REDEEM_RANGE' && rangeKeyResult.ok
+          ? findOwnedRangePosition(positionsSummary, rangeKeyResult.key)
+          : null,
+      quantityQuote,
+    });
 
     if (result.ok) {
       setPreviewState({ preview: result.preview, status: 'ready' });
@@ -233,20 +246,20 @@ export function StrategyBuilder({
                 <ModeButton
                   isActive={mode === 'binary'}
                   label="Binary"
-                  onClick={() => {
-                    setMode('binary');
-                    resetPreview();
-                    binaryMintFlow.reset();
-                  }}
+                onClick={() => {
+                  setMode('binary');
+                  resetPreview();
+                  resetBinaryFlows();
+                }}
                 />
                 <ModeButton
                   isActive={mode === 'range'}
                   label="Range"
-                  onClick={() => {
-                    setMode('range');
-                    resetPreview();
-                    binaryMintFlow.reset();
-                  }}
+                onClick={() => {
+                  setMode('range');
+                  resetPreview();
+                  resetBinaryFlows();
+                }}
                 />
               </div>
             </fieldset>
@@ -258,17 +271,17 @@ export function StrategyBuilder({
                 onActionChange={(value) => {
                   setBinaryAction(value);
                   resetPreview();
-                  binaryMintFlow.reset();
+                  resetBinaryFlows();
                 }}
                 onDirectionChange={(value) => {
                   setDirection(value);
                   resetPreview();
-                  binaryMintFlow.reset();
+                  resetBinaryFlows();
                 }}
                 onStrikeChange={(value) => {
                   setStrikeInput(value);
                   resetPreview();
-                  binaryMintFlow.reset();
+                  resetBinaryFlows();
                 }}
                 strikeInput={strikeInput}
               />
@@ -302,7 +315,7 @@ export function StrategyBuilder({
                 onChange={(event) => {
                   setQuantityInput(event.target.value);
                   resetPreview();
-                  binaryMintFlow.reset();
+                  resetBinaryFlows();
                 }}
                 value={quantityInput}
               />
@@ -321,7 +334,7 @@ export function StrategyBuilder({
                 Preview strategy
               </button>
               <p className="text-sm leading-6 text-[#53645f]">
-                Binary mint opens a pre-sign execution review after simulation. Redeem and range
+                Binary mint and redeem open a pre-sign execution review after simulation. Range
                 flows remain preview-only until their later execution tasks.
               </p>
             </div>
@@ -329,24 +342,24 @@ export function StrategyBuilder({
         </div>
       </TerminalPanel>
 
-      <BinaryMintFlowStatus state={binaryMintFlow.state} />
-      {binaryMintFlow.state.simulationPreview === null ? (
+      <BinaryTradeFlowStatus action={binaryAction} state={activeBinaryFlowState} />
+      {activeBinaryFlowState.simulationPreview === null ? (
         <PreviewResult previewState={previewState} />
       ) : null}
-      {binaryMintFlow.state.simulationPreview === null ? null : (
+      {activeBinaryFlowState.simulationPreview === null ? null : (
         <ExecutionModal
-          completedDigest={binaryMintFlow.state.completedDigest ?? undefined}
-          onClose={binaryMintFlow.closeModal}
+          completedDigest={activeBinaryFlowState.completedDigest ?? undefined}
+          onClose={activeBinaryFlow.closeModal}
           onRequestSignature={
-            binaryMintFlow.canRequestSignature
-              ? () => void binaryMintFlow.requestSignature()
+            activeBinaryFlow.canRequestSignature
+              ? () => void activeBinaryFlow.requestSignature()
               : undefined
           }
-          onSimulate={() => void binaryMintFlow.rerunSimulation()}
-          open={binaryMintFlow.state.modalOpen}
-          preview={binaryMintFlow.state.simulationPreview}
-          risk={binaryMintFlow.state.riskPreview}
-          title="Binary mint execution review"
+          onSimulate={() => void activeBinaryFlow.rerunSimulation()}
+          open={activeBinaryFlowState.modalOpen}
+          preview={activeBinaryFlowState.simulationPreview}
+          risk={activeBinaryFlowState.riskPreview}
+          title={activeBinaryFlowTitle}
         />
       )}
     </section>
@@ -515,7 +528,7 @@ function ReadinessNotices({
     });
   } else {
     notices.push({
-      copy: `Wallet ready on ${wallet.expectedNetwork}; binary mint can open a simulated pre-sign review.`,
+      copy: `Wallet ready on ${wallet.expectedNetwork}; binary trades can open a simulated pre-sign review.`,
       tone: 'success',
     });
   }
@@ -532,7 +545,7 @@ function ReadinessNotices({
     });
   } else {
     notices.push({
-      copy: 'PredictManager is not ready. Create or resolve the manager before mint execution in PP-050.',
+      copy: 'PredictManager is not ready. Create or resolve the manager before binary trade execution.',
       tone: 'blocked',
     });
   }
@@ -558,7 +571,7 @@ function ValidationPanel({
   if (errors.length === 0 && warnings.length === 0) {
     return (
       <InlineStateNotice tone="success">
-        Market key inputs are locally valid. Binary mint still requires simulation before wallet
+        Market key inputs are locally valid. Binary execution still requires simulation before wallet
         signing.
       </InlineStateNotice>
     );
@@ -582,7 +595,7 @@ function PreviewResult({ previewState }: { previewState: PreviewState }) {
   if (previewState.status === 'idle') {
     return (
       <StatePanel
-        description="Choose market parameters, then preview. Binary mint can open the pre-sign modal; redeem and range remain preview-only."
+        description="Choose market parameters, then preview. Binary mint and redeem can open the pre-sign modal; range remains preview-only."
         label="Strategy preview idle"
         title="Preview waiting"
         tone="empty"
@@ -647,17 +660,30 @@ function PreviewResult({ previewState }: { previewState: PreviewState }) {
   );
 }
 
-function BinaryMintFlowStatus({ state }: { state: ReturnType<typeof useBinaryMintFlow>['state'] }) {
+function BinaryTradeFlowStatus({
+  action,
+  state,
+}: {
+  action: BinaryPositionAction;
+  state: ReturnType<typeof useBinaryMintFlow>['state'] | ReturnType<typeof useBinaryRedeemFlow>['state'];
+}) {
   if (state.phase === 'idle') {
     return null;
   }
 
+  const actionLabel = action === 'MINT' ? 'mint' : 'redeem';
+  const capitalizedActionLabel = actionLabel === 'mint' ? 'Mint' : 'Redeem';
+
   if (state.phase === 'building' || state.phase === 'simulating') {
     return (
       <StatePanel
-        description="Preparing the binary mint PTB and running simulation before any wallet prompt."
-        label="Binary mint execution status"
-        title={state.phase === 'building' ? 'Building binary mint PTB' : 'Simulating binary mint'}
+        description={`Preparing the binary ${actionLabel} PTB and running simulation before any wallet prompt.`}
+        label={`Binary ${actionLabel} execution status`}
+        title={
+          state.phase === 'building'
+            ? `Building binary ${actionLabel} PTB`
+            : `Simulating binary ${actionLabel}`
+        }
         tone="loading"
       />
     );
@@ -667,8 +693,8 @@ function BinaryMintFlowStatus({ state }: { state: ReturnType<typeof useBinaryMin
     return (
       <StatePanel
         description="Simulation is ready. Review the modal before requesting the wallet signature."
-        label="Binary mint execution status"
-        title="Binary mint ready for signature"
+        label={`Binary ${actionLabel} execution status`}
+        title={`Binary ${actionLabel} ready for signature`}
         tone="success"
       />
     );
@@ -678,7 +704,7 @@ function BinaryMintFlowStatus({ state }: { state: ReturnType<typeof useBinaryMin
     return (
       <StatePanel
         description="Wallet signature request is in progress. Do not resubmit this PTB while the wallet is open."
-        label="Binary mint execution status"
+        label={`Binary ${actionLabel} execution status`}
         title="Waiting for wallet signature"
         tone="loading"
       />
@@ -689,8 +715,8 @@ function BinaryMintFlowStatus({ state }: { state: ReturnType<typeof useBinaryMin
     return (
       <StatePanel
         description="The wallet returned a transaction digest. PredictPilot invalidated affected manager, oracle, and history reads."
-        label="Binary mint execution status"
-        title="Binary mint transaction submitted"
+        label={`Binary ${actionLabel} execution status`}
+        title={`Binary ${actionLabel} transaction submitted`}
         tone="success"
       >
         <div className="grid gap-2">
@@ -711,9 +737,9 @@ function BinaryMintFlowStatus({ state }: { state: ReturnType<typeof useBinaryMin
 
   return (
     <StatePanel
-      description={state.error?.message ?? 'Binary mint could not continue.'}
-      label="Binary mint execution status"
-      title={state.error?.title ?? 'Binary mint blocked'}
+      description={state.error?.message ?? `Binary ${actionLabel} could not continue.`}
+      label={`Binary ${actionLabel} execution status`}
+      title={state.error?.title ?? `${capitalizedActionLabel} blocked`}
       tone={state.error?.code === 'TRANSACTION_REJECTED' ? 'warning' : 'blocked'}
     >
       {state.error === null ? null : <p>{state.error.recovery}</p>}

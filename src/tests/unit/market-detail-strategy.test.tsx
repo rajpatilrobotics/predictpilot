@@ -13,12 +13,19 @@ import {
   type BeginBinaryMintReviewResult,
   type BinaryMintFlowState,
 } from '@/features/trade/actions/useBinaryMintFlow';
+import {
+  useBinaryRedeemFlow,
+  type BeginBinaryRedeemReviewInput,
+  type BeginBinaryRedeemReviewResult,
+  type BinaryRedeemFlowState,
+} from '@/features/trade/actions/useBinaryRedeemFlow';
 import { MarketDetailPage } from '@/features/trade/MarketDetailPage';
 import { useWalletStatus } from '@/features/wallet/useWalletStatus';
 import { createAppError, type PredictPilotError } from '@/lib/errors';
 import type { PredictPtbSimulationPreview } from '@/integrations/deepbook-predict/tx/simulate';
 import type { OracleAskBoundsModel, OracleStateModel } from '@/types/oracle';
 import {
+  createTradeBinaryPosition,
   createTradeManagerState,
   createTradeManagerSummaryPortfolio,
   createTradeOracleState,
@@ -60,6 +67,10 @@ vi.mock('@/features/trade/actions/useBinaryMintFlow', () => ({
   useBinaryMintFlow: vi.fn(),
 }));
 
+vi.mock('@/features/trade/actions/useBinaryRedeemFlow', () => ({
+  useBinaryRedeemFlow: vi.fn(),
+}));
+
 interface HookState {
   askBounds: UseQueryResult<OracleAskBoundsModel, PredictPilotError>;
   manager: ReturnType<typeof createTradeManagerState>;
@@ -86,17 +97,28 @@ const hookState: HookState = {
 
 const beginMintReview =
   vi.fn<(input: BeginBinaryMintReviewInput) => Promise<BeginBinaryMintReviewResult>>();
+const beginRedeemReview =
+  vi.fn<(input: BeginBinaryRedeemReviewInput) => Promise<BeginBinaryRedeemReviewResult>>();
 const closeBinaryMintModal = vi.fn();
+const closeBinaryRedeemModal = vi.fn();
 const requestBinaryMintSignature = vi.fn();
+const requestBinaryRedeemSignature = vi.fn();
 const rerunBinaryMintSimulation = vi.fn();
+const rerunBinaryRedeemSimulation = vi.fn();
 const resetBinaryMintFlow = vi.fn();
+const resetBinaryRedeemFlow = vi.fn();
 
 beforeEach(() => {
   beginMintReview.mockResolvedValue({ ok: true });
+  beginRedeemReview.mockResolvedValue({ ok: true });
   closeBinaryMintModal.mockReset();
+  closeBinaryRedeemModal.mockReset();
   requestBinaryMintSignature.mockReset();
+  requestBinaryRedeemSignature.mockReset();
   rerunBinaryMintSimulation.mockReset();
+  rerunBinaryRedeemSimulation.mockReset();
   resetBinaryMintFlow.mockReset();
+  resetBinaryRedeemFlow.mockReset();
 
   hookState.askBounds = querySuccess<OracleAskBoundsModel>(presentAskBounds());
   hookState.manager = createTradeManagerState();
@@ -112,6 +134,7 @@ beforeEach(() => {
   vi.mocked(useManagerSummary).mockImplementation(() => hookState.managerSummary);
   vi.mocked(usePositionsSummary).mockImplementation(() => hookState.positionsSummary);
   vi.mocked(useBinaryMintFlow).mockImplementation(() => createBinaryMintFlowMock());
+  vi.mocked(useBinaryRedeemFlow).mockImplementation(() => createBinaryRedeemFlowMock());
 });
 
 describe('MarketDetailPage and StrategyBuilder', () => {
@@ -146,6 +169,37 @@ describe('MarketDetailPage and StrategyBuilder', () => {
       oracleId: tradeTestOracleId,
     });
     expect(reviewInput?.quantityQuote).toBe(1_000_000n);
+    expect(
+      screen.queryByRole('button', { name: 'Request wallet signature' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('opens the binary redeem review with a matching owned position fixture', async () => {
+    const ownedPosition = createTradeBinaryPosition();
+    hookState.positionsSummary = querySuccess(
+      createTradePositionsSummary({
+        binaryPositions: [ownedPosition],
+      }),
+    );
+
+    render(<MarketDetailPage nowMs={tradeTestNowMs} oracleId={tradeTestOracleId} />);
+
+    fireEvent.change(screen.getByLabelText('Binary action'), {
+      target: { value: 'REDEEM' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview strategy' }));
+
+    await waitFor(() => expect(beginRedeemReview).toHaveBeenCalledTimes(1));
+    const reviewInput = beginRedeemReview.mock.calls[0]?.[0];
+    expect(reviewInput?.marketKey).toMatchObject({
+      direction: 'UP',
+      oracleId: tradeTestOracleId,
+    });
+    expect(reviewInput?.ownedPosition).toMatchObject({
+      openQuantityQuote: ownedPosition.openQuantityQuote,
+    });
+    expect(reviewInput?.quantityQuote).toBe(1_000_000n);
+    expect(beginMintReview).not.toHaveBeenCalled();
     expect(
       screen.queryByRole('button', { name: 'Request wallet signature' }),
     ).not.toBeInTheDocument();
@@ -313,6 +367,37 @@ function createBinaryMintFlowMock({
       warnings: [],
       ...state,
     } satisfies BinaryMintFlowState,
+  };
+}
+
+function createBinaryRedeemFlowMock({
+  canRequestSignature = false,
+  state,
+}: {
+  canRequestSignature?: boolean;
+  state?: Partial<BinaryRedeemFlowState>;
+} = {}) {
+  return {
+    beginRedeemReview,
+    canRequestSignature,
+    closeModal: closeBinaryRedeemModal,
+    requestSignature: requestBinaryRedeemSignature,
+    rerunSimulation: rerunBinaryRedeemSimulation,
+    reset: resetBinaryRedeemFlow,
+    state: {
+      builderPreview: null,
+      completedDigest: null,
+      error: null,
+      executionRequest: null,
+      executionResult: null,
+      modalOpen: false,
+      phase: 'idle',
+      refreshWarning: null,
+      riskPreview: null,
+      simulationPreview: null,
+      warnings: [],
+      ...state,
+    } satisfies BinaryRedeemFlowState,
   };
 }
 

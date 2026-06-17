@@ -3,14 +3,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  useBinaryMintFlow,
-  type BeginBinaryMintReviewInput,
-} from '@/features/trade/actions/useBinaryMintFlow';
+  useBinaryRedeemFlow,
+  type BeginBinaryRedeemReviewInput,
+} from '@/features/trade/actions/useBinaryRedeemFlow';
 import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
 import type { PredictTransactionTransport } from '@/lib/tx-executor';
-import type { MarketKeyModel, QuoteAmount } from '@/types/predict';
+import type { QuoteAmount } from '@/types/predict';
 import {
   createReadyTradeSimulationTransport,
+  createTradeBinaryPosition,
   createTradeExecutionTransport,
   createTradeManagerState,
   createTradeManagerSummary,
@@ -46,9 +47,9 @@ beforeEach(() => {
   dAppKitMocks.waitForTransaction.mockReset();
 });
 
-describe('useBinaryMintFlow', () => {
-  it('blocks disconnected wallets before building a PTB', async () => {
-    const { result } = renderBinaryMintFlow({
+describe('useBinaryRedeemFlow', () => {
+  it('blocks disconnected wallets, wrong networks, and missing manager state before building', async () => {
+    const disconnected = renderBinaryRedeemFlow({
       walletStatus: createTradeWalletStatus({
         accountAddress: null,
         isConnected: false,
@@ -57,37 +58,14 @@ describe('useBinaryMintFlow', () => {
         status: 'disconnected',
       }),
     });
-
-    const outcome = await beginReview(result, { marketKey: createMarketKey(), quantityQuote });
-
-    expect(outcome.ok).toBe(false);
-    if (!outcome.ok) {
-      expect(outcome.error.code).toBe('WALLET_NOT_CONNECTED');
-    }
-    expect(result.current.state.phase).toBe('failure');
-    expect(dAppKitMocks.simulateTransaction).not.toHaveBeenCalled();
-  });
-
-  it('blocks wrong-network wallets before simulation', async () => {
-    const { result } = renderBinaryMintFlow({
+    const wrongNetwork = renderBinaryRedeemFlow({
       walletStatus: createTradeWalletStatus({
         currentNetwork: 'mainnet',
         isExpectedNetwork: false,
         isWrongNetwork: true,
       }),
     });
-
-    const outcome = await beginReview(result, { marketKey: createMarketKey(), quantityQuote });
-
-    expect(outcome.ok).toBe(false);
-    if (!outcome.ok) {
-      expect(outcome.error.code).toBe('WRONG_NETWORK');
-    }
-    expect(result.current.state.phase).toBe('failure');
-  });
-
-  it('blocks missing manager and missing manager summary states', async () => {
-    const noManager = renderBinaryMintFlow({
+    const noManager = renderBinaryRedeemFlow({
       manager: createTradeManagerState({
         authoritativeObject: null,
         isReady: false,
@@ -97,36 +75,33 @@ describe('useBinaryMintFlow', () => {
         status: 'NO_MANAGER',
       }),
     });
-    const noManagerOutcome = await beginReview(noManager.result, {
-      marketKey: createMarketKey(),
-      quantityQuote,
-    });
+    const noSummary = renderBinaryRedeemFlow({ managerSummary: null });
 
-    const noSummary = renderBinaryMintFlow({ managerSummary: null });
-    const noSummaryOutcome = await beginReview(noSummary.result, {
-      marketKey: createMarketKey(),
-      quantityQuote,
-    });
+    const outcomes = [
+      await beginReview(disconnected.result),
+      await beginReview(wrongNetwork.result),
+      await beginReview(noManager.result),
+      await beginReview(noSummary.result),
+    ];
 
-    expect(noManagerOutcome.ok).toBe(false);
-    expect(noSummaryOutcome.ok).toBe(false);
-    if (!noManagerOutcome.ok && !noSummaryOutcome.ok) {
-      expect(noManagerOutcome.error.code).toBe('MANAGER_NOT_FOUND');
-      expect(noSummaryOutcome.error.code).toBe('MANAGER_NOT_FOUND');
-    }
+    expect(outcomes.map((outcome) => (outcome.ok ? null : outcome.error.code))).toEqual([
+      'WALLET_NOT_CONNECTED',
+      'WRONG_NETWORK',
+      'MANAGER_NOT_FOUND',
+      'MANAGER_NOT_FOUND',
+    ]);
+    expect(dAppKitMocks.simulateTransaction).not.toHaveBeenCalled();
   });
 
   it('blocks invalid quantity and invalid market key inputs', async () => {
-    const invalidQuantity = renderBinaryMintFlow();
+    const invalidQuantity = renderBinaryRedeemFlow();
     const invalidQuantityOutcome = await beginReview(invalidQuantity.result, {
-      marketKey: createMarketKey(),
       quantityQuote: 0n,
     });
 
-    const invalidKey = renderBinaryMintFlow();
+    const invalidKey = renderBinaryRedeemFlow();
     const invalidKeyOutcome = await beginReview(invalidKey.result, {
       marketKey: null,
-      quantityQuote,
     });
 
     expect(invalidQuantityOutcome.ok).toBe(false);
@@ -137,28 +112,59 @@ describe('useBinaryMintFlow', () => {
     }
   });
 
-  it('blocks stale oracles before signature is possible', async () => {
-    const { result } = renderBinaryMintFlow({
+  it('blocks missing owned positions and redeem quantities above the open quantity', async () => {
+    const missingPosition = renderBinaryRedeemFlow();
+    const missingPositionOutcome = await beginReview(missingPosition.result, {
+      ownedPosition: null,
+    });
+
+    const smallPosition = createTradeBinaryPosition({
+      openQuantityQuote: 500_000n,
+    });
+    const tooLarge = renderBinaryRedeemFlow();
+    const tooLargeOutcome = await beginReview(tooLarge.result, {
+      marketKey: smallPosition.key,
+      ownedPosition: smallPosition,
+      quantityQuote,
+    });
+
+    expect(missingPositionOutcome.ok).toBe(false);
+    expect(tooLargeOutcome.ok).toBe(false);
+    if (!missingPositionOutcome.ok && !tooLargeOutcome.ok) {
+      expect(missingPositionOutcome.error.message).toMatch(/open binary position/i);
+      expect(tooLargeOutcome.error.message).toMatch(/exceeds the open binary position/i);
+    }
+  });
+
+  it('blocks stale and non-redeemable oracles before signature is possible', async () => {
+    const stale = renderBinaryRedeemFlow({
       oracleState: createTradeOracleState({
         priceTimestampMs: tradeTestNowMs - 90_000,
         sviTimestampMs: tradeTestNowMs - 90_000,
       }),
     });
+    const inactive = renderBinaryRedeemFlow({
+      oracleState: createTradeOracleState({
+        lifecycleStatus: 'INACTIVE',
+      }),
+    });
 
-    const outcome = await beginReview(result, { marketKey: createMarketKey(), quantityQuote });
+    const staleOutcome = await beginReview(stale.result);
+    const inactiveOutcome = await beginReview(inactive.result);
 
-    expect(outcome.ok).toBe(false);
-    if (!outcome.ok) {
-      expect(outcome.error.code).toBe('ORACLE_STALE');
+    expect(staleOutcome.ok).toBe(false);
+    expect(inactiveOutcome.ok).toBe(false);
+    if (!staleOutcome.ok && !inactiveOutcome.ok) {
+      expect(staleOutcome.error.code).toBe('ORACLE_STALE');
+      expect(inactiveOutcome.error.code).toBe('ORACLE_NOT_TRADEABLE');
     }
-    expect(result.current.canRequestSignature).toBe(false);
   });
 
-  it('builds and simulates a valid binary mint before enabling signature', async () => {
+  it('builds and simulates a valid binary redeem before enabling signature', async () => {
     const simulationTransport = createReadyTradeSimulationTransport();
-    const { result } = renderBinaryMintFlow({ simulationTransport });
+    const { result } = renderBinaryRedeemFlow({ simulationTransport });
 
-    const outcome = await beginReview(result, { marketKey: createMarketKey(), quantityQuote });
+    const outcome = await beginReview(result);
 
     expect(outcome.ok).toBe(true);
     expect(simulationTransport.simulateTransaction).toHaveBeenCalledTimes(1);
@@ -171,7 +177,7 @@ describe('useBinaryMintFlow', () => {
     });
     expect(result.current.canRequestSignature).toBe(true);
     expect(result.current.state.riskPreview).toMatchObject({
-      action: 'MINT',
+      action: 'REDEEM',
       managerId: tradeTestManagerId,
       oracleId: tradeTestOracleId,
     });
@@ -181,11 +187,11 @@ describe('useBinaryMintFlow', () => {
     const executionTransport = createTradeExecutionTransport({
       signAndExecuteTransaction: vi.fn().mockRejectedValue(new Error('User rejected request')),
     });
-    const { result } = renderBinaryMintFlow({
+    const { result } = renderBinaryRedeemFlow({
       executionTransport,
       simulationTransport: createReadyTradeSimulationTransport(),
     });
-    await beginReview(result, { marketKey: createMarketKey(), quantityQuote });
+    await beginReview(result);
 
     await act(async () => {
       await result.current.requestSignature();
@@ -198,12 +204,12 @@ describe('useBinaryMintFlow', () => {
   it('stores digest and invalidates affected Predict queries after success', async () => {
     const invalidateQueries = vi.fn().mockResolvedValue(undefined);
     const executionTransport = createTradeExecutionTransport();
-    const { result } = renderBinaryMintFlow({
+    const { result } = renderBinaryRedeemFlow({
       executionTransport,
       queryClient: { invalidateQueries },
       simulationTransport: createReadyTradeSimulationTransport(),
     });
-    await beginReview(result, { marketKey: createMarketKey(), quantityQuote });
+    await beginReview(result);
 
     await act(async () => {
       await result.current.requestSignature();
@@ -223,12 +229,12 @@ describe('useBinaryMintFlow', () => {
 
   it('keeps digest visible when post-submit query invalidation fails', async () => {
     const invalidateQueries = vi.fn().mockRejectedValue(new Error('cache unavailable'));
-    const { result } = renderBinaryMintFlow({
+    const { result } = renderBinaryRedeemFlow({
       executionTransport: createTradeExecutionTransport(),
       queryClient: { invalidateQueries },
       simulationTransport: createReadyTradeSimulationTransport(),
     });
-    await beginReview(result, { marketKey: createMarketKey(), quantityQuote });
+    await beginReview(result);
 
     await act(async () => {
       await result.current.requestSignature();
@@ -240,7 +246,7 @@ describe('useBinaryMintFlow', () => {
   });
 });
 
-function renderBinaryMintFlow({
+function renderBinaryRedeemFlow({
   executionTransport,
   manager = createTradeManagerState(),
   managerSummary = createTradeManagerSummary(),
@@ -253,7 +259,7 @@ function renderBinaryMintFlow({
   manager?: ReturnType<typeof createTradeManagerState>;
   managerSummary?: ReturnType<typeof createTradeManagerSummary> | null;
   oracleState?: ReturnType<typeof createTradeOracleState>;
-  queryClient?: Parameters<typeof useBinaryMintFlow>[0]['queryClient'];
+  queryClient?: Parameters<typeof useBinaryRedeemFlow>[0]['queryClient'];
   simulationTransport?: PredictSimulationTransport;
   walletStatus?: ReturnType<typeof createTradeWalletStatus>;
 } = {}) {
@@ -268,7 +274,7 @@ function renderBinaryMintFlow({
 
   return renderHook(
     () =>
-      useBinaryMintFlow({
+      useBinaryRedeemFlow({
         askBounds: presentAskBounds(),
         executionTransport,
         manager,
@@ -284,25 +290,25 @@ function renderBinaryMintFlow({
 }
 
 async function beginReview(
-  result: ReturnType<typeof renderBinaryMintFlow>['result'],
-  input: BeginBinaryMintReviewInput,
+  result: ReturnType<typeof renderBinaryRedeemFlow>['result'],
+  input: Partial<BeginBinaryRedeemReviewInput> = {},
 ) {
-  let outcome: Awaited<ReturnType<ReturnType<typeof useBinaryMintFlow>['beginMintReview']>>;
+  const fallbackPosition = createTradeBinaryPosition();
+  const ownedPosition = Object.hasOwn(input, 'ownedPosition')
+    ? input.ownedPosition
+    : fallbackPosition;
+  const marketKey =
+    input.marketKey === undefined ? (ownedPosition?.key ?? fallbackPosition.key) : input.marketKey;
+  const quantity = input.quantityQuote === undefined ? quantityQuote : input.quantityQuote;
+  let outcome: Awaited<ReturnType<ReturnType<typeof useBinaryRedeemFlow>['beginRedeemReview']>>;
 
   await act(async () => {
-    outcome = await result.current.beginMintReview(input);
+    outcome = await result.current.beginRedeemReview({
+      marketKey,
+      ownedPosition,
+      quantityQuote: quantity,
+    });
   });
 
   return outcome!;
-}
-
-function createMarketKey(): MarketKeyModel {
-  const oracleState = createTradeOracleState();
-
-  return {
-    direction: 'UP',
-    expiryMs: oracleState.oracle.expiryMs,
-    oracleId: tradeTestOracleId,
-    strike1e9: oracleState.oracle.minStrike1e9,
-  };
 }

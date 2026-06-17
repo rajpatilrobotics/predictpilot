@@ -1,12 +1,22 @@
 import type { UseQueryResult } from '@tanstack/react-query';
+import { vi } from 'vitest';
 import { predictDeploymentConfig } from '@/config/predict';
 import type { UsePredictManagerResult } from '@/features/manager/hooks/usePredictManager';
-import type { ManagerSummaryPortfolioModel } from '@/features/portfolio/lib/portfolio-selectors';
+import {
+  normalizeManagerPositionsSummary,
+  type ManagerSummaryPortfolioModel,
+} from '@/features/portfolio/lib/portfolio-selectors';
 import type { WalletStatusModel } from '@/features/wallet/useWalletStatus';
+import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
 import type { PredictPilotError } from '@/lib/errors';
+import type { PredictTransactionTransport } from '@/lib/tx-executor';
 import type { OracleAskBoundsModel, OracleStateModel } from '@/types/oracle';
 import type { ObjectId, SuiAddress } from '@/types/predict';
-import type { ManagerPositionsSummaryModel, ManagerSummaryModel } from '@/types/portfolio';
+import type {
+  BinaryPositionSummaryModel,
+  ManagerPositionsSummaryModel,
+  ManagerSummaryModel,
+} from '@/types/portfolio';
 
 export const tradeTestNowMs = 1_781_635_255_000;
 export const tradeTestOracleId =
@@ -123,26 +133,53 @@ export function createTradeManagerSummaryPortfolio(): ManagerSummaryPortfolioMod
   };
 }
 
-export function createTradePositionsSummary() {
+export function createTradeBinaryPosition(
+  overrides: Partial<BinaryPositionSummaryModel> = {},
+): BinaryPositionSummaryModel {
+  const oracleState = createTradeOracleState();
+
+  return {
+    averageEntryPrice1e9: 250_000_000n,
+    firstMintedAtMs: BigInt(tradeTestNowMs - 60_000),
+    key: {
+      direction: 'UP',
+      expiryMs: oracleState.oracle.expiryMs,
+      oracleId: tradeTestOracleId,
+      strike1e9: oracleState.oracle.minStrike1e9,
+    },
+    lastActivityAtMs: BigInt(tradeTestNowMs - 30_000),
+    managerId: tradeTestManagerId,
+    markPrice1e9: 300_000_000n,
+    markValueQuote: 600_000n,
+    mintedQuantityQuote: 2_000_000n,
+    openCostBasisQuote: 500_000n,
+    openQuantityQuote: 2_000_000n,
+    predictId: predictDeploymentConfig.predictObjectId,
+    quantityQuote: 2_000_000n,
+    quoteAssetType: predictDeploymentConfig.quoteAsset.type,
+    realizedPnlQuote: 0n,
+    redeemedQuantityQuote: 0n,
+    status: 'OPEN',
+    totalCostQuote: 500_000n,
+    totalPayoutQuote: 0n,
+    underlyingAsset: oracleState.oracle.underlyingAsset,
+    unrealizedPnlQuote: 100_000n,
+    ...overrides,
+  };
+}
+
+export function createTradePositionsSummary({
+  binaryPositions = [],
+}: {
+  binaryPositions?: BinaryPositionSummaryModel[];
+} = {}) {
   const summary: ManagerPositionsSummaryModel = {
-    binaryPositions: [],
+    binaryPositions,
     managerId: tradeTestManagerId,
     rangePositions: [],
   };
 
-  return {
-    binaryGroups: [],
-    binaryPositionCount: 0,
-    isEmpty: true,
-    managerId: tradeTestManagerId,
-    openBinaryPositionCount: 0,
-    openRangePositionCount: 0,
-    rangeGroups: [],
-    rangePositionCount: 0,
-    summary,
-    totalOpenBinaryQuantityQuote: 0n,
-    totalOpenRangeQuantityQuote: 0n,
-  };
+  return normalizeManagerPositionsSummary(summary);
 }
 
 export function createTradeManagerState(
@@ -234,4 +271,47 @@ export function queryError<T>(error: PredictPilotError): UseQueryResult<T, Predi
 
 export function presentAskBounds(): OracleAskBoundsModel {
   return { status: 'PRESENT_UNMAPPED' };
+}
+
+export function createReadyTradeSimulationTransport(): PredictSimulationTransport {
+  return {
+    simulateTransaction: vi.fn().mockResolvedValue({
+      $kind: 'Transaction',
+      Transaction: {
+        balanceChanges: [{ amount: '-1000' }],
+        digest: 'sim-digest',
+        effects: { status: { status: 'success' } },
+        events: [{ type: 'binary-trade' }],
+        objectTypes: {
+          [tradeTestManagerId]: 'predict_manager::PredictManager',
+        },
+      },
+      commandResults: [
+        { mutatedReferences: [], returnValues: [{ bcs: new Uint8Array([1]) }] },
+        { mutatedReferences: [{ bcs: new Uint8Array([2]) }], returnValues: [] },
+      ],
+    }),
+  };
+}
+
+export function createTradeExecutionTransport({
+  signAndExecuteTransaction = vi.fn().mockResolvedValue({
+    $kind: 'Transaction',
+    Transaction: {
+      digest: 'tx-digest',
+      effects: { status: { status: 'success' } },
+    },
+  }),
+  waitForTransaction = vi.fn().mockResolvedValue({
+    $kind: 'Transaction',
+    Transaction: {
+      digest: 'tx-digest',
+      effects: { status: { status: 'success' } },
+    },
+  }),
+}: Partial<PredictTransactionTransport> = {}): PredictTransactionTransport {
+  return {
+    signAndExecuteTransaction,
+    waitForTransaction,
+  };
 }
