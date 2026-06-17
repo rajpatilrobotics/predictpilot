@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { predictDeploymentConfig } from '@/config/predict';
+import {
+  InlineStateNotice,
+  StatePanel,
+  StateSkeletonGrid,
+} from '@/components/states/StatePrimitives';
 import { useVaultPerformance } from '@/features/vault/hooks/useVaultPerformance';
 import { useVaultSummary } from '@/features/vault/hooks/useVaultSummary';
 import {
@@ -380,21 +385,30 @@ function VaultPerformancePanel({
       </div>
 
       {isLoading ? (
-        <div aria-label="Vault performance loading" className="mt-4" role="status">
-          <div className="h-40 animate-pulse bg-[#eef3f1]" />
-          <p className="mt-3 text-sm text-[#64736e]">Loading vault performance...</p>
-        </div>
+        <StatePanel
+          className="mt-4"
+          description="Loading vault performance from the existing range=ALL hook."
+          label="Vault performance loading"
+          title="Loading vault performance"
+          tone="loading"
+        >
+          <StateSkeletonGrid
+            className="md:grid-cols-1"
+            count={1}
+            label="Vault performance chart loading"
+          />
+        </StatePanel>
       ) : null}
 
       {isError && error !== null ? <ErrorNotice error={error} compact /> : null}
 
       {!isLoading && !isError && points.length === 0 ? (
-        <div className="mt-4 border border-dashed border-[#c8d3ce] bg-[#fbfcfc] p-4" role="status">
-          <h3 className="font-semibold text-[#17211d]">No performance points yet</h3>
-          <p className="mt-2 text-sm leading-6 text-[#4f625b]">
-            The vault summary is available, but the performance series for this range is empty.
-          </p>
-        </div>
+        <StatePanel
+          className="mt-4"
+          description="The vault summary is available, but the performance series for this range is empty."
+          title="No performance points yet"
+          tone="empty"
+        />
       ) : null}
 
       {!isLoading && !isError && points.length > 0 ? (
@@ -649,47 +663,37 @@ function PreparationStateView({
 }) {
   if (status.kind === 'idle') {
     return (
-      <div
-        className="border border-[#d9dfdc] bg-[#fbfcfc] p-3 text-sm text-[#4f625b]"
-        role="status"
-      >
+      <InlineStateNotice tone="empty">
         Enter an amount to prepare an unsigned {isSupply ? 'supply' : 'withdraw'} preview.
-      </div>
+      </InlineStateNotice>
     );
   }
 
   if (status.kind === 'loading') {
     return (
-      <div
-        aria-label={`${isSupply ? 'Supply' : 'Withdraw'} preparation loading`}
-        className="border border-[#d9dfdc] bg-[#fbfcfc] p-3 text-sm text-[#4f625b]"
-        role="status"
-      >
+      <InlineStateNotice className="animate-pulse" tone="empty">
         Preparing unsigned {isSupply ? 'supply' : 'withdraw'} preview...
-      </div>
+      </InlineStateNotice>
     );
   }
 
   if (status.kind === 'ready') {
     return (
-      <div
-        className="border border-[#a9d8c6] bg-[#f1fbf6] p-3 text-sm text-[#245942]"
-        role="status"
-      >
+      <InlineStateNotice tone="success">
         {isSupply ? 'Supply preparation ready.' : 'Withdraw preparation ready.'} Review this preview
         before any future wallet signing flow.
-      </div>
+      </InlineStateNotice>
     );
   }
 
   return (
-    <div
-      className="border border-[#ead7a7] bg-[#fffaf0] p-3 text-sm leading-6 text-[#664b14]"
-      role="alert"
-    >
+    <InlineStateNotice tone={status.kind === 'error' ? 'error' : 'blocked'}>
       <p className="font-semibold">{status.title}</p>
       <p className="mt-1">{status.message}</p>
-    </div>
+      {status.recovery === undefined ? null : (
+        <p className="mt-1 text-xs font-semibold uppercase tracking-[0.1em]">{status.recovery}</p>
+      )}
+    </InlineStateNotice>
   );
 }
 
@@ -697,11 +701,13 @@ type PreparationStatus =
   | {
       kind: 'blocked';
       message: string;
+      recovery?: string;
       title: string;
     }
   | {
       kind: 'error';
       message: string;
+      recovery?: string;
       title: string;
     }
   | {
@@ -788,42 +794,31 @@ function getPreparationStatus({
   return {
     kind: preparation.status === 'error' ? 'error' : 'blocked',
     message: preparation.error.message,
+    recovery: preparation.error.recovery,
     title: preparation.error.title,
   };
 }
 
 function VaultReadyStatus({ vault }: { vault: VaultModel }) {
   return (
-    <div
-      aria-label="Vault summary loaded"
-      className="border border-[#a9d8c6] bg-[#f1fbf6] p-3 text-sm text-[#245942]"
-      role="status"
-    >
+    <InlineStateNotice className="border-[#a9d8c6]" label="Vault summary loaded" tone="success">
       Vault data ready from Predict server for {shortenObjectId(vault.predictId)}.
-    </div>
+    </InlineStateNotice>
   );
 }
 
 function LoadingSummary() {
-  return (
-    <section aria-label="Vault summary loading" className="grid gap-3 md:grid-cols-4" role="status">
-      {[0, 1, 2, 3].map((item) => (
-        <div className="h-24 animate-pulse border border-[#d9dfdc] bg-[#eef3f1]" key={item} />
-      ))}
-    </section>
-  );
+  return <StateSkeletonGrid className="md:grid-cols-4" count={4} label="Vault summary loading" />;
 }
 
 function ErrorNotice({ compact = false, error }: { compact?: boolean; error: PredictPilotError }) {
   return (
-    <div
-      className={`border border-[#e2b5b5] bg-[#fff7f7] text-[#7c2828] ${compact ? 'mt-4 p-3 text-sm' : 'p-4'}`}
-      role="alert"
-    >
-      <h3 className="font-semibold">{error.title}</h3>
-      <p className="mt-1 leading-6">{error.message}</p>
-      <p className="mt-1 text-sm leading-6">{error.recovery}</p>
-    </div>
+    <StatePanel
+      className={compact ? 'mt-4' : ''}
+      description={`${error.message} ${error.recovery}`}
+      title={error.title}
+      tone="error"
+    />
   );
 }
 

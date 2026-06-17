@@ -31,11 +31,12 @@ export function ExecutionModal({
     <div
       aria-label={title}
       aria-modal="true"
-      className="fixed inset-0 z-50 overflow-y-auto bg-[#07110d]/70 p-4"
+      className="fixed inset-0 z-50 overflow-y-auto bg-[#07110d]/70 p-3 sm:p-4"
       role="dialog"
+      tabIndex={-1}
     >
       <div className="mx-auto flex min-h-full max-w-5xl items-center">
-        <div className="w-full border border-[#d9dfdc] bg-[#f7faf8] p-4 shadow-2xl">
+        <div className="w-full min-w-0 border border-[#d9dfdc] bg-[#f7faf8] p-3 shadow-2xl sm:p-4">
           <header className="flex flex-col gap-3 border-b border-[#d9dfdc] pb-4 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase text-[#446b5e]">

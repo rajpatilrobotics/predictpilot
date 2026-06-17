@@ -1,6 +1,7 @@
 import type { BinaryTradePreviewModel } from '@/integrations/deepbook-predict/tx/preview-binary';
 import type { RangeTradePreviewModel } from '@/integrations/deepbook-predict/tx/preview-range';
-import { TerminalDatum, TerminalNotice, TerminalPanel } from '@/components/terminal/TerminalPanels';
+import { InlineStateNotice } from '@/components/states/StatePrimitives';
+import { TerminalDatum, TerminalPanel } from '@/components/terminal/TerminalPanels';
 
 type RiskWarningInput =
   | string
@@ -55,25 +56,22 @@ export function RiskPreview({ className = '', preview, title = 'Risk preview' }:
 
         <div className="mt-4 grid gap-3">
           {blockers.length === 0 ? null : (
-            <TerminalNotice>
+            <InlineStateNotice tone="blocked">
               <strong className="font-semibold">Blocked before signing.</strong>{' '}
               {blockers.join(' ')}
-            </TerminalNotice>
+            </InlineStateNotice>
           )}
 
           {warnings.length === 0 ? (
-            <TerminalNotice>
-              Missing optional risk data is shown as unavailable instead of estimated. Exact received
-              amounts still require simulation or onchain confirmation.
-            </TerminalNotice>
+            <InlineStateNotice>
+              Missing optional risk data is shown as unavailable instead of estimated. Exact
+              received amounts still require simulation or onchain confirmation.
+            </InlineStateNotice>
           ) : (
             <ul className="grid gap-2" aria-label="Risk warnings">
               {warnings.map((warning) => (
-                <li
-                  className="border border-[#e0c891] bg-[#fff9ea] p-3 text-sm leading-6 text-[#5c4720]"
-                  key={warning}
-                >
-                  {warning}
+                <li key={warning}>
+                  <InlineStateNotice>{warning}</InlineStateNotice>
                 </li>
               ))}
             </ul>
@@ -141,7 +139,10 @@ function createRiskRows(model: RiskPreviewModel) {
     { label: 'Oracle freshness', value: model.oracleFreshness ?? unavailableCopy },
     { label: 'Ask bounds', value: model.askBoundsStatus ?? unavailableCopy },
     { label: 'Expiry', value: formatOptionalValue(model.expiryMs, 'ms') },
-    { label: 'Manager balance', value: formatOptionalQuote(model.managerBalanceQuote, quoteSymbol) },
+    {
+      label: 'Manager balance',
+      value: formatOptionalQuote(model.managerBalanceQuote, quoteSymbol),
+    },
     { label: 'Quantity', value: formatOptionalQuote(model.quantityQuote, quoteSymbol) },
     estimatedAmount,
     { label: 'Manager', value: model.managerId ?? unavailableCopy },

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { predictDeploymentConfig } from '@/config/predict';
+import { StatePanel, StateSkeletonGrid } from '@/components/states/StatePrimitives';
 import { useAskBounds } from '@/features/markets/hooks/useAskBounds';
 import { useOracleState } from '@/features/markets/hooks/useOracleState';
 import { usePredictOracles } from '@/features/markets/hooks/usePredictOracles';
@@ -589,46 +590,36 @@ function LiveTapePanel({
 
 function MarketsLoadingState() {
   return (
-    <section
-      aria-label="Market intelligence loading state"
-      className="border border-[#c8d3ce] bg-white p-5 text-sm text-[#52615c]"
-      role="status"
+    <StatePanel
+      description="Loading Predict state and oracle list data from existing market hooks."
+      label="Market intelligence loading state"
+      title="Loading market intelligence"
+      tone="loading"
     >
-      <p className="font-semibold text-[#17211d]">Loading market intelligence</p>
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <span className="h-16 bg-[#e8eeee]" />
-        <span className="h-16 bg-[#e8eeee]" />
-        <span className="h-16 bg-[#e8eeee]" />
-      </div>
-    </section>
+      <StateSkeletonGrid count={3} label="Market intelligence skeleton loading" />
+    </StatePanel>
   );
 }
 
 function MarketsEmptyState() {
   return (
-    <section
-      aria-label="Market intelligence empty state"
-      className="border border-[#d9c27d] bg-[#fff9ea] p-5 text-sm text-[#5c4720]"
-    >
-      <h2 className="text-lg font-semibold text-[#3f3014]">No Predict oracles loaded</h2>
-      <p className="mt-2 leading-6">
-        The existing oracle list hook returned no markets. Retry the Predict server before staging
-        market detail or execution work.
-      </p>
-    </section>
+    <StatePanel
+      description="The existing oracle list hook returned no markets. Retry the Predict server before staging market detail or execution work."
+      label="Market intelligence empty state"
+      title="No Predict oracles loaded"
+      tone="empty"
+    />
   );
 }
 
 function MarketsErrorState({ message }: { message: string }) {
   return (
-    <section
-      aria-label="Market intelligence error state"
-      className="border border-[#d6a38f] bg-[#fff8f4] p-5 text-sm text-[#563023]"
-      role="alert"
-    >
-      <h2 className="text-lg font-semibold text-[#3c1f16]">Market intelligence failed to load</h2>
-      <p className="mt-2 leading-6">{message}</p>
-    </section>
+    <StatePanel
+      description={message}
+      label="Market intelligence error state"
+      title="Market intelligence failed to load"
+      tone="error"
+    />
   );
 }
 

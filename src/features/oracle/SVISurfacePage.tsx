@@ -4,6 +4,7 @@ import {
   TerminalPanel as Panel,
   TerminalStatCard as MetricCard,
 } from '@/components/terminal/TerminalPanels';
+import { StatePanel, StateSkeletonGrid } from '@/components/states/StatePrimitives';
 import { useLiveOracleTape } from '@/features/oracle/hooks/useLiveOracleTape';
 import {
   freshnessBadgeLabel,
@@ -234,45 +235,31 @@ function FreshnessStrip({ freshness, label }: { freshness: DataFreshnessModel; l
 
 function SurfaceEmptyState({ description, title }: { description: string; title: string }) {
   return (
-    <article aria-labelledby="surface-empty-title" className="border border-[#d9dfdc] bg-white p-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#446b5e]">
-        OracleSVI Surface
-      </p>
-      <h1
-        className="mt-2 text-3xl font-semibold tracking-normal text-[#17211d]"
-        id="surface-empty-title"
-      >
-        {title}
-      </h1>
-      <p className="mt-3 max-w-2xl text-sm leading-6 text-[#52615c]">{description}</p>
-    </article>
+    <StatePanel
+      description={description}
+      headingLevel={1}
+      label="SVI surface empty state"
+      title={title}
+      tone="empty"
+    />
   );
 }
 
 function SurfaceLoadingState({ title }: { title: string }) {
   return (
-    <article aria-label={title} className="border border-[#d9dfdc] bg-white p-5" role="status">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#446b5e]">
-        OracleSVI Surface
-      </p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-normal text-[#17211d]">{title}</h1>
-      <p className="mt-3 text-sm leading-6 text-[#52615c]">
-        Reading latest OracleSVI fields through the existing live tape hook.
-      </p>
-    </article>
+    <StatePanel
+      description="Reading latest OracleSVI fields through the existing live tape hook."
+      headingLevel={1}
+      title={title}
+      tone="loading"
+    >
+      <StateSkeletonGrid count={3} label="SVI surface skeleton loading" />
+    </StatePanel>
   );
 }
 
 function SurfaceUnavailableState({ message, title }: { message: string; title: string }) {
-  return (
-    <article aria-label={title} className="border border-[#d9a8a0] bg-[#fff8f6] p-5" role="alert">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a3e32]">
-        OracleSVI Surface
-      </p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-normal text-[#17211d]">{title}</h1>
-      <p className="mt-3 text-sm leading-6 text-[#6d423b]">{message}</p>
-    </article>
-  );
+  return <StatePanel description={message} headingLevel={1} title={title} tone="error" />;
 }
 
 function formatAskBounds(oracleState: OracleStateModel) {

@@ -1,6 +1,7 @@
 import type { PredictPtbSimulationPreview } from '@/integrations/deepbook-predict/tx/simulate';
 import { toPredictTxPreviewViewModel } from '@/features/tx/lib/tx-preview';
-import { TerminalDatum, TerminalNotice, TerminalPanel } from '@/components/terminal/TerminalPanels';
+import { InlineStateNotice } from '@/components/states/StatePrimitives';
+import { TerminalDatum, TerminalPanel } from '@/components/terminal/TerminalPanels';
 import { TxDigestLink } from '@/components/tx/TxDigestLink';
 
 export interface TransactionPreviewProps {
@@ -26,20 +27,17 @@ export function TransactionPreview({
       <div className={className}>
         <div className="flex flex-col gap-3 border-b border-[#d9dfdc] pb-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase text-[#446b5e]">
-              Pre-sign review
-            </p>
-            <h2 className="mt-2 text-xl font-semibold text-[#17211d]">
-              {viewModel.title}
-            </h2>
+            <p className="text-xs font-semibold uppercase text-[#446b5e]">Pre-sign review</p>
+            <h2 className="mt-2 text-xl font-semibold text-[#17211d]">{viewModel.title}</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[#53645f]">
               {viewModel.statusCopy}
             </p>
           </div>
           <span
+            aria-live="polite"
             className={`w-fit border px-3 py-1 text-xs font-semibold uppercase ${statusTone}`}
           >
-            {viewModel.status}
+            {formatStatusLabel(viewModel.status)}
           </span>
         </div>
 
@@ -53,29 +51,28 @@ export function TransactionPreview({
           {viewModel.warnings.length === 0 ? null : (
             <ul className="grid gap-2" aria-label="Transaction warnings">
               {viewModel.warnings.map((warning) => (
-                <li
-                  className="border border-[#e0c891] bg-[#fff9ea] p-3 text-sm leading-6 text-[#5c4720]"
-                  key={warning}
-                >
-                  {warning}
+                <li key={warning}>
+                  <InlineStateNotice>{warning}</InlineStateNotice>
                 </li>
               ))}
             </ul>
           )}
 
           {viewModel.recoveryCopy === undefined ? null : (
-            <TerminalNotice>{viewModel.recoveryCopy}</TerminalNotice>
+            <InlineStateNotice tone={viewModel.status === 'error' ? 'error' : 'blocked'}>
+              {viewModel.recoveryCopy}
+            </InlineStateNotice>
           )}
 
           {completedDigest === undefined ? null : (
-            <p className="border border-[#b8c6c0] bg-[#edf5f1] p-3 text-sm text-[#315447]">
+            <InlineStateNotice tone="success">
               Completed digest:{' '}
               <TxDigestLink
                 className="font-semibold underline underline-offset-2"
                 digest={completedDigest}
                 label="View transaction on Sui Explorer"
               />
-            </p>
+            </InlineStateNotice>
           )}
 
           <p className="text-sm leading-6 text-[#53645f]">
@@ -109,6 +106,21 @@ export function TransactionPreview({
       </div>
     </TerminalPanel>
   );
+}
+
+function formatStatusLabel(status: PredictPtbSimulationPreview['status']) {
+  switch (status) {
+    case 'TODO_VERIFY_BLOCKED':
+      return 'TODO VERIFY blocked';
+    case 'blocked':
+      return 'Blocked';
+    case 'error':
+      return 'Error';
+    case 'loading':
+      return 'Loading';
+    case 'ready':
+      return 'Ready';
+  }
 }
 
 function getStatusTone(status: PredictPtbSimulationPreview['status']) {

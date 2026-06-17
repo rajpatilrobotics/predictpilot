@@ -61,3 +61,25 @@ test('unknown routes render the safe route error state', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Route not found' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Back to dashboard' })).toBeVisible();
 });
+
+test('core mounted routes remain usable on mobile viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+
+  for (const route of [
+    { heading: 'Dashboard', path: '/dashboard' },
+    { heading: 'Market Intelligence', path: '/markets' },
+    { heading: 'Portfolio', path: '/portfolio' },
+    { heading: 'Vault / PLP', path: '/vault' },
+  ]) {
+    await page.goto(route.path);
+
+    await expect(page.getByRole('heading', { level: 1, name: route.heading })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: /Mobile navigation/i })).toBeVisible();
+    await expect(page.getByLabel('Terminal status strip')).toBeVisible();
+
+    const hasHorizontalPageOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth + 1,
+    );
+    expect(hasHorizontalPageOverflow).toBe(false);
+  }
+});

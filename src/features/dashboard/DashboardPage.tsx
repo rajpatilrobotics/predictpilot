@@ -1,5 +1,10 @@
 import { useMemo } from 'react';
 import {
+  InlineStateNotice,
+  StatePanel,
+  StateSkeletonGrid,
+} from '@/components/states/StatePrimitives';
+import {
   usePredictManager,
   type UsePredictManagerResult,
 } from '@/features/manager/hooks/usePredictManager';
@@ -115,15 +120,27 @@ export function DashboardView({ model }: { model: DashboardViewModel }) {
       </div>
 
       {hasLoadingState ? (
-        <div
-          aria-label="Dashboard loading state"
-          className="grid gap-3 border border-[#d9dfdc] bg-[#fbfcfc] p-4 md:grid-cols-3"
-          role="status"
+        <StatePanel
+          description="Loading market status, manager readiness, and vault context from existing read hooks."
+          label="Dashboard loading state"
+          title="Loading dashboard"
+          tone="loading"
         >
-          <LoadingSkeleton label="Market status" />
-          <LoadingSkeleton label="Manager readiness" />
-          <LoadingSkeleton label="Vault snapshot" />
-        </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {['Market status', 'Manager readiness', 'Vault snapshot'].map((label) => (
+              <div className="border border-[#d9dfdc] bg-white p-3" key={label}>
+                <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[#64736e]">
+                  {label}
+                </p>
+                <StateSkeletonGrid
+                  className="mt-3 md:grid-cols-1"
+                  count={1}
+                  label={`${label} loading`}
+                />
+              </div>
+            ))}
+          </div>
+        </StatePanel>
       ) : null}
 
       {errors.length > 0 ? (
@@ -637,34 +654,19 @@ function StatusPill({ label }: { label: string }) {
 }
 
 function EmptyState({ copy }: { copy: string }) {
-  return (
-    <p className="border border-[#d9dfdc] bg-[#fbfcfc] p-4 text-sm leading-6 text-[#52615c]">
-      {copy}
-    </p>
-  );
+  return <InlineStateNotice tone="empty">{copy}</InlineStateNotice>;
 }
 
 function ErrorPanel({ error, label }: { error: PredictPilotError; label: string }) {
   return (
-    <div className="border border-[#df9b9b] bg-[#fff4f4] p-4" role="alert">
-      <p className="text-sm font-semibold text-[#6d2b2b]">
-        {label}: {error.title}
-      </p>
-      <p className="mt-1 text-sm leading-6 text-[#6d2b2b]">{error.message}</p>
-      <p className="mt-2 text-xs font-semibold uppercase tracking-[0.1em] text-[#8a3f3f]">
-        {error.recovery}
-      </p>
-    </div>
-  );
-}
-
-function LoadingSkeleton({ label }: { label: string }) {
-  return (
-    <div className="border border-[#d9dfdc] bg-white p-3">
-      <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[#64736e]">{label}</p>
-      <div className="mt-3 h-3 w-3/4 bg-[#dce5e1]" />
-      <div className="mt-2 h-3 w-1/2 bg-[#e7eeeb]" />
-    </div>
+    <StatePanel
+      description={error.message}
+      label={`${label} error`}
+      title={`${label}: ${error.title}`}
+      tone="error"
+    >
+      <p className="text-xs font-semibold uppercase tracking-[0.1em]">{error.recovery}</p>
+    </StatePanel>
   );
 }
 

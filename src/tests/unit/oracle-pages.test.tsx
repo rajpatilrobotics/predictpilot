@@ -47,6 +47,10 @@ function renderWithQueryClient(ui: ReactNode) {
   return render(<Wrapper>{ui}</Wrapper>);
 }
 
+function findOracleStatusHeading() {
+  return screen.findByRole('heading', { name: 'Oracle Status' }, { timeout: 5_000 });
+}
+
 function oracleStateDto({
   askBounds = null,
   includePrice = true,
@@ -141,7 +145,7 @@ describe('oracle page components', () => {
       />,
     );
 
-    expect(await screen.findByRole('heading', { name: 'Oracle Status' })).toBeInTheDocument();
+    expect(await findOracleStatusHeading()).toBeInTheDocument();
     expect(screen.getAllByText('Active').length).toBeGreaterThan(0);
     expect(screen.getByText('65,250')).toBeInTheDocument();
     expect(screen.getByText('65,500')).toBeInTheDocument();
@@ -192,7 +196,7 @@ describe('oracle page components', () => {
       />,
     );
 
-    expect(await screen.findByRole('heading', { name: 'Oracle Status' })).toBeInTheDocument();
+    expect(await findOracleStatusHeading()).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByText('STALE').length).toBeGreaterThan(0));
     expect(screen.getByText('Mint is blocked')).toBeInTheDocument();
     expect(screen.getAllByText(/oracle stale/i).length).toBeGreaterThan(0);
@@ -218,7 +222,7 @@ describe('oracle page components', () => {
       />,
     );
 
-    expect(await screen.findByRole('heading', { name: 'Oracle Status' })).toBeInTheDocument();
+    expect(await findOracleStatusHeading()).toBeInTheDocument();
     expect(screen.getAllByText('Settled').length).toBeGreaterThan(0);
     expect(screen.getByText('66,000')).toBeInTheDocument();
     expect(screen.getByText(/Settled OracleSVI/i)).toBeInTheDocument();

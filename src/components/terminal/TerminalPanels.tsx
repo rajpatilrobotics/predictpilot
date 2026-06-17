@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { InlineStateNotice, StatePanel } from '@/components/states/StatePrimitives';
 
 export function TerminalPageHeader({
   eyebrow,
@@ -39,24 +40,10 @@ export function TerminalState({
   title: string;
   tone?: 'error' | 'neutral';
 }) {
-  const isError = tone === 'error';
-
   return (
-    <section
-      aria-label={title}
-      className={`border p-5 ${
-        isError
-          ? 'border-[#d6a38f] bg-[#fff8f4] text-[#563023]'
-          : 'border-[#d9dfdc] bg-[#fbfcfc] text-[#3f514b]'
-      }`}
-      role={isError ? 'alert' : 'status'}
-    >
-      <h2 className={`text-xl font-semibold ${isError ? 'text-[#3c1f16]' : 'text-[#17211d]'}`}>
-        {title}
-      </h2>
-      <p className="mt-2 max-w-3xl leading-6">{description}</p>
-      {children === undefined ? null : <div className="mt-4">{children}</div>}
-    </section>
+    <StatePanel description={description} title={title} tone={tone === 'error' ? 'error' : 'empty'}>
+      {children}
+    </StatePanel>
   );
 }
 
@@ -135,11 +122,5 @@ export function TerminalNotice({
   children: ReactNode;
   className?: string;
 }) {
-  return (
-    <p
-      className={`border border-[#e0c891] bg-[#fff9ea] p-3 text-sm leading-6 text-[#5c4720] ${className}`}
-    >
-      {children}
-    </p>
-  );
+  return <InlineStateNotice className={className}>{children}</InlineStateNotice>;
 }
