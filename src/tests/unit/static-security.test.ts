@@ -2,6 +2,7 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 const projectRoot = process.cwd();
@@ -103,6 +104,15 @@ describe('static security regression checks', () => {
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
+
+  it('requires explicit button types for JSX button controls', () => {
+    const violations = collectSourceFiles(sourceRoot)
+      .filter((filePath) => filePath.endsWith('.tsx'))
+      .flatMap(collectUntypedButtonControls)
+      .sort();
+
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
 });
 
 function collectSourceFiles(directoryPath: string): string[] {
@@ -145,4 +155,40 @@ function collectRepositoryFiles(directoryPath: string): string[] {
 
     return entryStats.isFile() ? [entryPath] : [];
   });
+}
+
+function collectUntypedButtonControls(filePath: string): string[] {
+  const source = readFileSync(filePath, 'utf8');
+  const sourceFile = ts.createSourceFile(
+    filePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  const violations: string[] = [];
+
+  function visit(node: ts.Node): void {
+    if (ts.isJsxOpeningElement(node) && node.tagName.getText(sourceFile) === 'button') {
+      const hasExplicitType = node.attributes.properties.some(
+        (attribute) => ts.isJsxAttribute(attribute) && attribute.name.getText(sourceFile) === 'type',
+      );
+
+      if (!hasExplicitType) {
+        const { character, line } = sourceFile.getLineAndCharacterOfPosition(
+          node.getStart(sourceFile),
+        );
+        const displayPath = relative(projectRoot, filePath);
+        violations.push(
+          `${displayPath}:${line + 1}:${character + 1} - JSX button needs an explicit type`,
+        );
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return violations;
 }
