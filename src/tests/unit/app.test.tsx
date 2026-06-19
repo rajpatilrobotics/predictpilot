@@ -164,6 +164,11 @@ describe('App shell', () => {
     expect(screen.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: /Primary navigation/i })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: /Mobile navigation/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Skip to route content' })).toHaveAttribute(
+      'href',
+      '#route-content',
+    );
+    expect(screen.getByRole('main', { name: 'Route content' })).toHaveAttribute('tabindex', '-1');
     expect(screen.getByLabelText('Wallet status')).toBeInTheDocument();
     expect(screen.getByLabelText('Terminal status strip')).toBeInTheDocument();
     expect(screen.getByText('Ready for focused polling')).toBeInTheDocument();

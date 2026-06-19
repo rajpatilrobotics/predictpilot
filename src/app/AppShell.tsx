@@ -53,10 +53,16 @@ interface AppShellProps {
 export function AppShell({ activeRoute, isNotFound, onNavigate, routes }: AppShellProps) {
   return (
     <div className="min-h-screen bg-[#f4f7f6] text-[#17211d]">
+      <a
+        className="absolute left-4 top-4 z-[60] -translate-y-24 border border-[#17211d] bg-white px-4 py-2 text-sm font-semibold text-[#17211d] transition focus:translate-y-0"
+        href="#route-content"
+      >
+        Skip to route content
+      </a>
       <TopBar activeRoute={activeRoute} />
       <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-4 px-4 py-4 lg:grid lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_320px] lg:px-6">
         <SidebarNav activeRoute={activeRoute} onNavigate={onNavigate} routes={routes} />
-        <main className="min-w-0" id="route-content">
+        <main aria-label="Route content" className="min-w-0" id="route-content" tabIndex={-1}>
           <TestnetBanner />
           <section className="mt-4">
             {isNotFound ? (
