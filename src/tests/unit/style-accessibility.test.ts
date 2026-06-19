@@ -76,6 +76,15 @@ describe('global stylesheet accessibility safeguards', () => {
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
+
+  it('requires intrinsic buttons to declare an explicit type', () => {
+    const violations = collectSourceFiles(sourceRoot)
+      .filter((filePath) => filePath.endsWith('.tsx'))
+      .flatMap(collectButtonsWithoutExplicitType)
+      .sort();
+
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
 });
 
 function collectUnnamedFormControls(filePath: string): string[] {
@@ -488,6 +497,32 @@ function collectFocusableAriaHiddenElements(filePath: string): string[] {
           `${relative(projectRoot, filePath)}:${line + 1}:${character + 1} - focusable ${tagName} must not be aria-hidden`,
         );
       }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return violations;
+}
+
+function collectButtonsWithoutExplicitType(filePath: string): string[] {
+  const sourceFile = createTsxSourceFile(filePath);
+  const violations: string[] = [];
+
+  function visit(node: ts.Node): void {
+    if (
+      (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
+      node.tagName.getText(sourceFile) === 'button' &&
+      !hasJsxAttribute(node, 'type', sourceFile)
+    ) {
+      const { character, line } = sourceFile.getLineAndCharacterOfPosition(
+        node.getStart(sourceFile),
+      );
+      violations.push(
+        `${relative(projectRoot, filePath)}:${line + 1}:${character + 1} - button needs explicit type`,
+      );
     }
 
     ts.forEachChild(node, visit);
