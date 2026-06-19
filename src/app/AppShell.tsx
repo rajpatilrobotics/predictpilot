@@ -1,22 +1,46 @@
+import { lazy, Suspense } from 'react';
 import { TestnetBanner } from '@/components/banners/TestnetBanner';
 import { ExecutionRail } from '@/components/layout/ExecutionRail';
 import { MobileNav } from '@/components/layout/MobileNav';
-import { RouteErrorState } from '@/components/layout/RouteStates';
+import { RouteErrorState, RouteLoadingState } from '@/components/layout/RouteStates';
 import { SidebarNav } from '@/components/layout/SidebarNav';
 import { TopBar } from '@/components/layout/TopBar';
-import { DashboardPage } from '@/features/dashboard/DashboardPage';
-import { DemoModePage } from '@/features/demo/DemoModePage';
-import { HistoryPage } from '@/features/history/HistoryPage';
-import { MarketIntelligencePage } from '@/features/markets/MarketIntelligencePage';
-import { PredictManagerPage } from '@/features/manager/PredictManagerPage';
-import { OracleStatusPage } from '@/features/oracle/OracleStatusPage';
-import { SVISurfacePage } from '@/features/oracle/SVISurfacePage';
-import { PnlPage } from '@/features/portfolio/PnlPage';
-import { PortfolioPage } from '@/features/portfolio/PortfolioPage';
-import { MarketDetailPage } from '@/features/trade/MarketDetailPage';
-import { VaultPage } from '@/features/vault/VaultPage';
 import type { AppRoute } from '@/app/routes';
 import type { ObjectId } from '@/types/predict';
+
+const DashboardPage = lazy(async () => ({
+  default: (await import('@/features/dashboard/DashboardPage')).DashboardPage,
+}));
+const DemoModePage = lazy(async () => ({
+  default: (await import('@/features/demo/DemoModePage')).DemoModePage,
+}));
+const HistoryPage = lazy(async () => ({
+  default: (await import('@/features/history/HistoryPage')).HistoryPage,
+}));
+const MarketIntelligencePage = lazy(async () => ({
+  default: (await import('@/features/markets/MarketIntelligencePage')).MarketIntelligencePage,
+}));
+const PredictManagerPage = lazy(async () => ({
+  default: (await import('@/features/manager/PredictManagerPage')).PredictManagerPage,
+}));
+const OracleStatusPage = lazy(async () => ({
+  default: (await import('@/features/oracle/OracleStatusPage')).OracleStatusPage,
+}));
+const SVISurfacePage = lazy(async () => ({
+  default: (await import('@/features/oracle/SVISurfacePage')).SVISurfacePage,
+}));
+const PnlPage = lazy(async () => ({
+  default: (await import('@/features/portfolio/PnlPage')).PnlPage,
+}));
+const PortfolioPage = lazy(async () => ({
+  default: (await import('@/features/portfolio/PortfolioPage')).PortfolioPage,
+}));
+const MarketDetailPage = lazy(async () => ({
+  default: (await import('@/features/trade/MarketDetailPage')).MarketDetailPage,
+}));
+const VaultPage = lazy(async () => ({
+  default: (await import('@/features/vault/VaultPage')).VaultPage,
+}));
 
 interface AppShellProps {
   activeRoute: AppRoute;
@@ -41,7 +65,9 @@ export function AppShell({ activeRoute, isNotFound, onNavigate, routes }: AppShe
                 title="Route not found"
               />
             ) : (
-              <RouteContent onNavigate={onNavigate} route={activeRoute} />
+              <Suspense fallback={<RouteLoadingState title={`Loading ${activeRoute.title}`} />}>
+                <RouteContent onNavigate={onNavigate} route={activeRoute} />
+              </Suspense>
             )}
           </section>
         </main>

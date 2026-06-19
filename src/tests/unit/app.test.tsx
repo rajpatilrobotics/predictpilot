@@ -153,7 +153,7 @@ afterEach(() => {
 });
 
 describe('App shell', () => {
-  it('renders the terminal shell with navigation, wallet status, and Testnet indicator', () => {
+  it('renders the terminal shell with navigation, wallet status, and Testnet indicator', async () => {
     renderAppAt('/dashboard');
 
     expect(screen.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeInTheDocument();
@@ -165,26 +165,26 @@ describe('App shell', () => {
     expect(screen.getByText('Discovery pending')).toBeInTheDocument();
     expect(screen.getByRole('status', { name: /Testnet status/i })).toBeInTheDocument();
     expect(screen.getByLabelText('Persistent execution rail')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
   });
 
-  it('navigates between shell routes and mounts implemented pages', () => {
+  it('navigates between shell routes and mounts implemented pages', async () => {
     renderAppAt('/dashboard');
     const primaryNav = screen.getByRole('navigation', { name: /Primary navigation/i });
 
     fireEvent.click(within(primaryNav).getByRole('link', { name: 'Markets' }));
-    expect(screen.getByRole('heading', { name: 'Markets' })).toBeInTheDocument();
-    expect(screen.getByText('Market intelligence page mounted')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Markets' })).toBeInTheDocument();
+    expect(await screen.findByText('Market intelligence page mounted')).toBeInTheDocument();
     expect(screen.getAllByText('Live terminal').length).toBeGreaterThan(0);
 
     fireEvent.click(within(primaryNav).getByRole('link', { name: 'Vault / PLP' }));
-    expect(screen.getByRole('heading', { name: 'Vault / PLP' })).toBeInTheDocument();
-    expect(screen.getByText('Vault page mounted')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Vault / PLP' })).toBeInTheDocument();
+    expect(await screen.findByText('Vault page mounted')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Vault actions' })).toBeInTheDocument();
     expect(screen.getByLabelText('Persistent execution rail')).toBeInTheDocument();
   });
 
-  it('mounts implemented Phase 5 route pages inside the shared shell', () => {
+  it('mounts implemented Phase 5 route pages inside the shared shell', async () => {
     const mountedRouteTextById = {
       dashboard: 'Dashboard page mounted',
       demo: 'Demo mode page mounted',
@@ -207,9 +207,11 @@ describe('App shell', () => {
         </AppProviders>,
       );
 
-      expect(screen.getByRole('heading', { name: route.title })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: route.title })).toBeInTheDocument();
       expect(
-        screen.getByText(mountedRouteTextById[route.id as keyof typeof mountedRouteTextById]),
+        await screen.findByText(
+          mountedRouteTextById[route.id as keyof typeof mountedRouteTextById],
+        ),
       ).toBeInTheDocument();
       expect(screen.queryByLabelText(`${route.title} route placeholder`)).not.toBeInTheDocument();
       unmount();
@@ -223,20 +225,22 @@ describe('App shell', () => {
     expect(resolveAppRoute('/oracle').id).toBe('oracle-status');
   });
 
-  it('mounts dynamic market detail routes inside the shared shell', () => {
+  it('mounts dynamic market detail routes inside the shared shell', async () => {
     const oracleId = '0x123';
 
     renderAppAt(`/markets/${oracleId}`);
 
-    expect(screen.getByRole('heading', { name: 'Market Detail / Strategy' })).toBeInTheDocument();
-    expect(screen.getByText('Market detail page mounted')).toBeInTheDocument();
-    expect(screen.getByText(oracleId)).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Market Detail / Strategy' }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText('Market detail page mounted')).toBeInTheDocument();
+    expect(await screen.findByText(oracleId)).toBeInTheDocument();
     expect(
       screen.queryByLabelText('Market Detail / Strategy route placeholder'),
     ).not.toBeInTheDocument();
   });
 
-  it('renders distinct Phase 5 pages for SVI, oracle status, and PnL', () => {
+  it('renders distinct Phase 5 pages for SVI, oracle status, and PnL', async () => {
     const distinctRoutes = [
       {
         mountedText: 'SVI surface page mounted',
@@ -261,22 +265,22 @@ describe('App shell', () => {
         </AppProviders>,
       );
 
-      expect(screen.getByRole('heading', { name: route.title })).toBeInTheDocument();
-      expect(screen.getByText(route.mountedText)).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: route.title })).toBeInTheDocument();
+      expect(await screen.findByText(route.mountedText)).toBeInTheDocument();
       expect(screen.getByRole('heading', { name: route.railTitle })).toBeInTheDocument();
       unmount();
     }
   });
 
-  it('passes query-selected oracle IDs into SVI and oracle status pages', () => {
+  it('passes query-selected oracle IDs into SVI and oracle status pages', async () => {
     const oracleId = '0x9c2da49c103556e6def22273d716f81f3d206c2a5823ea49c5bb6bf425a3238d';
 
     const sviRender = renderAppAt(`/svi?oracleId=${oracleId}`);
-    expect(screen.getByText(`SVI selected ${oracleId}`)).toBeInTheDocument();
+    expect(await screen.findByText(`SVI selected ${oracleId}`)).toBeInTheDocument();
     sviRender.unmount();
 
     const oracleStatusRender = renderAppAt(`/oracle-status?oracleId=${oracleId}`);
-    expect(screen.getByText(`Oracle status selected ${oracleId}`)).toBeInTheDocument();
+    expect(await screen.findByText(`Oracle status selected ${oracleId}`)).toBeInTheDocument();
     oracleStatusRender.unmount();
   });
 
@@ -287,7 +291,7 @@ describe('App shell', () => {
     expect(screen.getByRole('heading', { name: /Route not found/i })).toBeInTheDocument();
   });
 
-  it('renders the required five-tab mobile navigation labels', () => {
+  it('renders the required five-tab mobile navigation labels', async () => {
     renderAppAt('/dashboard');
     const mobileNav = screen.getByRole('navigation', { name: /Mobile navigation/i });
 
@@ -296,6 +300,7 @@ describe('App shell', () => {
     expect(within(mobileNav).getByRole('link', { name: 'Build' })).toBeInTheDocument();
     expect(within(mobileNav).getByRole('link', { name: 'Portfolio' })).toBeInTheDocument();
     expect(within(mobileNav).getByRole('link', { name: 'Demo' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
   });
 
   it('provides a reusable route loading state', () => {
