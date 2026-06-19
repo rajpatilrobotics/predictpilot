@@ -1,8 +1,9 @@
-import type { AppRoute } from '@/app/routes';
+import type { AppRoute, AppRouteId } from '@/app/routes';
 
 interface SidebarNavProps {
   activeRoute: AppRoute;
   onNavigate: (path: string) => void;
+  onPreload?: (routeId: AppRouteId) => void;
   routes: readonly AppRoute[];
 }
 
@@ -14,7 +15,7 @@ const sectionLabels: Record<AppRoute['section'], string> = {
   Overview: 'Overview',
 };
 
-export function SidebarNav({ activeRoute, onNavigate, routes }: SidebarNavProps) {
+export function SidebarNav({ activeRoute, onNavigate, onPreload, routes }: SidebarNavProps) {
   return (
     <nav
       aria-label="Primary navigation"
@@ -38,6 +39,7 @@ export function SidebarNav({ activeRoute, onNavigate, routes }: SidebarNavProps)
                     active={isActiveRoute(activeRoute, route)}
                     key={route.id}
                     onNavigate={onNavigate}
+                    onPreload={onPreload}
                     route={route}
                   />
                 ))}
@@ -63,12 +65,18 @@ export function SidebarNav({ activeRoute, onNavigate, routes }: SidebarNavProps)
 function NavLink({
   active,
   onNavigate,
+  onPreload,
   route,
 }: {
   active: boolean;
   onNavigate: (path: string) => void;
+  onPreload?: (routeId: AppRouteId) => void;
   route: AppRoute;
 }) {
+  function preloadRoute() {
+    onPreload?.(route.id);
+  }
+
   return (
     <a
       aria-current={active ? 'page' : undefined}
@@ -78,6 +86,8 @@ function NavLink({
           : 'border-transparent text-[#445750] hover:border-[#d9dfdc] hover:bg-[#f8fbfa]'
       }`}
       href={route.href}
+      onFocus={preloadRoute}
+      onMouseEnter={preloadRoute}
       onClick={(event) => {
         event.preventDefault();
         onNavigate(route.href);

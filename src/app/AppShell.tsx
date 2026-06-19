@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { TestnetBanner } from '@/components/banners/TestnetBanner';
 import { ExecutionRail } from '@/components/layout/ExecutionRail';
 import { MobileNav } from '@/components/layout/MobileNav';
@@ -6,41 +6,56 @@ import { RouteErrorBoundary } from '@/components/layout/RouteErrorBoundary';
 import { RouteErrorState, RouteLoadingState } from '@/components/layout/RouteStates';
 import { SidebarNav } from '@/components/layout/SidebarNav';
 import { TopBar } from '@/components/layout/TopBar';
+import {
+  loadDashboardPage,
+  loadDemoModePage,
+  loadHistoryPage,
+  loadMarketDetailPage,
+  loadMarketIntelligencePage,
+  loadOracleStatusPage,
+  loadPnlPage,
+  loadPortfolioPage,
+  loadPredictManagerPage,
+  loadSVISurfacePage,
+  loadVaultPage,
+  preloadAppRoute,
+  preloadOverviewRoutes,
+} from '@/app/route-preload';
 import type { AppRoute } from '@/app/routes';
 import type { ObjectId } from '@/types/predict';
 
 const DashboardPage = lazy(async () => ({
-  default: (await import('@/features/dashboard/DashboardPage')).DashboardPage,
+  default: (await loadDashboardPage()).DashboardPage,
 }));
 const DemoModePage = lazy(async () => ({
-  default: (await import('@/features/demo/DemoModePage')).DemoModePage,
+  default: (await loadDemoModePage()).DemoModePage,
 }));
 const HistoryPage = lazy(async () => ({
-  default: (await import('@/features/history/HistoryPage')).HistoryPage,
+  default: (await loadHistoryPage()).HistoryPage,
 }));
 const MarketIntelligencePage = lazy(async () => ({
-  default: (await import('@/features/markets/MarketIntelligencePage')).MarketIntelligencePage,
+  default: (await loadMarketIntelligencePage()).MarketIntelligencePage,
 }));
 const PredictManagerPage = lazy(async () => ({
-  default: (await import('@/features/manager/PredictManagerPage')).PredictManagerPage,
+  default: (await loadPredictManagerPage()).PredictManagerPage,
 }));
 const OracleStatusPage = lazy(async () => ({
-  default: (await import('@/features/oracle/OracleStatusPage')).OracleStatusPage,
+  default: (await loadOracleStatusPage()).OracleStatusPage,
 }));
 const SVISurfacePage = lazy(async () => ({
-  default: (await import('@/features/oracle/SVISurfacePage')).SVISurfacePage,
+  default: (await loadSVISurfacePage()).SVISurfacePage,
 }));
 const PnlPage = lazy(async () => ({
-  default: (await import('@/features/portfolio/PnlPage')).PnlPage,
+  default: (await loadPnlPage()).PnlPage,
 }));
 const PortfolioPage = lazy(async () => ({
-  default: (await import('@/features/portfolio/PortfolioPage')).PortfolioPage,
+  default: (await loadPortfolioPage()).PortfolioPage,
 }));
 const MarketDetailPage = lazy(async () => ({
-  default: (await import('@/features/trade/MarketDetailPage')).MarketDetailPage,
+  default: (await loadMarketDetailPage()).MarketDetailPage,
 }));
 const VaultPage = lazy(async () => ({
-  default: (await import('@/features/vault/VaultPage')).VaultPage,
+  default: (await loadVaultPage()).VaultPage,
 }));
 
 interface AppShellProps {
@@ -51,6 +66,10 @@ interface AppShellProps {
 }
 
 export function AppShell({ activeRoute, isNotFound, onNavigate, routes }: AppShellProps) {
+  useEffect(() => {
+    return scheduleOverviewPreload();
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#f4f7f6] text-[#17211d]">
       <a
@@ -61,7 +80,14 @@ export function AppShell({ activeRoute, isNotFound, onNavigate, routes }: AppShe
       </a>
       <TopBar activeRoute={activeRoute} />
       <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-4 px-4 py-4 lg:grid lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_320px] lg:px-6">
-        <SidebarNav activeRoute={activeRoute} onNavigate={onNavigate} routes={routes} />
+        <SidebarNav
+          activeRoute={activeRoute}
+          onNavigate={onNavigate}
+          onPreload={(routeId) => {
+            void preloadAppRoute(routeId);
+          }}
+          routes={routes}
+        />
         <main aria-label="Route content" className="min-w-0" id="route-content" tabIndex={-1}>
           <TestnetBanner />
           <section className="mt-4">
@@ -89,6 +115,23 @@ export function AppShell({ activeRoute, isNotFound, onNavigate, routes }: AppShe
       <MobileNav activeRoute={activeRoute} onNavigate={onNavigate} routes={routes} />
     </div>
   );
+}
+
+function scheduleOverviewPreload() {
+  const preload = () => {
+    void preloadOverviewRoutes();
+  };
+  const idleScheduler = globalThis.requestIdleCallback;
+
+  if (typeof idleScheduler === 'function') {
+    const idleCallbackId = idleScheduler(preload, { timeout: 1_500 });
+
+    return () => globalThis.cancelIdleCallback(idleCallbackId);
+  }
+
+  const timeoutId = globalThis.setTimeout(preload, 250);
+
+  return () => globalThis.clearTimeout(timeoutId);
 }
 
 function RouteContent({

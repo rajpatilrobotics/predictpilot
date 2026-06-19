@@ -39,6 +39,35 @@ test('reaches mounted and placeholder routes from navigation', async ({ page }) 
   await expect(page.getByRole('heading', { level: 1, name: 'Demo Mode' })).toBeVisible();
 });
 
+test('overview navigation preloads and switches quickly from execute routes', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/manager');
+  await expect(page.getByRole('heading', { level: 1, name: 'PredictManager' })).toBeVisible();
+
+  const primaryNav = page.getByRole('navigation', { name: /Primary navigation/i });
+  const overviewRoutes = [
+    { heading: 'Dashboard', label: 'Dashboard', path: '/dashboard' },
+    { heading: 'Market Intelligence', label: 'Markets', path: '/markets' },
+    { heading: 'No oracle selected', label: 'SVI Surface', path: '/svi' },
+    { heading: 'No oracle selected', label: 'Oracle Status', path: '/oracle-status' },
+  ] as const;
+
+  for (const route of overviewRoutes) {
+    const link = primaryNav.getByRole('link', { name: new RegExp(`^${route.label}`) });
+
+    await link.hover();
+    await link.focus();
+    await link.click();
+
+    await expect.poll(() => new URL(page.url()).pathname, { timeout: 2_500 }).toBe(route.path);
+    await expect(
+      page.getByRole('heading', { level: 1, name: route.heading }),
+      `${route.label} heading should render after a preloaded nav click`,
+    ).toBeVisible({ timeout: 2_500 });
+    await expect(page.getByLabel('Persistent execution rail')).toBeVisible();
+  }
+});
+
 test('desktop primary navigation stays visible while scrolling route content', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/dashboard');
