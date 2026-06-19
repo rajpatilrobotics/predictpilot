@@ -31,6 +31,35 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Production dependency audit
+        run: pnpm audit --prod
+
+      - name: Secret and wallet artifact scan
+        run: |
+          matches="$(
+            find . \
+              \( -name '.env.local' \
+              -o -name '.env.test' \
+              -o -name 'storageState.json' \
+              -o -iname '*private*key*' \
+              -o -iname '*seed*phrase*' \
+              -o -iname '*mnemonic*' \
+              -o -iname '*wallet*backup*' \
+              -o -iname '*keystore*' \
+              -o -iname '*cookie*' \) \
+              -not -path './node_modules/*' \
+              -not -path './.git/*' \
+              -not -path './dist/*' \
+              -not -path './playwright-report/*' \
+              -not -path './test-results/*' \
+              -print
+          )"
+          if [ -n "$matches" ]; then
+            echo "Forbidden secret/auth/wallet artifacts found:"
+            echo "$matches"
+            exit 1
+          fi
+
       - name: Lint
         run: pnpm lint
 
