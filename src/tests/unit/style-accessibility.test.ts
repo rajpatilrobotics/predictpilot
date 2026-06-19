@@ -67,6 +67,15 @@ describe('global stylesheet accessibility safeguards', () => {
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
+
+  it('prevents aria-hidden from hiding focusable JSX elements', () => {
+    const violations = collectSourceFiles(sourceRoot)
+      .filter((filePath) => filePath.endsWith('.tsx'))
+      .flatMap(collectFocusableAriaHiddenElements)
+      .sort();
+
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
 });
 
 function collectUnnamedFormControls(filePath: string): string[] {
@@ -458,6 +467,51 @@ function collectPositiveTabIndexValues(filePath: string): string[] {
   visit(sourceFile);
 
   return violations;
+}
+
+function collectFocusableAriaHiddenElements(filePath: string): string[] {
+  const sourceFile = createTsxSourceFile(filePath);
+  const violations: string[] = [];
+
+  function visit(node: ts.Node): void {
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tagName = node.tagName.getText(sourceFile);
+
+      if (
+        getStringJsxAttribute(node, 'aria-hidden', sourceFile) === 'true' &&
+        isFocusableElement(node, tagName, sourceFile)
+      ) {
+        const { character, line } = sourceFile.getLineAndCharacterOfPosition(
+          node.getStart(sourceFile),
+        );
+        violations.push(
+          `${relative(projectRoot, filePath)}:${line + 1}:${character + 1} - focusable ${tagName} must not be aria-hidden`,
+        );
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return violations;
+}
+
+function isFocusableElement(
+  node: ts.JsxOpeningLikeElement,
+  tagName: string,
+  sourceFile: ts.SourceFile,
+): boolean {
+  if (getNumericJsxAttribute(node, 'tabIndex', sourceFile) !== undefined) {
+    return true;
+  }
+
+  if (['button', 'input', 'select', 'summary', 'textarea'].includes(tagName)) {
+    return true;
+  }
+
+  return tagName === 'a' && hasJsxAttribute(node, 'href', sourceFile);
 }
 
 function getNumericJsxAttribute(
