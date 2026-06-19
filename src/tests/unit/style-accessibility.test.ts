@@ -31,6 +31,15 @@ describe('global stylesheet accessibility safeguards', () => {
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
+
+  it('keeps click handlers on keyboard-accessible intrinsic elements', () => {
+    const violations = collectSourceFiles(sourceRoot)
+      .filter((filePath) => filePath.endsWith('.tsx'))
+      .flatMap(collectNonInteractiveClickHandlers)
+      .sort();
+
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
 });
 
 function collectUnnamedFormControls(filePath: string): string[] {
@@ -128,4 +137,60 @@ function hasAccessibleName(
 
 function isFormControlTag(tagName: string): boolean {
   return tagName === 'input' || tagName === 'select' || tagName === 'textarea';
+}
+
+function collectNonInteractiveClickHandlers(filePath: string): string[] {
+  const sourceFile = createTsxSourceFile(filePath);
+  const violations: string[] = [];
+
+  function visit(node: ts.Node): void {
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tagName = node.tagName.getText(sourceFile);
+
+      if (
+        isIntrinsicElement(tagName) &&
+        hasJsxAttribute(node, 'onClick', sourceFile) &&
+        !isKeyboardAccessibleClickTarget(node, tagName, sourceFile)
+      ) {
+        const { character, line } = sourceFile.getLineAndCharacterOfPosition(
+          node.getStart(sourceFile),
+        );
+        violations.push(
+          `${relative(projectRoot, filePath)}:${line + 1}:${character + 1} - ${tagName} with onClick must be a keyboard-accessible control`,
+        );
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return violations;
+}
+
+function isKeyboardAccessibleClickTarget(
+  node: ts.JsxOpeningLikeElement,
+  tagName: string,
+  sourceFile: ts.SourceFile,
+): boolean {
+  if (tagName === 'a') {
+    return hasJsxAttribute(node, 'href', sourceFile);
+  }
+
+  return ['button', 'input', 'label', 'option', 'select', 'summary', 'textarea'].includes(tagName);
+}
+
+function isIntrinsicElement(tagName: string): boolean {
+  return tagName === tagName.toLowerCase();
+}
+
+function hasJsxAttribute(
+  node: ts.JsxOpeningLikeElement,
+  name: string,
+  sourceFile: ts.SourceFile,
+): boolean {
+  return node.attributes.properties.some(
+    (property) => ts.isJsxAttribute(property) && property.name.getText(sourceFile) === name,
+  );
 }
