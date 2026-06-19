@@ -79,7 +79,7 @@ export function MarketDetailPage({ nowMs, oracleId }: MarketDetailPageProps = {}
               simulation review only after wallet, manager, and funding checks pass.
             </p>
           </div>
-          <div className="grid gap-2 text-xs sm:grid-cols-2 xl:min-w-[360px]">
+          <dl className="grid gap-2 text-xs sm:grid-cols-2 xl:min-w-[360px]">
             <ContextPill label="Network" value={`Sui ${predictDeploymentConfig.network}`} />
             <ContextPill label="Quote" value={predictDeploymentConfig.quoteAsset.symbol} />
             <ContextPill
@@ -90,7 +90,7 @@ export function MarketDetailPage({ nowMs, oracleId }: MarketDetailPageProps = {}
               label="Oracle"
               value={parsedOracleId.ok ? formatObjectId(parsedOracleId.oracleId) : 'Not selected'}
             />
-          </div>
+          </dl>
         </div>
       </header>
 

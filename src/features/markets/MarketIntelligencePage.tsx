@@ -123,7 +123,7 @@ export function MarketIntelligencePage({ nowMs }: MarketIntelligencePageProps) {
               availability. This lane is read-only and does not stage strategy or execution.
             </p>
           </div>
-          <div className="grid gap-2 text-xs sm:grid-cols-2 xl:min-w-[360px]">
+          <dl className="grid gap-2 text-xs sm:grid-cols-2 xl:min-w-[360px]">
             <ContextPill
               label="Predict object"
               value={shortId(predictDeploymentConfig.predictObjectId)}
@@ -131,7 +131,7 @@ export function MarketIntelligencePage({ nowMs }: MarketIntelligencePageProps) {
             <ContextPill label="Quote" value={predictDeploymentConfig.quoteAsset.symbol} />
             <ContextPill label="Network" value={`Sui ${predictDeploymentConfig.network}`} />
             <ContextPill label="Source" value="Indexed + focused polling" />
-          </div>
+          </dl>
         </div>
       </header>
 
@@ -196,7 +196,7 @@ function PredictStatePanel({ predictState }: { predictState: PredictStateModel |
     predictState?.quoteAssets.includes(predictDeploymentConfig.quoteAssetType) ?? false;
 
   return (
-    <section
+    <dl
       aria-label="Predict market context"
       className="grid gap-3 border border-[#c8d3ce] bg-white p-4 text-sm shadow-sm md:grid-cols-4"
     >
@@ -220,7 +220,7 @@ function PredictStatePanel({ predictState }: { predictState: PredictStateModel |
         tone={predictState?.riskStatus === 'PRESENT' ? 'success' : 'warning'}
         value={predictState?.riskStatus === 'PRESENT' ? 'Present' : 'TODO VERIFY missing'}
       />
-    </section>
+    </dl>
   );
 }
 
@@ -495,7 +495,7 @@ function SelectedMarketPanel({
           <InlineInfo value="Loading selected oracle state from the existing oracle hook." />
         ) : null}
 
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <dl className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <MetricCard
             label="Lifecycle"
             tone={getLifecycleTone(oracle.lifecycleStatus)}
@@ -526,7 +526,7 @@ function SelectedMarketPanel({
             tone={status === null ? 'neutral' : status.mintRange.severity}
             value={status === null ? 'Loading' : formatAvailability(status.mintRange)}
           />
-        </div>
+        </dl>
 
         <div className="grid gap-3 md:grid-cols-2">
           <ProtocolPanel

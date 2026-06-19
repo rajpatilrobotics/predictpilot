@@ -252,7 +252,7 @@ export function DashboardView({ model }: { model: DashboardViewModel }) {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel kicker="Oracle Freshness" title="Readiness strip">
-          <div className="grid gap-3 md:grid-cols-2">
+          <dl className="grid gap-3 md:grid-cols-2">
             <DashboardDatum
               label="Active oracles"
               value={
@@ -277,11 +277,11 @@ export function DashboardView({ model }: { model: DashboardViewModel }) {
               label="Ask bounds"
               value="Shown per-market after strategy page selects an oracle"
             />
-          </div>
+          </dl>
         </Panel>
 
         <Panel kicker="Portfolio Snapshot" title="Manager-centric state">
-          <div className="grid gap-3 md:grid-cols-2">
+          <dl className="grid gap-3 md:grid-cols-2">
             <DashboardDatum label="Manager status" value={formatManagerStatus(model.manager)} />
             <DashboardDatum
               label="Manager balance"
@@ -307,7 +307,7 @@ export function DashboardView({ model }: { model: DashboardViewModel }) {
                   : model.positions.data.openRangePositionCount.toString()
               }
             />
-          </div>
+          </dl>
           {model.positions.data?.isEmpty === true ? (
             <p className="mt-4 border border-[#d9dfdc] bg-[#fbfcfc] p-3 text-sm text-[#52615c]">
               No open positions yet. Mint a binary or range position after the preview and execution

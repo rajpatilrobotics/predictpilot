@@ -47,6 +47,15 @@
 - `MEDIUM`: does not block all development, but weakens safety or trust.
 - `LOW`: polish, hardening, or observability gap.
 
+## Automated quality and security gates
+
+PredictPilot uses layered checks instead of trusting one scanner for everything:
+- SonarCloud checks reliability, maintainability, duplication, and security hotspot trends.
+- GitHub CodeQL runs JavaScript/TypeScript code scanning with extended security queries.
+- `pnpm audit --prod` checks production dependency advisories.
+- Playwright accessibility smoke tests scan current terminal routes for serious or critical WCAG issues.
+- Manual funded Testnet proof remains required because static tools cannot prove wallet signing, digest capture, or post-transaction state refresh.
+
 **Status labels.**
 - `OPEN`
 - `IN_PROGRESS`
