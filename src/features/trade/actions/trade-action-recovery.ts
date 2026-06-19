@@ -27,7 +27,7 @@ export interface TradeDigestRecoveryOptions<TPreview> {
   requestedAtMs: number;
 }
 
-const DEFAULT_TRADE_RECOVERY_ATTEMPTS = 8;
+const DEFAULT_TRADE_RECOVERY_ATTEMPTS = 60;
 const DEFAULT_TRADE_RECOVERY_POLL_DELAY_MS = 2_000;
 const RECOVERY_TIMESTAMP_TOLERANCE_MS = 10_000n;
 

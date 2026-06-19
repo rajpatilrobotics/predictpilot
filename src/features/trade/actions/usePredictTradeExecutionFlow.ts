@@ -36,7 +36,7 @@ export type PredictTradeFlowPhase =
 
 type PredictTradeOperationLock = 'review' | 'signature' | null;
 
-export const DEFAULT_WALLET_RETURN_TIMEOUT_MS = 45_000;
+export const DEFAULT_WALLET_RETURN_TIMEOUT_MS = 180_000;
 export const WALLET_RETURN_RECOVERY_NOTICE =
   'Wallet approval may have completed; checking indexed Predict state for the submitted transaction.';
 

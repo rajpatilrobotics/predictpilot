@@ -6,6 +6,8 @@ import {
   useBinaryRedeemFlow,
   type BeginBinaryRedeemReviewInput,
 } from '@/features/trade/actions/useBinaryRedeemFlow';
+import { predictDeploymentConfig } from '@/config/predict';
+import type { HistoryReadClient } from '@/integrations/deepbook-predict/api/history';
 import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
 import type { PredictTransactionTransport } from '@/lib/tx-executor';
 import type { QuoteAmount } from '@/types/predict';
@@ -21,6 +23,7 @@ import {
   tradeTestManagerId,
   tradeTestNowMs,
   tradeTestOracleId,
+  tradeTestOwner,
 } from './trade-test-helpers';
 
 const dAppKitMocks = vi.hoisted(() => ({
@@ -244,24 +247,78 @@ describe('useBinaryRedeemFlow', () => {
     expect(result.current.state.completedDigest).toBe('tx-digest');
     expect(result.current.state.refreshWarning?.code).toBe('POST_TX_REFRESH_FAILED');
   });
+
+  it('recovers a submitted binary redeem digest after delayed wallet handoff indexing', async () => {
+    const invalidateQueries = vi.fn().mockResolvedValue(undefined);
+    const signAndExecuteTransaction = vi.fn(() => new Promise<never>(() => undefined));
+    const waitForTransaction = vi.fn();
+    const historyClient = createHistoryClient({
+      fetchPositionRedeemHistoryDto: vi
+        .fn()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          binaryRedeemDto({
+            checkpoint_timestamp_ms: Date.now() + 1_000,
+            digest: 'recovered-binary-redeem-digest',
+          }),
+        ]),
+    });
+    const { result } = renderBinaryRedeemFlow({
+      executionTransport: createTradeExecutionTransport({
+        signAndExecuteTransaction,
+        waitForTransaction,
+      }),
+      historyClient,
+      queryClient: { invalidateQueries },
+      simulationTransport: createReadyTradeSimulationTransport(),
+      tradeRecoveryMaxAttempts: 2,
+      tradeRecoveryPollDelayMs: 0,
+      walletReturnTimeoutMs: 1,
+    });
+    await beginReview(result);
+
+    await act(async () => {
+      await result.current.requestSignature();
+    });
+
+    expect(result.current.state.phase).toBe('success');
+    expect(result.current.state.completedDigest).toBe('recovered-binary-redeem-digest');
+    expect(result.current.state.executionResult).toMatchObject({
+      confirmedStatus: 'success',
+      digest: 'recovered-binary-redeem-digest',
+      status: 'success',
+    });
+    expect(result.current.state.error).toBeNull();
+    expect(invalidateQueries).toHaveBeenCalled();
+    expect(signAndExecuteTransaction).toHaveBeenCalledTimes(1);
+    expect(waitForTransaction).not.toHaveBeenCalled();
+  });
 });
 
 function renderBinaryRedeemFlow({
   executionTransport,
+  historyClient,
   manager = createTradeManagerState(),
   managerSummary = createTradeManagerSummary(),
   oracleState = createTradeOracleState(),
   queryClient,
   simulationTransport = createReadyTradeSimulationTransport(),
+  tradeRecoveryMaxAttempts,
+  tradeRecoveryPollDelayMs,
   walletStatus = createTradeWalletStatus(),
+  walletReturnTimeoutMs,
 }: {
   executionTransport?: PredictTransactionTransport;
+  historyClient?: HistoryReadClient;
   manager?: ReturnType<typeof createTradeManagerState>;
   managerSummary?: ReturnType<typeof createTradeManagerSummary> | null;
   oracleState?: ReturnType<typeof createTradeOracleState>;
   queryClient?: Parameters<typeof useBinaryRedeemFlow>[0]['queryClient'];
   simulationTransport?: PredictSimulationTransport;
+  tradeRecoveryMaxAttempts?: number;
+  tradeRecoveryPollDelayMs?: number;
   walletStatus?: ReturnType<typeof createTradeWalletStatus>;
+  walletReturnTimeoutMs?: number;
 } = {}) {
   const providerClient = new QueryClient({
     defaultOptions: {
@@ -277,13 +334,17 @@ function renderBinaryRedeemFlow({
       useBinaryRedeemFlow({
         askBounds: presentAskBounds(),
         executionTransport,
+        historyClient,
         manager,
         managerSummary,
         nowMs: tradeTestNowMs,
         oracleState,
         queryClient,
         simulationTransport,
+        tradeRecoveryMaxAttempts,
+        tradeRecoveryPollDelayMs,
         walletStatus,
+        walletReturnTimeoutMs,
       }),
     { wrapper },
   );
@@ -311,4 +372,51 @@ async function beginReview(
   });
 
   return outcome!;
+}
+
+function createHistoryClient(overrides: Partial<HistoryReadClient>): HistoryReadClient {
+  return {
+    fetchLpSuppliesHistoryDto: vi.fn(),
+    fetchLpWithdrawalsHistoryDto: vi.fn(),
+    fetchOracleTradesDto: vi.fn(),
+    fetchPositionMintHistoryDto: vi.fn(),
+    fetchPositionRedeemHistoryDto: vi.fn(),
+    fetchRangeMintHistoryDto: vi.fn(),
+    fetchRangeRedeemHistoryDto: vi.fn(),
+    ...overrides,
+  };
+}
+
+function binaryRedeemDto({
+  checkpoint_timestamp_ms = tradeTestNowMs,
+  digest = 'binary-redeem-digest',
+}: {
+  checkpoint_timestamp_ms?: number;
+  digest?: string;
+}) {
+  const position = createTradeBinaryPosition();
+
+  return {
+    bid_price: 26_738_000,
+    checkpoint: 1,
+    checkpoint_timestamp_ms,
+    digest,
+    event_digest: `${digest}-event`,
+    event_index: 0,
+    executor: tradeTestOwner,
+    expiry: String(position.key.expiryMs),
+    is_settled: false,
+    is_up: position.key.direction === 'UP',
+    manager_id: tradeTestManagerId,
+    oracle_id: position.key.oracleId,
+    owner: tradeTestOwner,
+    package: predictDeploymentConfig.packageId,
+    payout: 26_738,
+    predict_id: predictDeploymentConfig.predictObjectId,
+    quantity: String(quantityQuote),
+    quote_asset: predictDeploymentConfig.quoteAsset.type,
+    sender: tradeTestOwner,
+    strike: String(position.key.strike1e9),
+    tx_index: 0,
+  };
 }
