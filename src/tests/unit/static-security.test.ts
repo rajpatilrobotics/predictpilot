@@ -114,6 +114,37 @@ const forbiddenArtifactNames = [
   'cookies',
 ] as const;
 
+const browserCleanupApiPairs = [
+  {
+    createLabel: 'addEventListener',
+    createPattern: /\baddEventListener\s*\(/,
+    cleanupLabel: 'removeEventListener',
+    cleanupPattern: /\bremoveEventListener\s*\(/,
+    reason: 'event listeners need matching cleanup to avoid stale route or wallet handlers.',
+  },
+  {
+    createLabel: 'setInterval',
+    createPattern: /\bsetInterval\s*\(/,
+    cleanupLabel: 'clearInterval',
+    cleanupPattern: /\bclearInterval\s*\(/,
+    reason: 'interval polling must be cancellable when a component or request stops.',
+  },
+  {
+    createLabel: 'setTimeout',
+    createPattern: /\bsetTimeout\s*\(/,
+    cleanupLabel: 'clearTimeout',
+    cleanupPattern: /\bclearTimeout\s*\(/,
+    reason: 'timeouts should be cleared when the guarded work exits.',
+  },
+  {
+    createLabel: 'requestAnimationFrame',
+    createPattern: /\brequestAnimationFrame\s*\(/,
+    cleanupLabel: 'cancelAnimationFrame',
+    cleanupPattern: /\bcancelAnimationFrame\s*\(/,
+    reason: 'animation frames need matching cleanup to avoid background UI work.',
+  },
+] as const;
+
 const forbiddenUiProtocolPatterns = [
   {
     label: 'Sui object or package ID',
@@ -176,6 +207,14 @@ describe('static security regression checks', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => !isCentralHttpClient(filePath))
       .flatMap(collectDirectFetchCalls)
+      .sort();
+
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
+
+  it('keeps browser lifecycle APIs paired with local cleanup', () => {
+    const violations = collectSourceFiles(sourceRoot)
+      .flatMap(collectUnpairedBrowserCleanupApis)
       .sort();
 
     expect(violations, violations.join('\n')).toEqual([]);
@@ -325,6 +364,21 @@ function collectHardcodedProtocolIdentifiers(filePath: string): string[] {
   });
 
   return violations;
+}
+
+function collectUnpairedBrowserCleanupApis(filePath: string): string[] {
+  const source = readFileSync(filePath, 'utf8');
+  const displayPath = relative(projectRoot, filePath);
+
+  return browserCleanupApiPairs
+    .filter(
+      ({ cleanupPattern, createPattern }) =>
+        createPattern.test(source) && !cleanupPattern.test(source),
+    )
+    .map(
+      ({ cleanupLabel, createLabel, reason }) =>
+        `${displayPath}: ${createLabel} requires ${cleanupLabel} - ${reason}`,
+    );
 }
 
 function collectUnsafeBlankTargetLinks(filePath: string): string[] {
