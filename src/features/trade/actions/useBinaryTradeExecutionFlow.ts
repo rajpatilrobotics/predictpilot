@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import type { Transaction } from '@mysten/sui/transactions';
 import type { QueryClient } from '@tanstack/react-query';
 import type { RiskPreviewModel } from '@/features/tx/RiskPreview';
@@ -12,7 +12,6 @@ import {
   type BinaryTradePreviewWarning,
 } from '@/integrations/deepbook-predict/tx/preview-binary';
 import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
-import { predictDeploymentConfig } from '@/config/predict';
 import { createAppError, type PredictPilotError } from '@/lib/errors';
 import { getOracleStatus, type OracleStatusModel } from '@/lib/oracle-status';
 import type { PredictTransactionTransport } from '@/lib/tx-executor';
@@ -28,6 +27,13 @@ import {
   type PredictTradeTxPreviewBase,
   type PreparePredictTradeReviewResult,
 } from './usePredictTradeExecutionFlow';
+import {
+  createBlockedRiskPreview,
+  createSimulationRequiredRiskPreview,
+  isOracleAvailabilityStale,
+  useStableInitialNowMs,
+  validateTradeWalletManagerBase,
+} from './trade-flow-shared';
 
 export type BinaryTradeFlowPhase = PredictTradeFlowPhase;
 
@@ -181,8 +187,8 @@ export function useBinaryTradeExecutionFlow<TPreview extends BinaryTradeTxPrevie
             action,
             copy,
             error: riskResult.error,
+            expiryMs: preconditions.marketKey.expiryMs,
             managerSummary: preconditions.managerSummary,
-            marketKey: preconditions.marketKey,
             oracleState,
             oracleStatus: preconditions.oracleStatus,
             quantityQuote: preconditions.quantityQuote,
@@ -240,12 +246,6 @@ export function useBinaryTradeExecutionFlow<TPreview extends BinaryTradeTxPrevie
   });
 }
 
-function useStableInitialNowMs(nowMs: number | undefined) {
-  const [initialNowMs] = useState(() => nowMs ?? Date.now());
-
-  return initialNowMs;
-}
-
 function validateBinaryTradePreconditions({
   action,
   copy,
@@ -283,54 +283,16 @@ function validateBinaryTradePreconditions({
       error: PredictPilotError;
       ok: false;
     } {
-  if (!walletStatus.isConnected || walletStatus.accountAddress === null) {
-    return {
-      error: createAppError('WALLET_NOT_CONNECTED', {
-        context: {
-          action,
-        },
-      }),
-      ok: false,
-    };
-  }
+  const baseValidation = validateTradeWalletManagerBase({
+    action,
+    copy,
+    manager,
+    managerSummary,
+    walletStatus,
+  });
 
-  if (!walletStatus.isExpectedNetwork || walletStatus.isWrongNetwork) {
-    return {
-      error: createAppError('WRONG_NETWORK', {
-        context: {
-          action,
-          currentNetwork: walletStatus.currentNetwork,
-          expectedNetwork: walletStatus.expectedNetwork,
-        },
-      }),
-      ok: false,
-    };
-  }
-
-  if (!manager.isReady || manager.managerId === null) {
-    return {
-      error: createAppError('MANAGER_NOT_FOUND', {
-        context: {
-          action,
-          wallet: walletStatus.accountAddress,
-        },
-      }),
-      ok: false,
-    };
-  }
-
-  if (managerSummary === null || managerSummary === undefined) {
-    return {
-      error: createAppError('MANAGER_NOT_FOUND', {
-        context: {
-          action,
-          managerId: manager.managerId,
-        },
-        message: copy.missingManagerSummaryMessage,
-        recovery: copy.missingManagerSummaryRecovery,
-      }),
-      ok: false,
-    };
+  if (!baseValidation.ok) {
+    return baseValidation;
   }
 
   if (
@@ -343,7 +305,7 @@ function validateBinaryTradePreconditions({
         context: {
           action,
           field: 'marketKey',
-          managerId: manager.managerId,
+          managerId: baseValidation.managerId,
           oracleId: oracleState.oracle.oracleId,
         },
         message: copy.invalidKeyMessage,
@@ -359,7 +321,7 @@ function validateBinaryTradePreconditions({
         context: {
           action,
           field: 'quantityQuote',
-          managerId: manager.managerId,
+          managerId: baseValidation.managerId,
           oracleId: oracleState.oracle.oracleId,
         },
         message: copy.invalidQuantityMessage,
@@ -373,19 +335,20 @@ function validateBinaryTradePreconditions({
   const availability = action === 'MINT' ? oracleStatus.mint : oracleStatus.redeem;
 
   if (!availability.isAllowed) {
-    const stale = availability.reasonCodes.some((code) =>
-      ['ORACLE_PRICE_MISSING', 'ORACLE_STALE', 'ORACLE_SVI_MISSING'].includes(code),
-    );
-
     return {
-      error: createAppError(stale ? 'ORACLE_STALE' : 'ORACLE_NOT_TRADEABLE', {
-        context: {
-          action,
-          managerId: manager.managerId,
-          oracleId: oracleState.oracle.oracleId,
-          reasonCodes: availability.reasonCodes,
+      error: createAppError(
+        isOracleAvailabilityStale(availability.reasonCodes)
+          ? 'ORACLE_STALE'
+          : 'ORACLE_NOT_TRADEABLE',
+        {
+          context: {
+            action,
+            managerId: baseValidation.managerId,
+            oracleId: oracleState.oracle.oracleId,
+            reasonCodes: availability.reasonCodes,
+          },
         },
-      }),
+      ),
       ok: false,
     };
   }
@@ -397,7 +360,7 @@ function validateBinaryTradePreconditions({
           context: {
             action,
             field: 'ownedPosition',
-            managerId: manager.managerId,
+            managerId: baseValidation.managerId,
             oracleId: oracleState.oracle.oracleId,
           },
           message: copy.missingOwnedPositionMessage ?? 'An open binary position is required.',
@@ -418,7 +381,7 @@ function validateBinaryTradePreconditions({
           context: {
             action,
             field: 'quantityQuote',
-            managerId: manager.managerId,
+            managerId: baseValidation.managerId,
             oracleId: oracleState.oracle.oracleId,
           },
           message:
@@ -434,14 +397,14 @@ function validateBinaryTradePreconditions({
   }
 
   return {
-    managerId: manager.managerId,
-    managerSummary,
+    managerId: baseValidation.managerId,
+    managerSummary: baseValidation.managerSummary,
     marketKey,
     ok: true,
     oracleStatus,
     ownedPosition,
     quantityQuote,
-    sender: walletStatus.accountAddress as SuiAddress,
+    sender: baseValidation.sender,
   };
 }
 
@@ -511,92 +474,14 @@ async function createBinaryTradeRiskPreview({
     preview: createSimulationRequiredRiskPreview({
       action,
       copy,
+      expiryMs: marketKey.expiryMs,
       managerSummary,
-      marketKey,
       oracleState,
       oracleStatus,
       quantityQuote,
       warnings: previewResult.warnings,
     }),
     warnings: previewResult.warnings,
-  };
-}
-
-function createSimulationRequiredRiskPreview({
-  action,
-  copy,
-  managerSummary,
-  marketKey,
-  oracleState,
-  oracleStatus,
-  quantityQuote,
-  warnings,
-}: {
-  action: BinaryTradePreviewAction;
-  copy: BinaryTradeFlowCopy;
-  managerSummary: ManagerSummaryModel;
-  marketKey: MarketKeyModel;
-  oracleState: OracleStateModel;
-  oracleStatus: OracleStatusModel;
-  quantityQuote: QuoteAmount;
-  warnings: BinaryTradePreviewWarning[];
-}): RiskPreviewModel {
-  return {
-    action,
-    askBoundsStatus: oracleState.askBounds.status,
-    expiryMs: marketKey.expiryMs,
-    managerBalanceQuote: managerSummary.tradingBalanceQuote,
-    managerId: managerSummary.managerId,
-    oracleFreshness: oracleStatus.freshness.aggregateStatus,
-    oracleId: oracleState.oracle.oracleId,
-    oracleStatus: oracleStatus.lifecycleStatus,
-    quantityQuote,
-    quoteAsset: predictDeploymentConfig.quoteAsset,
-    title: copy.reviewTitle,
-    underlyingAsset: oracleState.oracle.underlyingAsset,
-    warnings: [
-      ...warnings,
-      {
-        message: copy.simulationRequiredMessage,
-        severity: 'warning',
-      },
-    ],
-  };
-}
-
-function createBlockedRiskPreview({
-  action,
-  copy,
-  error,
-  managerSummary,
-  marketKey,
-  oracleState,
-  oracleStatus,
-  quantityQuote,
-  warnings,
-}: {
-  action: BinaryTradePreviewAction;
-  copy: BinaryTradeFlowCopy;
-  error: PredictPilotError;
-  managerSummary: ManagerSummaryModel;
-  marketKey: MarketKeyModel;
-  oracleState: OracleStateModel;
-  oracleStatus: OracleStatusModel;
-  quantityQuote: QuoteAmount;
-  warnings: BinaryTradePreviewWarning[];
-}): RiskPreviewModel {
-  return {
-    ...createSimulationRequiredRiskPreview({
-      action,
-      copy,
-      managerSummary,
-      marketKey,
-      oracleState,
-      oracleStatus,
-      quantityQuote,
-      warnings,
-    }),
-    blockers: [error.message],
   };
 }
 
