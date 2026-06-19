@@ -1,6 +1,4 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { predictDeploymentConfig } from '@/config/predict';
-import type { RiskPreviewModel } from '@/features/tx/RiskPreview';
 import {
   usePredictTradeExecutionFlow,
   type PredictTradeFlowPhase,
@@ -8,7 +6,6 @@ import {
   type PreparePredictTradeReviewResult,
 } from '@/features/trade/actions/usePredictTradeExecutionFlow';
 import type { WalletStatusModel } from '@/features/wallet/useWalletStatus';
-import { vaultWalletBalanceQueryKeys } from '@/features/vault/lib/vault-wallet-balances';
 import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
 import {
   buildSupplyVaultTx,
@@ -18,6 +15,11 @@ import { createAppError } from '@/lib/errors';
 import type { PredictTransactionTransport } from '@/lib/tx-executor';
 import type { QuoteAmount, SuiAddress } from '@/types/predict';
 import type { VaultModel } from '@/types/vault';
+import {
+  createVaultRiskPreview,
+  validateVaultActionBase,
+  withWalletRefreshKeys,
+} from './vault-flow-shared';
 
 export type VaultSupplyFlowPhase = PredictTradeFlowPhase;
 export type VaultSupplyFlowState = PredictTradeFlowState<SupplyVaultTxPreview>;
@@ -167,37 +169,14 @@ function validateSupplyPreconditions({
       error: ReturnType<typeof createAppError>;
       ok: false;
     } {
-  if (!walletStatus.isConnected || walletStatus.accountAddress === null) {
-    return {
-      error: createAppError('WALLET_NOT_CONNECTED', {
-        context: { action: 'SUPPLY' },
-      }),
-      ok: false,
-    };
-  }
+  const baseValidation = validateVaultActionBase({
+    action: 'SUPPLY',
+    vault,
+    walletStatus,
+  });
 
-  if (!walletStatus.isExpectedNetwork || walletStatus.isWrongNetwork) {
-    return {
-      error: createAppError('WRONG_NETWORK', {
-        context: {
-          action: 'SUPPLY',
-          currentNetwork: walletStatus.currentNetwork,
-          expectedNetwork: walletStatus.expectedNetwork,
-        },
-      }),
-      ok: false,
-    };
-  }
-
-  if (vault === null || vault === undefined) {
-    return {
-      error: createAppError('TODO_VERIFY_PATH_USED', {
-        context: { action: 'SUPPLY', field: 'vault' },
-        message: 'Vault state is required before vault supply execution.',
-        recovery: 'Refresh the vault summary before opening the supply execution review.',
-      }),
-      ok: false,
-    };
+  if (!baseValidation.ok) {
+    return baseValidation;
   }
 
   if (typeof amountQuote !== 'bigint' || amountQuote <= 0n) {
@@ -238,8 +217,8 @@ function validateSupplyPreconditions({
   return {
     amountQuote,
     ok: true,
-    sender: walletStatus.accountAddress as SuiAddress,
-    vault,
+    sender: baseValidation.sender,
+    vault: baseValidation.vault,
   };
 }
 
@@ -251,25 +230,13 @@ function createSupplyRiskPreview({
   amountQuote?: QuoteAmount;
   errorMessage?: string;
   vault?: VaultModel | null;
-}): RiskPreviewModel {
-  return {
+}) {
+  return createVaultRiskPreview({
     action: 'SUPPLY',
     amountQuote,
-    quoteAsset: predictDeploymentConfig.quoteAsset,
+    errorMessage,
     title: 'Supply DUSDC to Predict vault',
-    vaultValueQuote: vault?.vaultValueQuote,
+    vault,
     warnings: supplyWarnings,
-    ...(errorMessage === undefined ? {} : { blockers: [errorMessage] }),
-  };
-}
-
-function withWalletRefreshKeys(preview: SupplyVaultTxPreview, sender: SuiAddress) {
-  return {
-    ...preview,
-    postTransactionRefreshKeys: [
-      ...preview.postTransactionRefreshKeys,
-      vaultWalletBalanceQueryKeys.quote(sender),
-      vaultWalletBalanceQueryKeys.plp(sender),
-    ],
-  };
+  });
 }

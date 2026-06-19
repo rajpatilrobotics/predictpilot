@@ -1,6 +1,4 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { predictDeploymentConfig } from '@/config/predict';
-import type { RiskPreviewModel } from '@/features/tx/RiskPreview';
 import {
   usePredictTradeExecutionFlow,
   type PredictTradeFlowPhase,
@@ -8,7 +6,6 @@ import {
   type PreparePredictTradeReviewResult,
 } from '@/features/trade/actions/usePredictTradeExecutionFlow';
 import type { WalletStatusModel } from '@/features/wallet/useWalletStatus';
-import { vaultWalletBalanceQueryKeys } from '@/features/vault/lib/vault-wallet-balances';
 import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
 import {
   buildWithdrawVaultTx,
@@ -18,6 +15,11 @@ import { createAppError } from '@/lib/errors';
 import type { PredictTransactionTransport } from '@/lib/tx-executor';
 import type { SuiAddress } from '@/types/predict';
 import type { VaultModel } from '@/types/vault';
+import {
+  createVaultRiskPreview,
+  validateVaultActionBase,
+  withWalletRefreshKeys,
+} from './vault-flow-shared';
 
 export type VaultWithdrawFlowPhase = PredictTradeFlowPhase;
 export type VaultWithdrawFlowState = PredictTradeFlowState<WithdrawVaultTxPreview>;
@@ -169,37 +171,14 @@ function validateWithdrawPreconditions({
       error: ReturnType<typeof createAppError>;
       ok: false;
     } {
-  if (!walletStatus.isConnected || walletStatus.accountAddress === null) {
-    return {
-      error: createAppError('WALLET_NOT_CONNECTED', {
-        context: { action: 'WITHDRAW' },
-      }),
-      ok: false,
-    };
-  }
+  const baseValidation = validateVaultActionBase({
+    action: 'WITHDRAW',
+    vault,
+    walletStatus,
+  });
 
-  if (!walletStatus.isExpectedNetwork || walletStatus.isWrongNetwork) {
-    return {
-      error: createAppError('WRONG_NETWORK', {
-        context: {
-          action: 'WITHDRAW',
-          currentNetwork: walletStatus.currentNetwork,
-          expectedNetwork: walletStatus.expectedNetwork,
-        },
-      }),
-      ok: false,
-    };
-  }
-
-  if (vault === null || vault === undefined) {
-    return {
-      error: createAppError('TODO_VERIFY_PATH_USED', {
-        context: { action: 'WITHDRAW', field: 'vault' },
-        message: 'Vault state is required before vault withdraw execution.',
-        recovery: 'Refresh the vault summary before opening the withdraw execution review.',
-      }),
-      ok: false,
-    };
+  if (!baseValidation.ok) {
+    return baseValidation;
   }
 
   if (typeof plpAmountAtomic !== 'bigint' || plpAmountAtomic <= 0n) {
@@ -239,12 +218,12 @@ function validateWithdrawPreconditions({
     };
   }
 
-  if (vault.availableWithdrawalQuote <= 0n) {
+  if (baseValidation.vault.availableWithdrawalQuote <= 0n) {
     return {
       error: createAppError('INVALID_INPUT', {
         context: {
           action: 'WITHDRAW',
-          availableWithdrawalQuote: vault.availableWithdrawalQuote.toString(),
+          availableWithdrawalQuote: baseValidation.vault.availableWithdrawalQuote.toString(),
         },
         message: 'Vault withdrawal is currently unavailable.',
         recovery:
@@ -257,8 +236,8 @@ function validateWithdrawPreconditions({
   return {
     ok: true,
     plpAmountAtomic,
-    sender: walletStatus.accountAddress as SuiAddress,
-    vault,
+    sender: baseValidation.sender,
+    vault: baseValidation.vault,
     walletPlpBalanceAtomic,
   };
 }
@@ -271,26 +250,13 @@ function createWithdrawRiskPreview({
   errorMessage?: string;
   plpAmountAtomic?: bigint;
   vault?: VaultModel | null;
-}): RiskPreviewModel {
-  return {
+}) {
+  return createVaultRiskPreview({
     action: 'WITHDRAW',
-    availableWithdrawalQuote: vault?.availableWithdrawalQuote,
+    errorMessage,
     plpAmountAtomic,
-    quoteAsset: predictDeploymentConfig.quoteAsset,
     title: 'Withdraw DUSDC from Predict vault',
-    vaultValueQuote: vault?.vaultValueQuote,
+    vault,
     warnings: withdrawWarnings,
-    ...(errorMessage === undefined ? {} : { blockers: [errorMessage] }),
-  };
-}
-
-function withWalletRefreshKeys(preview: WithdrawVaultTxPreview, sender: SuiAddress) {
-  return {
-    ...preview,
-    postTransactionRefreshKeys: [
-      ...preview.postTransactionRefreshKeys,
-      vaultWalletBalanceQueryKeys.quote(sender),
-      vaultWalletBalanceQueryKeys.plp(sender),
-    ],
-  };
+  });
 }
