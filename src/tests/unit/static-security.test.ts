@@ -25,6 +25,16 @@ const forbiddenSourcePatterns = [
     reason: 'Use React rendering instead of direct HTML injection.',
   },
   {
+    label: 'DOM outerHTML writes',
+    pattern: /\.outerHTML\b/,
+    reason: 'Use React rendering instead of direct HTML replacement.',
+  },
+  {
+    label: 'DOM insertAdjacentHTML writes',
+    pattern: /\.insertAdjacentHTML\b/,
+    reason: 'Use React rendering instead of direct HTML insertion.',
+  },
+  {
     label: 'eval',
     pattern: /\beval\s*\(/,
     reason: 'Dynamic code execution is not needed in the client.',
@@ -43,6 +53,21 @@ const forbiddenSourcePatterns = [
     label: 'window.open',
     pattern: /\bwindow\.open\b/,
     reason: 'Use explicit anchor links with noopener/noreferrer instead of imperative popups.',
+  },
+  {
+    label: 'XMLHttpRequest',
+    pattern: /\bXMLHttpRequest\b/,
+    reason: 'Use the centralized typed HTTP client for browser network reads.',
+  },
+  {
+    label: 'WebSocket',
+    pattern: /\bWebSocket\b/,
+    reason: 'Streaming transports must be introduced through a reviewed integration boundary.',
+  },
+  {
+    label: 'EventSource',
+    pattern: /\bEventSource\b/,
+    reason: 'Streaming transports must be introduced through a reviewed integration boundary.',
   },
   {
     label: 'localStorage',
@@ -132,6 +157,15 @@ describe('static security regression checks', () => {
     expect(violations, violations.join('\n')).toEqual([]);
   });
 
+  it('keeps direct fetch calls behind the centralized HTTP client', () => {
+    const violations = collectSourceFiles(sourceRoot)
+      .filter((filePath) => !isCentralHttpClient(filePath))
+      .flatMap(collectDirectFetchCalls)
+      .sort();
+
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
+
   it('requires explicit button types for JSX button controls', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
@@ -191,6 +225,37 @@ function isUiSourceFile(filePath: string): boolean {
   const displayPath = relative(projectRoot, filePath).split(sep).join('/');
 
   return uiSourceRoots.some((sourceRootPath) => displayPath.startsWith(sourceRootPath));
+}
+
+function isCentralHttpClient(filePath: string): boolean {
+  return relative(projectRoot, filePath).split(sep).join('/') === 'src/lib/http.ts';
+}
+
+function collectDirectFetchCalls(filePath: string): string[] {
+  const sourceFile = createTsxSourceFile(filePath);
+  const violations: string[] = [];
+
+  function visit(node: ts.Node): void {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === 'fetch'
+    ) {
+      const { character, line } = sourceFile.getLineAndCharacterOfPosition(
+        node.getStart(sourceFile),
+      );
+      const displayPath = relative(projectRoot, filePath);
+      violations.push(
+        `${displayPath}:${line + 1}:${character + 1} - use src/lib/http.ts so network responses stay timeout/retry/schema validated`,
+      );
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return violations;
 }
 
 function collectHardcodedProtocolIdentifiers(filePath: string): string[] {
