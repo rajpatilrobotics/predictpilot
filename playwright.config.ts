@@ -23,6 +23,7 @@ export default defineConfig({
     ? {
         webServer: {
           command: 'pnpm dev --host 127.0.0.1 --port 5173',
+          timeout: process.env.CI ? 120_000 : 60_000,
           url: localBaseURL,
           reuseExistingServer: !process.env.CI,
         },
