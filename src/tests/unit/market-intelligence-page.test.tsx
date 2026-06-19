@@ -133,6 +133,34 @@ describe('MarketIntelligencePage', () => {
     expect(screen.getByText('No markets match these filters')).toBeInTheDocument();
   });
 
+  it('renders large oracle lists in batches so market switching stays responsive', () => {
+    const manyOracles = Array.from({ length: 65 }, (_, index) =>
+      createOracleSummary({
+        expiryMs: BigInt(nowMs + (index + 1) * 60_000),
+        lifecycleStatus: 'ACTIVE',
+        oracleId: createObjectId(index),
+        underlyingAsset: 'BTC',
+      }),
+    );
+    vi.mocked(usePredictOracles).mockReturnValue(querySuccess(manyOracles));
+
+    render(<MarketIntelligencePage nowMs={nowMs} />);
+
+    const oracleList = screen.getByLabelText('Oracle list');
+    expect(
+      within(oracleList).getByText('Showing 60 of 65 filtered / 65 total'),
+    ).toBeInTheDocument();
+    expect(within(oracleList).getAllByText('BTC Oracle')).toHaveLength(60);
+
+    fireEvent.click(within(oracleList).getByRole('button', { name: 'Load 5 more markets' }));
+
+    expect(
+      within(oracleList).getByText('Showing 65 of 65 filtered / 65 total'),
+    ).toBeInTheDocument();
+    expect(within(oracleList).getAllByText('BTC Oracle')).toHaveLength(65);
+    expect(within(oracleList).queryByRole('button', { name: /Load .* more markets/i })).toBeNull();
+  });
+
   it('shows an honest loading state while market hooks are pending', () => {
     vi.mocked(usePredictState).mockReturnValue(queryPending<PredictStateModel>());
     vi.mocked(usePredictOracles).mockReturnValue(queryPending<OracleSummaryModel[]>());
@@ -297,6 +325,10 @@ function createOracleSummary({
     tickSize1e9: 1_000_000_000n,
     underlyingAsset,
   };
+}
+
+function createObjectId(index: number): ObjectId {
+  return `0x${(index + 1).toString(16).padStart(64, '0')}`;
 }
 
 function createOracleState({

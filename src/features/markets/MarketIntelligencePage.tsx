@@ -30,6 +30,8 @@ const lifecycleOptions: LifecycleFilter[] = [
 ];
 
 const fallbackOracleId = predictDeploymentConfig.predictObjectId;
+const oracleListInitialCount = 60;
+const oracleListIncrement = 60;
 
 export function MarketIntelligencePage({ nowMs }: MarketIntelligencePageProps) {
   const [copiedOracleId, setCopiedOracleId] = useState<ObjectId | null>(null);
@@ -39,6 +41,7 @@ export function MarketIntelligencePage({ nowMs }: MarketIntelligencePageProps) {
     predictDeploymentConfig.defaultOracleId ?? null,
   );
   const [underlyingFilter, setUnderlyingFilter] = useState('ALL');
+  const [visibleOracleCount, setVisibleOracleCount] = useState(oracleListInitialCount);
   const renderNowMs = nowMs ?? mountedAtMs;
 
   const predictStateQuery = usePredictState();
@@ -68,6 +71,10 @@ export function MarketIntelligencePage({ nowMs }: MarketIntelligencePageProps) {
       filteredOracles.find((oracle) => oracle.oracleId === selectedOracleId) ?? filteredOracles[0],
     [filteredOracles, selectedOracleId],
   );
+  const visibleOracles = useMemo(
+    () => filteredOracles.slice(0, visibleOracleCount),
+    [filteredOracles, visibleOracleCount],
+  );
   const selectedOracleQueryId = selectedOracle?.oracleId ?? fallbackOracleId;
   const hasSelectedOracle = selectedOracle !== undefined;
 
@@ -93,6 +100,22 @@ export function MarketIntelligencePage({ nowMs }: MarketIntelligencePageProps) {
   function selectOracle(oracleId: ObjectId) {
     setSelectedOracleId(oracleId);
     setCopiedOracleId(null);
+  }
+
+  function changeLifecycleFilter(value: LifecycleFilter) {
+    setLifecycleFilter(value);
+    setVisibleOracleCount(oracleListInitialCount);
+  }
+
+  function changeUnderlyingFilter(value: string) {
+    setUnderlyingFilter(value);
+    setVisibleOracleCount(oracleListInitialCount);
+  }
+
+  function showMoreOracles() {
+    setVisibleOracleCount((currentCount) =>
+      Math.min(currentCount + oracleListIncrement, filteredOracles.length),
+    );
   }
 
   function copySelectedOracleId() {
@@ -154,8 +177,8 @@ export function MarketIntelligencePage({ nowMs }: MarketIntelligencePageProps) {
               <MarketFilters
                 lifecycleFilter={lifecycleFilter}
                 lifecycleOptions={lifecycleOptions}
-                onLifecycleChange={setLifecycleFilter}
-                onUnderlyingChange={setUnderlyingFilter}
+                onLifecycleChange={changeLifecycleFilter}
+                onUnderlyingChange={changeUnderlyingFilter}
                 underlyingFilter={underlyingFilter}
                 underlyingOptions={underlyingOptions}
               />
@@ -163,9 +186,12 @@ export function MarketIntelligencePage({ nowMs }: MarketIntelligencePageProps) {
                 filteredCount={filteredOracles.length}
                 nowMs={renderNowMs}
                 onSelect={selectOracle}
-                oracles={filteredOracles}
+                onShowMore={showMoreOracles}
+                oracles={visibleOracles}
                 selectedOracleId={selectedOracle?.oracleId ?? null}
+                shownCount={visibleOracles.length}
                 totalCount={oracles.length}
+                totalFilteredCount={filteredOracles.length}
               />
             </div>
 
@@ -286,16 +312,22 @@ function OracleList({
   filteredCount,
   nowMs,
   onSelect,
+  onShowMore,
   oracles,
   selectedOracleId,
+  shownCount,
   totalCount,
+  totalFilteredCount,
 }: {
   filteredCount: number;
   nowMs: number;
   onSelect: (oracleId: ObjectId) => void;
+  onShowMore: () => void;
   oracles: OracleSummaryModel[];
   selectedOracleId: ObjectId | null;
+  shownCount: number;
   totalCount: number;
+  totalFilteredCount: number;
 }) {
   if (oracles.length === 0) {
     return (
@@ -318,11 +350,11 @@ function OracleList({
         <div>
           <h2 className="text-lg font-semibold text-[#17211d]">Oracle markets</h2>
           <p className="mt-1 text-xs uppercase tracking-[0.12em] text-[#64736e]">
-            Showing {filteredCount} of {totalCount}
+            Showing {shownCount} of {filteredCount} filtered / {totalCount} total
           </p>
         </div>
         <span className="border border-[#b8c6c0] bg-[#edf5f1] px-2 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-[#315447]">
-          Local filters
+          Fast list
         </span>
       </div>
 
@@ -372,6 +404,21 @@ function OracleList({
           );
         })}
       </div>
+
+      {shownCount < totalFilteredCount ? (
+        <div className="border-t border-[#d9dfdc] bg-[#fbfcfc] p-4">
+          <button
+            className="w-full border border-[#8ea79e] bg-white px-3 py-2 text-sm font-semibold uppercase tracking-[0.1em] text-[#315447] transition hover:bg-[#edf5f1]"
+            onClick={onShowMore}
+            type="button"
+          >
+            Load {Math.min(oracleListIncrement, totalFilteredCount - shownCount)} more markets
+          </button>
+          <p className="mt-2 text-center text-xs text-[#64736e]">
+            Rendering markets in batches keeps oracle switching responsive.
+          </p>
+        </div>
+      ) : null}
     </section>
   );
 }
