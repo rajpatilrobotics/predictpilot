@@ -182,7 +182,7 @@ describe('App shell', () => {
     expect(screen.getByText('Ready for focused polling')).toBeInTheDocument();
     expect(screen.getByText('Discovery pending')).toBeInTheDocument();
     expect(screen.getByRole('status', { name: /Testnet status/i })).toBeInTheDocument();
-    expect(screen.getByLabelText('Persistent execution rail')).toBeInTheDocument();
+    expect(screen.getByLabelText('Execution readiness')).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
   });
 
@@ -199,7 +199,7 @@ describe('App shell', () => {
     expect(await screen.findByRole('heading', { name: 'Vault / PLP' })).toBeInTheDocument();
     expect(await screen.findByText('Vault page mounted')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Vault actions' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Persistent execution rail')).toBeInTheDocument();
+    expect(screen.getByLabelText('Execution readiness')).toBeInTheDocument();
   });
 
   it('mounts implemented Phase 5 route pages inside the shared shell', async () => {

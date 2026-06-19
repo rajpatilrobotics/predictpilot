@@ -23,7 +23,7 @@ test('loads the PredictPilot app shell', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeVisible();
   await expect(page.getByRole('navigation', { name: /Primary navigation/i })).toBeVisible();
   await expect(page.getByLabel('Terminal status strip')).toBeVisible();
-  await expect(page.getByLabel('Persistent execution rail')).toBeVisible();
+  await expect(page.getByLabel('Execution readiness')).toBeVisible();
   await expect(page.getByText('Live terminal')).toBeVisible();
   await expect(page.getByText('Guarded wallet execution')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
@@ -68,7 +68,7 @@ test('overview navigation preloads and switches quickly from execute routes', as
       page.getByRole('heading', { level: 1, name: route.heading }),
       `${route.label} heading should render after a preloaded nav click`,
     ).toBeVisible({ timeout: overviewSwitchTimeoutMs });
-    await expect(page.getByLabel('Persistent execution rail')).toBeVisible();
+    await expect(page.getByLabel('Execution readiness')).toBeVisible();
   }
 });
 
@@ -135,7 +135,7 @@ test('every approved shell route loads inside the terminal shell', async ({ page
 
     await expect(page.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeVisible();
     await expect(page.getByRole('heading', { level: 1, name: route.heading })).toBeVisible();
-    await expect(page.getByLabel('Persistent execution rail')).toBeVisible();
+    await expect(page.getByLabel('Execution readiness')).toBeVisible();
   }
 });
 
@@ -144,7 +144,7 @@ test('legacy oracle route resolves to the oracle status page empty state', async
 
   await expect(page.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'No oracle selected' })).toBeVisible();
-  await expect(page.getByLabel('Persistent execution rail')).toBeVisible();
+  await expect(page.getByLabel('Execution readiness')).toBeVisible();
 });
 
 test('query-selected oracle routes do not fall back to empty selection state', async ({ page }) => {

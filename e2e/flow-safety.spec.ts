@@ -18,7 +18,7 @@ test.describe('execution flow safety smoke', () => {
     await expect(
       page.getByRole('heading', { level: 1, name: 'Market Detail / Strategy' }),
     ).toBeVisible();
-    await expect(page.getByLabel('Persistent execution rail')).toBeVisible();
+    await expect(page.getByLabel('Execution readiness')).toBeVisible();
     await expect(page.getByRole('button', { name: /request wallet signature/i })).toHaveCount(0);
     await expect(page.getByRole('link', { name: /view transaction/i })).toHaveCount(0);
   });
@@ -31,7 +31,7 @@ test.describe('execution flow safety smoke', () => {
 
       await expect(page.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeVisible();
       await expect(page.getByLabel('Terminal status strip')).toBeVisible();
-      await expect(page.getByLabel('Persistent execution rail')).toBeVisible();
+      await expect(page.getByLabel('Execution readiness')).toBeVisible();
       await expect(page.getByRole('button', { name: /request wallet signature/i })).toHaveCount(0);
       await expect(page.getByRole('link', { name: /view transaction/i })).toHaveCount(0);
 

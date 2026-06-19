@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { TestnetBanner } from '@/components/banners/TestnetBanner';
-import { ExecutionRail } from '@/components/layout/ExecutionRail';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { RouteErrorBoundary } from '@/components/layout/RouteErrorBoundary';
 import { RouteErrorState, RouteLoadingState } from '@/components/layout/RouteStates';
@@ -79,7 +78,7 @@ export function AppShell({ activeRoute, isNotFound, onNavigate, routes }: AppShe
         Skip to route content
       </a>
       <TopBar activeRoute={activeRoute} />
-      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-4 px-4 py-4 lg:grid lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_320px] lg:px-6">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-4 px-4 py-4 lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:px-6">
         <SidebarNav
           activeRoute={activeRoute}
           onNavigate={onNavigate}
@@ -110,7 +109,6 @@ export function AppShell({ activeRoute, isNotFound, onNavigate, routes }: AppShe
             )}
           </section>
         </main>
-        <ExecutionRail activeRoute={activeRoute} />
       </div>
       <MobileNav activeRoute={activeRoute} onNavigate={onNavigate} routes={routes} />
     </div>
