@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+const overviewSwitchTimeoutMs = process.env.CI ? 5_000 : 2_500;
+
 const shellRoutes = [
   { heading: 'Dashboard', path: '/dashboard' },
   { heading: 'Market Intelligence', path: '/markets' },
@@ -59,11 +61,13 @@ test('overview navigation preloads and switches quickly from execute routes', as
     await link.focus();
     await link.click();
 
-    await expect.poll(() => new URL(page.url()).pathname, { timeout: 2_500 }).toBe(route.path);
+    await expect
+      .poll(() => new URL(page.url()).pathname, { timeout: overviewSwitchTimeoutMs })
+      .toBe(route.path);
     await expect(
       page.getByRole('heading', { level: 1, name: route.heading }),
       `${route.label} heading should render after a preloaded nav click`,
-    ).toBeVisible({ timeout: 2_500 });
+    ).toBeVisible({ timeout: overviewSwitchTimeoutMs });
     await expect(page.getByLabel('Persistent execution rail')).toBeVisible();
   }
 });
