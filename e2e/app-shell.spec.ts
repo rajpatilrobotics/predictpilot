@@ -86,6 +86,25 @@ test('desktop primary navigation stays visible while scrolling route content', a
   await expect(activeDashboardLink).toBeInViewport();
 });
 
+test('terminal top bar stays visible while scrolling route content', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/markets');
+
+  const terminalStatus = page.getByLabel('Terminal status strip');
+  const executionReadiness = page.getByLabel('Execution readiness');
+  const walletStatus = page.getByLabel('Wallet status');
+
+  await expect(terminalStatus).toBeVisible();
+  await expect(executionReadiness).toBeVisible();
+  await expect(walletStatus).toBeVisible();
+
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+
+  await expect(terminalStatus).toBeInViewport();
+  await expect(executionReadiness).toBeInViewport();
+  await expect(walletStatus).toBeInViewport();
+});
+
 test('keyboard users can skip shell navigation to route content', async ({ page }) => {
   await page.goto('/dashboard');
   await expect(page.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeVisible();

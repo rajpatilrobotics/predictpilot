@@ -23,7 +23,7 @@ export function TopBar({ activeRoute }: TopBarProps) {
   ] as const;
 
   return (
-    <header className="border-b border-[#c8d3ce] bg-white">
+    <header className="sticky top-0 z-50 border-b border-[#c8d3ce] bg-white/95 shadow-sm backdrop-blur">
       <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-3 px-4 py-3 lg:px-6">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] lg:items-start">
           <div className="min-w-0">
