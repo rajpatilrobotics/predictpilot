@@ -77,13 +77,15 @@ export function StateSkeletonGrid({
       className={`grid gap-3 md:grid-cols-3 ${className}`}
       role="status"
     >
-      {Array.from({ length: count }, (_, index) => (
-        <span
-          aria-hidden="true"
-          className="h-14 animate-pulse border border-[#d9dfdc] bg-[#e8eeee]"
-          key={index}
-        />
-      ))}
+      {Array.from({ length: count }, (_, index) => `skeleton-cell-${index + 1}`).map(
+        (skeletonKey) => (
+          <span
+            aria-hidden="true"
+            className="h-14 animate-pulse border border-[#d9dfdc] bg-[#e8eeee]"
+            key={skeletonKey}
+          />
+        ),
+      )}
     </div>
   );
 }
