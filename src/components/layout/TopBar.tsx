@@ -24,52 +24,52 @@ export function TopBar({ activeRoute }: TopBarProps) {
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#c8d3ce] bg-white/95 shadow-sm backdrop-blur">
-      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-2 px-4 py-2 lg:px-6">
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(300px,380px)] lg:items-start">
+      <div className="mx-auto w-full max-w-[1440px] px-4 py-2 lg:px-6">
+        <div className="grid gap-3 lg:grid-cols-[minmax(300px,420px)_minmax(0,1fr)_minmax(300px,360px)] lg:items-start">
           <div className="min-w-0">
-            <div className="flex min-w-0 flex-col gap-2 xl:flex-row xl:items-start xl:justify-between">
-              <div className="min-w-0 shrink-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#446b5e]">
-                  PredictPilot
-                </p>
-                <h1 className="mt-1 text-2xl font-semibold tracking-normal text-[#17211d]">
-                  DeepBook Predict Terminal
-                </h1>
-                <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.1em]">
-                  <span className="border border-[#a8b7b0] bg-[#edf5f1] px-2 py-1 text-[#315447]">
-                    Sui {suiConfig.network}
-                  </span>
-                  <span className="border border-[#d5dcd9] bg-[#f7f9fb] px-2 py-1 text-[#52615c]">
-                    {activeRoute.title}
-                  </span>
-                  <span className="border border-[#d5dcd9] bg-[#f7f9fb] px-2 py-1 text-[#52615c]">
-                    Live terminal
-                  </span>
-                </div>
-              </div>
-              <dl
-                aria-label="Terminal status strip"
-                className="flex max-w-full flex-wrap gap-1 text-[0.68rem] xl:max-w-[660px] xl:justify-end"
-              >
-                {statusItems.map((item) => (
-                  <div
-                    className="flex min-h-6 items-center gap-1 border border-[#d9dfdc] bg-[#fbfcfc] px-1.5 py-0.5"
-                    key={item.label}
-                  >
-                    <dt className="font-semibold uppercase tracking-[0.08em] text-[#64736e]">
-                      {item.label}
-                    </dt>
-                    <dd className="max-w-32 truncate font-medium text-[#17211d]">{item.value}</dd>
-                  </div>
-                ))}
-              </dl>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#446b5e]">
+              PredictPilot
+            </p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-normal text-[#17211d]">
+              DeepBook Predict Terminal
+            </h1>
+            <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.1em]">
+              <span className="border border-[#a8b7b0] bg-[#edf5f1] px-2 py-1 text-[#315447]">
+                Sui {suiConfig.network}
+              </span>
+              <span className="border border-[#d5dcd9] bg-[#f7f9fb] px-2 py-1 text-[#52615c]">
+                {activeRoute.title}
+              </span>
+              <span className="border border-[#d5dcd9] bg-[#f7f9fb] px-2 py-1 text-[#52615c]">
+                Live terminal
+              </span>
             </div>
           </div>
+
+          <div className="min-w-0 space-y-1.5">
+            <dl
+              aria-label="Terminal status strip"
+              className="flex max-w-full flex-wrap gap-1 text-[0.66rem] lg:justify-end"
+            >
+              {statusItems.map((item) => (
+                <div
+                  className="flex min-h-5 items-center gap-1 border border-[#d9dfdc] bg-[#fbfcfc] px-1.5 py-0.5"
+                  key={item.label}
+                >
+                  <dt className="font-semibold uppercase tracking-[0.08em] text-[#64736e]">
+                    {item.label}
+                  </dt>
+                  <dd className="max-w-28 truncate font-medium text-[#17211d]">{item.value}</dd>
+                </div>
+              ))}
+            </dl>
+            <ExecutionReadiness activeRoute={activeRoute} />
+          </div>
+
           <Suspense fallback={<WalletPanelLoadingState />}>
             <WalletPanel variant="compact" />
           </Suspense>
         </div>
-        <ExecutionReadiness activeRoute={activeRoute} />
       </div>
     </header>
   );
