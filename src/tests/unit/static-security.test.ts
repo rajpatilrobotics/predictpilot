@@ -144,6 +144,15 @@ describe('static security regression checks', () => {
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
+
+  it('prevents unsafe placeholder or script-like anchor hrefs', () => {
+    const violations = collectSourceFiles(sourceRoot)
+      .filter((filePath) => filePath.endsWith('.tsx'))
+      .flatMap(collectUnsafeAnchorHrefs)
+      .sort();
+
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
 });
 
 function collectUntypedButtonControls(filePath: string): string[] {
@@ -222,6 +231,47 @@ function collectUnsafeBlankTargetLinks(filePath: string): string[] {
   visit(sourceFile);
 
   return violations;
+}
+
+function collectUnsafeAnchorHrefs(filePath: string): string[] {
+  const sourceFile = createTsxSourceFile(filePath);
+  const violations: string[] = [];
+
+  function visit(node: ts.Node): void {
+    if (
+      (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
+      node.tagName.getText(sourceFile) === 'a'
+    ) {
+      const href = getStringJsxAttribute(node, 'href', sourceFile);
+
+      if (href !== undefined && isUnsafeAnchorHref(href)) {
+        const { character, line } = sourceFile.getLineAndCharacterOfPosition(
+          node.getStart(sourceFile),
+        );
+        const displayPath = relative(projectRoot, filePath);
+        violations.push(
+          `${displayPath}:${line + 1}:${character + 1} - anchor href must not be empty, placeholder-only, or script-like`,
+        );
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return violations;
+}
+
+function isUnsafeAnchorHref(href: string): boolean {
+  const normalizedHref = href.trim().toLowerCase();
+
+  return (
+    normalizedHref === '' ||
+    normalizedHref === '#' ||
+    normalizedHref.startsWith('javascript:') ||
+    normalizedHref.startsWith('data:')
+  );
 }
 
 function hasSafeBlankTargetRel(node: ts.JsxOpeningLikeElement, sourceFile: ts.SourceFile): boolean {
