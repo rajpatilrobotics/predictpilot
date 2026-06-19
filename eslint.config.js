@@ -56,7 +56,18 @@ export default tseslint.config(
           prefer: 'type-imports',
         },
       ],
+      '@typescript-eslint/await-thenable': 'error',
+      '@typescript-eslint/no-base-to-string': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-misused-promises': 'error',
+      '@typescript-eslint/restrict-template-expressions': [
+        'error',
+        {
+          allowBoolean: true,
+          allowNullish: true,
+          allowNumber: true,
+        },
+      ],
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },
