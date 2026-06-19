@@ -50,6 +50,15 @@ describe('global stylesheet accessibility safeguards', () => {
     expect(violations, violations.join('\n')).toEqual([]);
   });
 
+  it('keeps static aria-labelledby references connected to local heading IDs', () => {
+    const violations = collectSourceFiles(sourceRoot)
+      .filter((filePath) => filePath.endsWith('.tsx'))
+      .flatMap(collectBrokenStaticAriaLabelledByReferences)
+      .sort();
+
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
+
   it('keeps click handlers on keyboard-accessible intrinsic elements', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
@@ -412,6 +421,64 @@ function createInteractiveNameViolation(
   const { character, line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
 
   return `${relative(projectRoot, filePath)}:${line + 1}:${character + 1} - ${tagName} needs visible text or an accessible name`;
+}
+
+function collectBrokenStaticAriaLabelledByReferences(filePath: string): string[] {
+  const sourceFile = createTsxSourceFile(filePath);
+  const localLabelIds = collectLocalLabelIds(sourceFile);
+  const violations: string[] = [];
+
+  function visit(node: ts.Node): void {
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const ariaLabelledBy = getStringJsxAttribute(node, 'aria-labelledby', sourceFile);
+
+      if (ariaLabelledBy !== undefined) {
+        const missingIds = ariaLabelledBy
+          .split(/\s+/)
+          .filter((labelId) => labelId.length > 0 && !localLabelIds.has(labelId));
+
+        if (missingIds.length > 0) {
+          const { character, line } = sourceFile.getLineAndCharacterOfPosition(
+            node.getStart(sourceFile),
+          );
+          violations.push(
+            `${relative(projectRoot, filePath)}:${line + 1}:${character + 1} - aria-labelledby references missing local id(s): ${missingIds.join(', ')}`,
+          );
+        }
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return violations;
+}
+
+function collectLocalLabelIds(sourceFile: ts.SourceFile): ReadonlySet<string> {
+  const ids = new Set<string>();
+
+  function visit(node: ts.Node): void {
+    if (ts.isJsxOpeningLikeElement(node)) {
+      const id = getStringJsxAttribute(node, 'id', sourceFile);
+      const titleId = getStringJsxAttribute(node, 'titleId', sourceFile);
+
+      if (id !== undefined && id.trim() !== '') {
+        ids.add(id);
+      }
+
+      if (titleId !== undefined && titleId.trim() !== '') {
+        ids.add(titleId);
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return ids;
 }
 
 function collectNonInteractiveClickHandlers(filePath: string): string[] {
