@@ -56,6 +56,7 @@ export default tseslint.config(
           prefer: 'type-imports',
         },
       ],
+      '@typescript-eslint/no-floating-promises': 'error',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },
