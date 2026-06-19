@@ -7,6 +7,7 @@ import {
   type PredictManagerPageProps,
 } from '@/features/manager/PredictManagerPage';
 import type { UsePredictManagerResult } from '@/features/manager/hooks/usePredictManager';
+import type * as WalletStatusModule from '@/features/wallet/useWalletStatus';
 import type { WalletStatusModel } from '@/features/wallet/useWalletStatus';
 import type { PredictPilotError } from '@/lib/errors';
 import type { SuiAddress } from '@/types/predict';
@@ -106,7 +107,7 @@ vi.mock('@mysten/dapp-kit-react', () => ({
 }));
 
 vi.mock('@/features/wallet/useWalletStatus', async () => {
-  const actual = await vi.importActual<typeof import('@/features/wallet/useWalletStatus')>(
+  const actual = await vi.importActual<typeof WalletStatusModule>(
     '@/features/wallet/useWalletStatus',
   );
 

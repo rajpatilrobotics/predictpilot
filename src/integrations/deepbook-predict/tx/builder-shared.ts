@@ -1,4 +1,4 @@
-import { Transaction, type TransactionResult } from '@mysten/sui/transactions';
+import type { Transaction, TransactionResult } from '@mysten/sui/transactions';
 import { predictDeploymentConfig } from '@/config/predict';
 import { ObjectIdSchema } from '@/integrations/deepbook-predict/schemas';
 import { createAppError, type PredictPilotError, type PredictPilotErrorCode } from '@/lib/errors';

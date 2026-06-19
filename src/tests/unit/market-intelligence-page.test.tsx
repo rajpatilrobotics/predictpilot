@@ -11,6 +11,7 @@ import {
   useLiveOracleTape,
   type LiveOracleTapeModel,
 } from '@/features/oracle/hooks/useLiveOracleTape';
+import type * as LiveOracleTapeModule from '@/features/oracle/hooks/useLiveOracleTape';
 import type { PredictPilotError } from '@/lib/errors';
 import type {
   OracleAskBoundsModel,
@@ -38,7 +39,7 @@ vi.mock('@/features/markets/hooks/usePredictState', () => ({
 }));
 
 vi.mock('@/features/oracle/hooks/useLiveOracleTape', async () => {
-  const actual = await vi.importActual<typeof import('@/features/oracle/hooks/useLiveOracleTape')>(
+  const actual = await vi.importActual<typeof LiveOracleTapeModule>(
     '@/features/oracle/hooks/useLiveOracleTape',
   );
 
