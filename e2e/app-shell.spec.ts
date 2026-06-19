@@ -53,6 +53,21 @@ test('desktop primary navigation stays visible while scrolling route content', a
   await expect(activeDashboardLink).toBeInViewport();
 });
 
+test('keyboard users can skip shell navigation to route content', async ({ page }) => {
+  await page.goto('/dashboard');
+
+  const skipLink = page.getByRole('link', { name: 'Skip to route content' });
+  const routeContent = page.getByRole('main', { name: 'Route content' });
+
+  await page.keyboard.press('Tab');
+  await expect(skipLink).toBeFocused();
+  await expect(skipLink).toBeVisible();
+
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#route-content$/);
+  await expect(routeContent).toBeFocused();
+});
+
 test('demo mode is visibly offline and never claims execution proof', async ({ page }) => {
   await page.goto('/demo');
 
@@ -101,14 +116,20 @@ test('query-selected oracle routes do not fall back to empty selection state', a
   await expect(page.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'No oracle selected' })).toHaveCount(0);
   await expect(
-    page.getByRole('heading', { level: 1, name: /Loading SVI surface|SVI state unavailable|SVI Surface Explorer/ }),
+    page.getByRole('heading', {
+      level: 1,
+      name: /Loading SVI surface|SVI state unavailable|SVI Surface Explorer/,
+    }),
   ).toBeVisible();
 
   await page.goto(`/oracle-status?oracleId=${dummyOracleId}`);
   await expect(page.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'No oracle selected' })).toHaveCount(0);
   await expect(
-    page.getByRole('heading', { level: 1, name: /Loading oracle status|Oracle state unavailable|Oracle Status/ }),
+    page.getByRole('heading', {
+      level: 1,
+      name: /Loading oracle status|Oracle state unavailable|Oracle Status/,
+    }),
   ).toBeVisible();
 });
 
