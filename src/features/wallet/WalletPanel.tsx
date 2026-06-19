@@ -13,9 +13,7 @@ export function WalletPanel() {
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#446b5e]">
-            Wallet
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#446b5e]">Wallet</p>
           <p className="mt-1 font-semibold text-[#17211d]">
             {walletStatus.walletName ?? 'No wallet connected'}
           </p>

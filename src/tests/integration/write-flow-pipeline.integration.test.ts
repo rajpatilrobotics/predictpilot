@@ -153,7 +153,9 @@ describe('Predict write integration pipeline', () => {
     });
     expect(refreshWarning).toBeNull();
     expect(refreshCalls[0]).toBe('authoritative:manager-authority');
-    expect(invalidateQueries).toHaveBeenCalledTimes(build.preview.postTransactionRefreshKeys.length);
+    expect(invalidateQueries).toHaveBeenCalledTimes(
+      build.preview.postTransactionRefreshKeys.length,
+    );
   });
 
   it('keeps range and vault builder previews compatible with the shared simulation adapter', async () => {

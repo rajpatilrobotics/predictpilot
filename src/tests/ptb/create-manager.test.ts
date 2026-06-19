@@ -4,8 +4,7 @@ import { buildCreateManagerTx } from '@/integrations/deepbook-predict/tx/create-
 import { predictTxTargets } from '@/integrations/deepbook-predict/targets';
 import type { SuiAddress } from '@/types/predict';
 
-const sender =
-  '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
+const sender = '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
 
 describe('buildCreateManagerTx', () => {
   it('builds one create-manager Move call from the target registry', () => {

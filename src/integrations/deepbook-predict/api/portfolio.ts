@@ -1,4 +1,7 @@
-import { createPredictServerClient, type PredictServerClient } from '@/integrations/deepbook-predict/client';
+import {
+  createPredictServerClient,
+  type PredictServerClient,
+} from '@/integrations/deepbook-predict/client';
 import type {
   ManagerPnlDto,
   ManagerPositionsSummaryDto,
@@ -46,7 +49,10 @@ type ManagerPnlSeriesDtoLike = {
 
 export type PortfolioReadClient = Pick<
   PredictServerClient,
-  'fetchManagerPnlDto' | 'fetchManagerPositionsSummaryDto' | 'fetchManagerSummaryDto' | 'fetchManagersDto'
+  | 'fetchManagerPnlDto'
+  | 'fetchManagerPositionsSummaryDto'
+  | 'fetchManagerSummaryDto'
+  | 'fetchManagersDto'
 >;
 
 export interface GetManagersOptions {
@@ -166,7 +172,9 @@ export function mapManagerPnlDtoToModel(dto: ManagerPnlDto, managerId: ObjectId)
   };
 }
 
-function mapManagerQuoteBalanceDtoToModel(dto: ManagerSummaryDto['balances'][number]): ManagerQuoteBalanceModel {
+function mapManagerQuoteBalanceDtoToModel(
+  dto: ManagerSummaryDto['balances'][number],
+): ManagerQuoteBalanceModel {
   return {
     balanceQuote: toQuoteAmount(dto.balance),
     quoteAssetType: normalizeMoveType(dto.quote_asset),

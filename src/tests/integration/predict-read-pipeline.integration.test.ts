@@ -1,10 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { predictDeploymentConfig } from '@/config/predict';
 import { getOracleState, getAskBounds } from '@/integrations/deepbook-predict/api/oracles';
-import {
-  getPredictOracles,
-  getPredictState,
-} from '@/integrations/deepbook-predict/api/markets';
+import { getPredictOracles, getPredictState } from '@/integrations/deepbook-predict/api/markets';
 import {
   getManagerPnl,
   getManagerPositionsSummary,
@@ -27,12 +24,9 @@ import type { ObjectId, SuiAddress } from '@/types/predict';
 
 const baseUrl = 'https://predict-server.testnet.mystenlabs.com';
 const predictId = predictDeploymentConfig.predictObjectId;
-const oracleId =
-  '0x175331eba3cbb60face9193d05d2efac052868d6cccaf80a62775e2e7eb0b462' as ObjectId;
-const managerId =
-  '0x640e9ab9bdd5c68e57ddf293260ed319abf85ea0d6d0da076952de023fe961b3' as ObjectId;
-const owner =
-  '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
+const oracleId = '0x175331eba3cbb60face9193d05d2efac052868d6cccaf80a62775e2e7eb0b462' as ObjectId;
+const managerId = '0x640e9ab9bdd5c68e57ddf293260ed319abf85ea0d6d0da076952de023fe961b3' as ObjectId;
+const owner = '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
 const packageId = predictDeploymentConfig.packageId.slice(2);
 const quoteAssetWithoutPrefix = predictDeploymentConfig.quoteAsset.type.slice(2);
 
@@ -343,7 +337,9 @@ function responseForPath(pathname: string) {
   }
 
   if (pathname === `/trades/${oracleId}`) {
-    return jsonResponse([{ ...eventBase, oracle_id: oracleId, quantity: 2_000_000, trader: owner }]);
+    return jsonResponse([
+      { ...eventBase, oracle_id: oracleId, quantity: 2_000_000, trader: owner },
+    ]);
   }
 
   return Promise.resolve(new Response('{}', { status: 404 }));

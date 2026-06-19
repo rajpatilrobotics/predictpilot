@@ -17,7 +17,9 @@ export function MobileNav({ activeRoute, onNavigate, routes }: MobileNavProps) {
       className="sticky bottom-0 grid grid-cols-5 border-t border-[#c8d3ce] bg-white lg:hidden"
     >
       {mobileRoutes.map((route) => {
-        const active = activeRoute.id === route.id || (activeRoute.id === 'market-detail' && route.id === 'strategy');
+        const active =
+          activeRoute.id === route.id ||
+          (activeRoute.id === 'market-detail' && route.id === 'strategy');
 
         return (
           <a

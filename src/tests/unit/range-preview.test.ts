@@ -17,14 +17,11 @@ import type { ObjectId, QuoteAmount, SuiAddress } from '@/types/predict';
 import type { ManagerSummaryModel, RangePositionModel } from '@/types/portfolio';
 
 const predictId = predictDeploymentConfig.predictObjectId;
-const managerId =
-  '0x640e9ab9bdd5c68e57ddf293260ed319abf85ea0d6d0da076952de023fe961b3' as ObjectId;
-const oracleId =
-  '0x175331eba3cbb60face9193d05d2efac052868d6cccaf80a62775e2e7eb0b462' as ObjectId;
+const managerId = '0x640e9ab9bdd5c68e57ddf293260ed319abf85ea0d6d0da076952de023fe961b3' as ObjectId;
+const oracleId = '0x175331eba3cbb60face9193d05d2efac052868d6cccaf80a62775e2e7eb0b462' as ObjectId;
 const oracleCapId =
   '0x0b8fb5c4514337dbd300ff2a49185a99433d8369670a23329126388364119817' as ObjectId;
-const sender =
-  '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
+const sender = '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
 const nowMs = 100_000n;
 
 const validQuantity = 100_000n as QuoteAmount;
@@ -127,9 +124,7 @@ function createOracleState({
   };
 }
 
-function createOwnedRangePosition(
-  overrides: Partial<RangePositionModel> = {},
-): RangePositionModel {
+function createOwnedRangePosition(overrides: Partial<RangePositionModel> = {}): RangePositionModel {
   return {
     averageEntryQuote: 10_000n,
     key: {
@@ -429,7 +424,10 @@ describe('previewRangeTrade', () => {
       lowerStrike1e9: validLowerStrike,
       manager: createManager(),
       nowMs,
-      oracleState: createOracleState({ lifecycleStatus: 'SETTLED', settlementPrice1e9: validLowerStrike }),
+      oracleState: createOracleState({
+        lifecycleStatus: 'SETTLED',
+        settlementPrice1e9: validLowerStrike,
+      }),
       quantityQuote: validQuantity,
     });
 

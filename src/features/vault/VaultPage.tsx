@@ -86,9 +86,9 @@ export function VaultPage({
       : 'ready';
   const quoteSymbol = predictDeploymentConfig.quoteAsset.symbol;
   const expectedNetwork = predictDeploymentConfig.network;
-  const effectiveSender = (sender === undefined ? wallet.accountAddress : sender) as
-    | SuiAddress
-    | null;
+  const effectiveSender = (
+    sender === undefined ? wallet.accountAddress : sender
+  ) as SuiAddress | null;
   const effectiveNetwork = currentNetwork === undefined ? wallet.currentNetwork : currentNetwork;
   const networkState = getNetworkState(effectiveNetwork, expectedNetwork);
   const effectiveWalletStatus = createEffectiveWalletStatus({
@@ -105,7 +105,9 @@ export function VaultPage({
     [withdrawAmountInput],
   );
   const shouldLoadWalletBalances =
-    effectiveSender !== null && networkState.status === 'ready' && effectiveWalletStatus.isConnected;
+    effectiveSender !== null &&
+    networkState.status === 'ready' &&
+    effectiveWalletStatus.isConnected;
   const walletDusdcBalanceQuery = useQuery({
     enabled: walletDusdcBalanceQuote === undefined && shouldLoadWalletBalances,
     queryFn: () =>
@@ -655,13 +657,7 @@ function LpActionPanel({
   );
 }
 
-function ExecutionStateView({
-  isSupply,
-  status,
-}: {
-  isSupply: boolean;
-  status: ExecutionStatus;
-}) {
+function ExecutionStateView({ isSupply, status }: { isSupply: boolean; status: ExecutionStatus }) {
   if (status.kind === 'idle') {
     return (
       <InlineStateNotice tone="empty">

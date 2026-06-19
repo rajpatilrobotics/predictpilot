@@ -1,4 +1,7 @@
-import { createPredictServerClient, type PredictServerClient } from '@/integrations/deepbook-predict/client';
+import {
+  createPredictServerClient,
+  type PredictServerClient,
+} from '@/integrations/deepbook-predict/client';
 import type {
   ObjectIdDto,
   OracleAskBoundsDto,
@@ -17,16 +20,14 @@ import type {
   OracleSviParametersModel,
 } from '@/types/oracle';
 import type { ObjectId, SuiAddress } from '@/types/predict';
-import {
-  normalizeObjectId,
-  PredictAdapterError,
-  toBigInt,
-  toNullableBigInt,
-} from './mapping';
+import { normalizeObjectId, PredictAdapterError, toBigInt, toNullableBigInt } from './mapping';
 
 export { PredictAdapterError } from './mapping';
 
-export type OracleReadClient = Pick<PredictServerClient, 'fetchOracleAskBoundsDto' | 'fetchOracleStateDto'>;
+export type OracleReadClient = Pick<
+  PredictServerClient,
+  'fetchOracleAskBoundsDto' | 'fetchOracleStateDto'
+>;
 
 export interface GetOracleStateOptions {
   client?: OracleReadClient;
@@ -57,7 +58,8 @@ export async function getAskBounds({
 export function mapOracleStateDtoToModel(dto: OracleStateDto): OracleStateModel {
   return {
     askBounds: mapOracleAskBoundsDtoToModel(dto.ask_bounds),
-    latestPrice: dto.latest_price === null ? null : mapOraclePriceUpdateDtoToModel(dto.latest_price),
+    latestPrice:
+      dto.latest_price === null ? null : mapOraclePriceUpdateDtoToModel(dto.latest_price),
     latestSvi: dto.latest_svi === null ? null : mapOracleSviUpdateDtoToModel(dto.latest_svi),
     oracle: mapOracleSummaryDtoToModel(dto.oracle),
   };

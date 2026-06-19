@@ -1,7 +1,4 @@
-import {
-  buildTxDigestExplorerUrl,
-  formatExplorerText,
-} from '@/lib/sui/explorer';
+import { buildTxDigestExplorerUrl, formatExplorerText } from '@/lib/sui/explorer';
 
 interface TxDigestLinkProps {
   className?: string;

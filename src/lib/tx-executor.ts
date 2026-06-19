@@ -1,8 +1,4 @@
-import {
-  createAppError,
-  normalizeAppError,
-  type PredictPilotError,
-} from '@/lib/errors';
+import { createAppError, normalizeAppError, type PredictPilotError } from '@/lib/errors';
 import type {
   PredictTransactionConfirmedStatus,
   PredictTransactionExecutionRequest,
@@ -125,7 +121,9 @@ export async function executePredictTransaction(
   }
 }
 
-function normalizeWalletTransactionResult(result: PredictWalletTransactionResult): NormalizedWalletResult {
+function normalizeWalletTransactionResult(
+  result: PredictWalletTransactionResult,
+): NormalizedWalletResult {
   if (!isRecord(result)) {
     return { status: 'unknown' };
   }
@@ -146,7 +144,10 @@ function normalizeTransactionPayload(
   fallbackStatus: PredictTransactionConfirmedStatus,
 ): NormalizedWalletResult {
   const effects = isRecord(payload.effects) ? payload.effects : undefined;
-  const status = extractExecutionStatus(payload.status) ?? extractExecutionStatus(effects?.status) ?? fallbackStatus;
+  const status =
+    extractExecutionStatus(payload.status) ??
+    extractExecutionStatus(effects?.status) ??
+    fallbackStatus;
   const digest =
     firstString(payload.digest, effects?.transactionDigest, payload.transactionDigest) ?? undefined;
   const errorMessage =
@@ -221,8 +222,12 @@ function transactionFailedError(
   });
 }
 
-function inferStatusFromPayload(payload: Record<string, unknown>): PredictTransactionConfirmedStatus {
-  return extractExecutionStatus(payload.status) ?? extractExecutionStatus(payload.effects) ?? 'unknown';
+function inferStatusFromPayload(
+  payload: Record<string, unknown>,
+): PredictTransactionConfirmedStatus {
+  return (
+    extractExecutionStatus(payload.status) ?? extractExecutionStatus(payload.effects) ?? 'unknown'
+  );
 }
 
 function extractExecutionStatus(value: unknown): PredictTransactionConfirmedStatus | undefined {

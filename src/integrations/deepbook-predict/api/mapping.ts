@@ -95,7 +95,9 @@ export function toQuoteAmount(value: Integerish): QuoteAmount {
   return toBigInt(value);
 }
 
-export function toOptionalQuoteAmount(value: Integerish | null | undefined): QuoteAmount | undefined {
+export function toOptionalQuoteAmount(
+  value: Integerish | null | undefined,
+): QuoteAmount | undefined {
   return toOptionalBigInt(value);
 }
 

@@ -1,7 +1,11 @@
 import { z } from 'zod';
 
-export const ObjectIdSchema = z.string().regex(/^0x[a-fA-F0-9]{64}$/, 'Expected a 32-byte Sui object ID');
-export const SuiAddressSchema = z.string().regex(/^0x[a-fA-F0-9]{64}$/, 'Expected a 32-byte Sui address');
+export const ObjectIdSchema = z
+  .string()
+  .regex(/^0x[a-fA-F0-9]{64}$/, 'Expected a 32-byte Sui object ID');
+export const SuiAddressSchema = z
+  .string()
+  .regex(/^0x[a-fA-F0-9]{64}$/, 'Expected a 32-byte Sui address');
 export const MoveTypeSchema = z
   .string()
   .regex(

@@ -191,9 +191,7 @@ function DemoModePageContent({ onNavigate }: { onNavigate?: (path: string) => vo
         <ul className="grid gap-3">
           {demo.fixture.history.map((item) => (
             <li className="border border-[#d9dfdc] bg-[#fbfcfc] p-3" key={item.kind}>
-              <p className="text-xs uppercase tracking-[0.12em] text-[#64736e]">
-                {item.timestamp}
-              </p>
+              <p className="text-xs uppercase tracking-[0.12em] text-[#64736e]">{item.timestamp}</p>
               <p className="mt-1 font-semibold text-[#17211d]">{item.kind}</p>
               <p className="mt-1 text-sm leading-6 text-[#52615c]">{item.note}</p>
             </li>

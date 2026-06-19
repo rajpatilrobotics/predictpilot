@@ -133,9 +133,7 @@ describe('WalletPanel', () => {
     render(<WalletPanel />);
 
     expect(screen.getByText('mainnet (expected testnet)')).toBeInTheDocument();
-    expect(screen.getByLabelText('Wrong network warning')).toHaveTextContent(
-      'Switch to Testnet',
-    );
+    expect(screen.getByLabelText('Wrong network warning')).toHaveTextContent('Switch to Testnet');
   });
 });
 

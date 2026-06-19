@@ -30,10 +30,8 @@ vi.mock('@mysten/dapp-kit-react', () => ({
   }),
 }));
 
-const sender =
-  '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
-const managerId =
-  '0x295b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as ObjectId;
+const sender = '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
+const managerId = '0x295b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as ObjectId;
 const quantityQuote = 1_000_000n as QuoteAmount;
 
 interface TestTradePreview extends PredictTradeTxPreviewBase {

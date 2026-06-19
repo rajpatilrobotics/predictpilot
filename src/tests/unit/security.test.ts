@@ -11,10 +11,8 @@ import type { PredictPtbSimulationPreview } from '@/integrations/deepbook-predic
 import type { ObjectId, SuiAddress } from '@/types/predict';
 import type { PredictTransactionExecutionRequest } from '@/types/tx';
 
-const sender =
-  '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
-const managerId =
-  '0x295b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as ObjectId;
+const sender = '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
+const managerId = '0x295b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as ObjectId;
 
 describe('security guards', () => {
   it('allows a fresh ready simulation preview to request signature', () => {
@@ -160,10 +158,7 @@ function createExecutionRequest(): PredictTransactionExecutionRequest {
   };
 }
 
-function createReadySimulationPreview(): Extract<
-  PredictPtbSimulationPreview,
-  { status: 'ready' }
-> {
+function createReadySimulationPreview(): Extract<PredictPtbSimulationPreview, { status: 'ready' }> {
   return {
     intent: {
       action: 'MINT',

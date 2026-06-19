@@ -9,11 +9,7 @@ import {
   suiConfig,
   supportedSuiNetworks,
 } from '@/config/sui';
-import {
-  appSuiClient,
-  createSuiGrpcClient,
-  createSuiGrpcClientForNetwork,
-} from '@/lib/sui-client';
+import { appSuiClient, createSuiGrpcClient, createSuiGrpcClientForNetwork } from '@/lib/sui-client';
 
 describe('Sui Testnet configuration', () => {
   it('exposes one Testnet-only network config source', () => {

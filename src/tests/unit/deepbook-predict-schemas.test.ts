@@ -179,7 +179,9 @@ describe('DeepBook Predict schemas', () => {
     ).toBe(true);
     expect(
       VaultPerformanceDtoSchema.safeParse({
-        points: [{ share_price: 1, timestamp_ms: 1_781_635_075_310, total_shares: 1, vault_value: 1 }],
+        points: [
+          { share_price: 1, timestamp_ms: 1_781_635_075_310, total_shares: 1, vault_value: 1 },
+        ],
         predict_id: validObjectId,
         range: 'ALL',
       }).success,
@@ -205,9 +207,10 @@ describe('DeepBook Predict schemas', () => {
   });
 
   it('accepts object or list PnL payloads using captured PnL point fields', () => {
-    expect(ManagerPnlDtoSchema.safeParse([{ cumulative_realized_pnl: '1000000', timestamp_ms: 1 }]).success).toBe(
-      true,
-    );
+    expect(
+      ManagerPnlDtoSchema.safeParse([{ cumulative_realized_pnl: '1000000', timestamp_ms: 1 }])
+        .success,
+    ).toBe(true);
     expect(
       ManagerPnlDtoSchema.safeParse({
         current_total_pnl: '1000000',

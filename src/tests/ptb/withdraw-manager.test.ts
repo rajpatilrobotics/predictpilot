@@ -1,16 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { predictDeploymentConfig } from '@/config/predict';
 import { buildWithdrawFromManagerTx } from '@/integrations/deepbook-predict/tx/withdraw-manager';
-import {
-  predictProtocolTypes,
-  predictTxTargets,
-} from '@/integrations/deepbook-predict/targets';
+import { predictProtocolTypes, predictTxTargets } from '@/integrations/deepbook-predict/targets';
 import type { ObjectId, QuoteAmount, SuiAddress } from '@/types/predict';
 
-const sender =
-  '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
-const managerId =
-  '0x640e9ab9bdd5c68e57ddf293260ed319abf85ea0d6d0da076952de023fe961b3' as ObjectId;
+const sender = '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
+const managerId = '0x640e9ab9bdd5c68e57ddf293260ed319abf85ea0d6d0da076952de023fe961b3' as ObjectId;
 const amountQuote = 1_500_000n as QuoteAmount;
 
 describe('buildWithdrawFromManagerTx', () => {

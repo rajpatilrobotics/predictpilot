@@ -43,7 +43,9 @@ describe('http helpers', () => {
   });
 
   it('throws HTTP errors for 4xx responses without retrying', async () => {
-    const fetchImpl = vi.fn<FetchLike>().mockResolvedValue(jsonResponse({ error: 'not found' }, { status: 404 }));
+    const fetchImpl = vi
+      .fn<FetchLike>()
+      .mockResolvedValue(jsonResponse({ error: 'not found' }, { status: 404 }));
 
     await expect(
       fetchJson({

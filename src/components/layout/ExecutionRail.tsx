@@ -45,8 +45,8 @@ export function ExecutionRail({ activeRoute }: ExecutionRailProps) {
       </div>
 
       <p className="mt-4 border border-[#e0c891] bg-[#fff9ea] p-3 text-xs leading-5 text-[#5c4720]">
-        Actions open a pre-sign review first. Funding and live dUSDC are still required before
-        real Testnet proof.
+        Actions open a pre-sign review first. Funding and live dUSDC are still required before real
+        Testnet proof.
       </p>
     </aside>
   );

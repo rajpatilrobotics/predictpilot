@@ -1,18 +1,12 @@
 import { Transaction } from '@mysten/sui/transactions';
 import { describe, expect, it, vi } from 'vitest';
-import {
-  executePredictTransaction,
-  type PredictTransactionTransport,
-} from '@/lib/tx-executor';
+import { executePredictTransaction, type PredictTransactionTransport } from '@/lib/tx-executor';
 import type { ObjectId, SuiAddress, TransactionDigest } from '@/types/predict';
 import type { AffectedObjectHint, PredictTransactionExecutionRequest } from '@/types/tx';
 
-const sender =
-  '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
-const managerId =
-  '0x640e9ab9bdd5c68e57ddf293260ed319abf85ea0d6d0da076952de023fe961b3' as ObjectId;
-const oracleId =
-  '0x175331eba3cbb60face9193d05d2efac052868d6cccaf80a62775e2e7eb0b462' as ObjectId;
+const sender = '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
+const managerId = '0x640e9ab9bdd5c68e57ddf293260ed319abf85ea0d6d0da076952de023fe961b3' as ObjectId;
+const oracleId = '0x175331eba3cbb60face9193d05d2efac052868d6cccaf80a62775e2e7eb0b462' as ObjectId;
 const digest = '9QFneskU8tW7UxQf7tE5qFRfcN4FadtC2Z3HAZkgeETd' as TransactionDigest;
 
 const affectedObjects: AffectedObjectHint[] = [

@@ -194,11 +194,15 @@ function createDepositAffectedObjects(managerId: ObjectId): AffectedObjectHint[]
   ];
 }
 
-function hasConnectedSender(sender: BuildDepositToManagerTxOptions['sender']): sender is SuiAddress {
+function hasConnectedSender(
+  sender: BuildDepositToManagerTxOptions['sender'],
+): sender is SuiAddress {
   return typeof sender === 'string' && sender.trim().length > 0;
 }
 
-function hasValidManagerId(managerId: BuildDepositToManagerTxOptions['managerId']): managerId is ObjectId {
+function hasValidManagerId(
+  managerId: BuildDepositToManagerTxOptions['managerId'],
+): managerId is ObjectId {
   return typeof managerId === 'string' && ObjectIdSchema.safeParse(managerId).success;
 }
 

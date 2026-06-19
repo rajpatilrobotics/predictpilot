@@ -145,7 +145,9 @@ describe('PredictManagerPage', () => {
         'Connect a Sui Testnet wallet before creating or inspecting a PredictManager.',
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Request wallet signature/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Request wallet signature/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows no-manager state and opens a create-manager execution review after simulation', async () => {
@@ -162,7 +164,9 @@ describe('PredictManagerPage', () => {
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Create PredictManager' })[0]);
 
-    expect(await screen.findByRole('dialog', { name: /Create PredictManager execution review/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('dialog', { name: /Create PredictManager execution review/i }),
+    ).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /Request wallet signature/i })).toBeEnabled(),
     );
@@ -215,8 +219,12 @@ describe('PredictManagerPage', () => {
       target: { value: '1.00' },
     });
 
-    expect(within(depositPanel).getByText('Amount exceeds the currently loaded balance.')).toBeInTheDocument();
-    expect(within(depositPanel).getByRole('button', { name: 'Open execution review' })).toBeDisabled();
+    expect(
+      within(depositPanel).getByText('Amount exceeds the currently loaded balance.'),
+    ).toBeInTheDocument();
+    expect(
+      within(depositPanel).getByRole('button', { name: 'Open execution review' }),
+    ).toBeDisabled();
   });
 
   it('shows a deposit digest after mocked wallet execution succeeds', async () => {
@@ -359,7 +367,8 @@ function managerCreated(managerId: string) {
     eventIndex: 0,
     managerId: managerId as `0x${string}`,
     owner: tradeTestOwner,
-    packageId: '0xf5ea2b3749c65d6e56507cc35388719aadb28f9cab873696a2f8687f5c785138' as `0x${string}`,
+    packageId:
+      '0xf5ea2b3749c65d6e56507cc35388719aadb28f9cab873696a2f8687f5c785138' as `0x${string}`,
     sender: tradeTestOwner,
     txIndex: 0,
   };

@@ -29,7 +29,9 @@ describe('market read adapters', () => {
         pricing: null,
         risk: { paused: false },
         trading_paused: null,
-        quote_assets: ['e95040085976bfd54a1a07225cd46c8a2b4e8e2b6732f140a0fc49850ba73e1a::dusdc::DUSDC'],
+        quote_assets: [
+          'e95040085976bfd54a1a07225cd46c8a2b4e8e2b6732f140a0fc49850ba73e1a::dusdc::DUSDC',
+        ],
       }),
     };
 
@@ -89,6 +91,8 @@ describe('market read adapters', () => {
       fetchPredictStateDto: vi.fn(),
     };
 
-    await expect(getPredictOracles({ client, predictId })).rejects.toThrow(/Unknown oracle lifecycle status/);
+    await expect(getPredictOracles({ client, predictId })).rejects.toThrow(
+      /Unknown oracle lifecycle status/,
+    );
   });
 });

@@ -40,7 +40,9 @@ describe('DemoModePage', () => {
     fireEvent.click(within(proofRoutes).getByRole('button', { name: 'Open live markets' }));
 
     expect(onNavigate).toHaveBeenCalledWith('/markets');
-    expect(screen.queryByRole('button', { name: /request wallet signature/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /request wallet signature/i }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /view transaction/i })).not.toBeInTheDocument();
   });
 
@@ -62,11 +64,17 @@ describe('DemoModePage', () => {
 
     const fixtureSnapshot = screen.getByLabelText('Curated fixture snapshot');
 
-    expect(within(fixtureSnapshot).getByRole('heading', { name: 'Oracle fixture' })).toBeInTheDocument();
+    expect(
+      within(fixtureSnapshot).getByRole('heading', { name: 'Oracle fixture' }),
+    ).toBeInTheDocument();
     expect(within(fixtureSnapshot).getByText('BTC weekly expiry')).toBeInTheDocument();
-    expect(within(fixtureSnapshot).getByRole('heading', { name: 'Manager fixture' })).toBeInTheDocument();
+    expect(
+      within(fixtureSnapshot).getByRole('heading', { name: 'Manager fixture' }),
+    ).toBeInTheDocument();
     expect(within(fixtureSnapshot).getByText('1,250.00 dUSDC')).toBeInTheDocument();
-    expect(within(fixtureSnapshot).getByRole('heading', { name: 'Vault fixture' })).toBeInTheDocument();
+    expect(
+      within(fixtureSnapshot).getByRole('heading', { name: 'Vault fixture' }),
+    ).toBeInTheDocument();
     expect(within(fixtureSnapshot).getByText('Requires live check')).toBeInTheDocument();
   });
 });

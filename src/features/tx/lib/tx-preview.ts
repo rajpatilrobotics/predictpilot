@@ -100,10 +100,7 @@ function optionalRow(label: string, value?: string): PredictTxPreviewSummaryRow[
 function formatAssetRow(asset: PredictSimulationAsset): PredictTxPreviewSummaryRow {
   return {
     label: formatAssetRole(asset.role),
-    value:
-      asset.amount === undefined
-        ? asset.type
-        : `${asset.amount.toString()} ${asset.type}`,
+    value: asset.amount === undefined ? asset.type : `${asset.amount.toString()} ${asset.type}`,
   };
 }
 

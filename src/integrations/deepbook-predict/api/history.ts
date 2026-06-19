@@ -1,4 +1,7 @@
-import { createPredictServerClient, type PredictServerClient } from '@/integrations/deepbook-predict/client';
+import {
+  createPredictServerClient,
+  type PredictServerClient,
+} from '@/integrations/deepbook-predict/client';
 import type {
   LpSuppliesHistoryDto,
   LpWithdrawalsHistoryDto,
@@ -157,7 +160,9 @@ export function mapBinaryRedeemHistoryDtoToModel(
   };
 }
 
-export function mapRangeMintHistoryDtoToModel(dto: RangeMintHistoryDto[number]): RangeMintHistoryRecord {
+export function mapRangeMintHistoryDtoToModel(
+  dto: RangeMintHistoryDto[number],
+): RangeMintHistoryRecord {
   return {
     ...mapHistoryRecordBase(dto),
     askPrice1e9: toOptionalQuoteAmount(dto.ask_price),
@@ -200,7 +205,9 @@ export function mapRangeRedeemHistoryDtoToModel(
   };
 }
 
-export function mapLpSupplyHistoryDtoToModel(dto: LpSuppliesHistoryDto[number]): LpSupplyHistoryRecord {
+export function mapLpSupplyHistoryDtoToModel(
+  dto: LpSuppliesHistoryDto[number],
+): LpSupplyHistoryRecord {
   return {
     ...mapHistoryRecordBase(dto),
     kind: 'LP_SUPPLY',
@@ -246,7 +253,9 @@ export function mapOracleTradeHistoryDtoToModel(
   };
 }
 
-function mapHistoryRecordBase(dto: Parameters<typeof mapIndexedEventDtoToModel>[0]): HistoryRecordBase {
+function mapHistoryRecordBase(
+  dto: Parameters<typeof mapIndexedEventDtoToModel>[0],
+): HistoryRecordBase {
   const event = mapIndexedEventDtoToModel(dto);
 
   return {
@@ -265,7 +274,10 @@ function mapBinaryDirection(isUp: boolean): BinaryDirection {
   return isUp ? 'UP' : 'DOWN';
 }
 
-function readOptionalQuoteAmount(record: HistoryRecordObject, field: string): QuoteAmount | undefined {
+function readOptionalQuoteAmount(
+  record: HistoryRecordObject,
+  field: string,
+): QuoteAmount | undefined {
   const value = record[field];
 
   if (typeof value !== 'number' && typeof value !== 'string') {

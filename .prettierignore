@@ -5,6 +5,7 @@ playwright-report
 test-results
 .vite
 .pnpm-store
+pnpm-lock.yaml
 
 AGENTS.md
 MASTER_CODEX_PROMPT.md

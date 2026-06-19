@@ -78,7 +78,11 @@ describe('data freshness utilities', () => {
   });
 
   it('rejects invalid threshold policies', () => {
-    expect(() => createFreshnessPolicy({ freshForMs: -1n, staleAfterMs: 1n })).toThrow(/non-negative/);
-    expect(() => createFreshnessPolicy({ freshForMs: 10n, staleAfterMs: 1n })).toThrow(/less than or equal/);
+    expect(() => createFreshnessPolicy({ freshForMs: -1n, staleAfterMs: 1n })).toThrow(
+      /non-negative/,
+    );
+    expect(() => createFreshnessPolicy({ freshForMs: 10n, staleAfterMs: 1n })).toThrow(
+      /less than or equal/,
+    );
   });
 });

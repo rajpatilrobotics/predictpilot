@@ -1,9 +1,5 @@
 import { SuiGrpcClient } from '@mysten/sui/grpc';
-import {
-  assertSupportedSuiNetwork,
-  suiConfig,
-  type SupportedSuiNetwork,
-} from '@/config/sui';
+import { assertSupportedSuiNetwork, suiConfig, type SupportedSuiNetwork } from '@/config/sui';
 
 export interface CreateSuiGrpcClientOptions {
   grpcUrl?: string;

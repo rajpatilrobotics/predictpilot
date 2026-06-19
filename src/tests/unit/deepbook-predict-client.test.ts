@@ -95,7 +95,9 @@ function responseForPath(pathname: string) {
     return jsonResponse({
       predict_id: objectId,
       pricing: null,
-      quote_assets: ['e95040085976bfd54a1a07225cd46c8a2b4e8e2b6732f140a0fc49850ba73e1a::dusdc::DUSDC'],
+      quote_assets: [
+        'e95040085976bfd54a1a07225cd46c8a2b4e8e2b6732f140a0fc49850ba73e1a::dusdc::DUSDC',
+      ],
       risk: null,
       trading_paused: null,
     });
@@ -120,7 +122,9 @@ function responseForPath(pathname: string) {
 
   if (pathname === `/predicts/${objectId}/vault/performance`) {
     return jsonResponse({
-      points: [{ share_price: 1, timestamp_ms: 1_800_000_000_000, total_shares: 1, vault_value: 1 }],
+      points: [
+        { share_price: 1, timestamp_ms: 1_800_000_000_000, total_shares: 1, vault_value: 1 },
+      ],
       predict_id: objectId,
       range: 'ALL',
     });

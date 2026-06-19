@@ -135,7 +135,9 @@ export function buildWithdrawVaultTx({
 
     transaction.transferObjects([quoteCoin], transaction.pure.address(validation.sender));
 
-    const affectedObjects = createWithdrawAffectedObjects(validation.protocolConfig.predictObjectId);
+    const affectedObjects = createWithdrawAffectedObjects(
+      validation.protocolConfig.predictObjectId,
+    );
     const postTransactionRefreshKeys = predictInvalidationKeys.afterVaultWrite({
       predictId: validation.protocolConfig.predictObjectId,
     });
@@ -309,7 +311,8 @@ function validateWithdrawVaultInputs({
           field: 'availableWithdrawalQuote',
         },
         message: 'Vault withdrawal is currently unavailable.',
-        recovery: 'Withdrawals depend on current vault value and max payout coverage. Try a smaller amount later.',
+        recovery:
+          'Withdrawals depend on current vault value and max payout coverage. Try a smaller amount later.',
       }),
       ok: false,
     };
@@ -325,9 +328,7 @@ function validateWithdrawVaultInputs({
   };
 }
 
-function validateWithdrawProtocolConfig(
-  protocolConfig: VaultWithdrawTxProtocolConfig,
-):
+function validateWithdrawProtocolConfig(protocolConfig: VaultWithdrawTxProtocolConfig):
   | {
       ok: true;
       protocolConfig: Required<VaultWithdrawTxProtocolConfig>;
@@ -371,7 +372,8 @@ function missingProtocolConfig(field: keyof VaultWithdrawTxProtocolConfig) {
         field,
       },
       message: 'Vault withdraw protocol configuration is incomplete.',
-      recovery: 'Verify the current DeepBook Predict deployment config before enabling vault withdraw.',
+      recovery:
+        'Verify the current DeepBook Predict deployment config before enabling vault withdraw.',
     }),
     ok: false as const,
   };

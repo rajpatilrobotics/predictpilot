@@ -47,7 +47,8 @@ const managerDepositFlowCopy = {
 
 const depositWarnings = [
   {
-    message: 'Manager and wallet balances refresh after confirmed execution; no optimistic balance is shown.',
+    message:
+      'Manager and wallet balances refresh after confirmed execution; no optimistic balance is shown.',
     severity: 'info' as const,
   },
 ];

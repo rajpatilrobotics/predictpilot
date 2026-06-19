@@ -40,7 +40,11 @@ function mockObjectResponse(objectId: ObjectId, type: string) {
   };
 }
 
-function mockCoin(objectId: ObjectId, balance: string, coinType = predictDeploymentConfig.quoteAsset.type) {
+function mockCoin(
+  objectId: ObjectId,
+  balance: string,
+  coinType = predictDeploymentConfig.quoteAsset.type,
+) {
   return {
     balance,
     digest: `digest-${objectId.slice(2, 8)}`,

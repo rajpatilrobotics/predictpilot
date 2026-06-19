@@ -48,7 +48,8 @@ const managerWithdrawFlowCopy = {
 
 const withdrawWarnings = [
   {
-    message: 'Withdraw returns DUSDC from the PredictManager to the connected wallet after confirmation.',
+    message:
+      'Withdraw returns DUSDC from the PredictManager to the connected wallet after confirmation.',
     severity: 'info' as const,
   },
 ];

@@ -1,11 +1,6 @@
 import type { Transaction } from '@mysten/sui/transactions';
 import type { PredictPilotError } from '@/lib/errors';
-import type {
-  ObjectId,
-  PredictUserAction,
-  SuiAddress,
-  TransactionDigest,
-} from '@/types/predict';
+import type { ObjectId, PredictUserAction, SuiAddress, TransactionDigest } from '@/types/predict';
 
 export type PredictTransactionAction = PredictUserAction;
 

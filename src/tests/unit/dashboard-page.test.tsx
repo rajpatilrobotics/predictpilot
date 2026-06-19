@@ -112,7 +112,11 @@ describe('DashboardPage', () => {
   });
 
   it('renders market, vault, manager, and portfolio summary data', () => {
-    hookState.wallet = createWalletState({ isConnected: true, isDisconnected: false, status: 'connected' });
+    hookState.wallet = createWalletState({
+      isConnected: true,
+      isDisconnected: false,
+      status: 'connected',
+    });
     hookState.manager = createManagerState({
       isReady: true,
       managerId,
@@ -145,7 +149,11 @@ describe('DashboardPage', () => {
   });
 
   it('shows honest empty states for no indexed markets and no open positions', () => {
-    hookState.wallet = createWalletState({ isConnected: true, isDisconnected: false, status: 'connected' });
+    hookState.wallet = createWalletState({
+      isConnected: true,
+      isDisconnected: false,
+      status: 'connected',
+    });
     hookState.manager = createManagerState({
       isReady: true,
       managerId,

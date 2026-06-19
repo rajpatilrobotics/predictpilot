@@ -50,7 +50,8 @@ export function analyzeDataFreshness({
   policy,
 }: AnalyzeDataFreshnessInput): DataFreshnessModel {
   const normalizedNowMs = toMsBigInt(nowMs);
-  const normalizedLastUpdatedAtMs = lastUpdatedAtMs === null || lastUpdatedAtMs === undefined ? null : toMsBigInt(lastUpdatedAtMs);
+  const normalizedLastUpdatedAtMs =
+    lastUpdatedAtMs === null || lastUpdatedAtMs === undefined ? null : toMsBigInt(lastUpdatedAtMs);
 
   if (normalizedLastUpdatedAtMs === null) {
     return {

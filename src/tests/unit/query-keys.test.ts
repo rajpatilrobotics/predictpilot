@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { createAppQueryClient } from '@/lib/query-client';
-import { predictInvalidationKeys, predictQueryKeys, predictQueryStaleTimes } from '@/lib/query-keys';
+import {
+  predictInvalidationKeys,
+  predictQueryKeys,
+  predictQueryStaleTimes,
+} from '@/lib/query-keys';
 
 const predictId = '0xc8736204d12f0a7277c86388a68bf8a194b0a14c5538ad13f22cbd8e2a38028a';
 const managerId = '0x640e9ab9bdd5c68e57ddf293260ed319abf85ea0d6d0da076952de023fe961b3';

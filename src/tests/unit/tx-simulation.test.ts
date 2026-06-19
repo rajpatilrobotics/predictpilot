@@ -7,17 +7,12 @@ import {
   previewPredictTransactionSimulation,
   type PredictSimulationTransport,
 } from '@/integrations/deepbook-predict/tx/simulate';
-import {
-  isPredictTxPreviewReady,
-  toPredictTxPreviewViewModel,
-} from '@/features/tx/lib/tx-preview';
+import { isPredictTxPreviewReady, toPredictTxPreviewViewModel } from '@/features/tx/lib/tx-preview';
 import { buildDepositToManagerTx } from '@/integrations/deepbook-predict/tx/deposit-manager';
 import type { ObjectId, QuoteAmount, SuiAddress } from '@/types/predict';
 
-const sender =
-  '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
-const managerId =
-  '0x295b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as ObjectId;
+const sender = '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
+const managerId = '0x295b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as ObjectId;
 const amountQuote = 1_500_000n as QuoteAmount;
 
 function createDepositRequest() {

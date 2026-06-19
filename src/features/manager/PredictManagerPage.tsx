@@ -96,9 +96,9 @@ export function PredictManagerPage({
     enabled: managerId !== null,
     managerId: managerId ?? undefined,
   });
-  const effectiveSender = (sender === undefined ? wallet.accountAddress : sender) as
-    | SuiAddress
-    | null;
+  const effectiveSender = (
+    sender === undefined ? wallet.accountAddress : sender
+  ) as SuiAddress | null;
   const effectiveNetwork = currentNetwork === undefined ? wallet.currentNetwork : currentNetwork;
   const effectiveWalletStatus = createEffectiveWalletStatus({
     currentNetwork: effectiveNetwork,
@@ -175,9 +175,7 @@ export function PredictManagerPage({
   return (
     <article aria-labelledby="predict-manager-page-title" className="space-y-5">
       <header className="border-b border-[#d9dfdc] pb-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#446b5e]">
-          Execute
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#446b5e]">Execute</p>
         <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <h1
@@ -203,7 +201,11 @@ export function PredictManagerPage({
 
       {manager.isLoading || manager.isConfirming ? <ManagerLoadingState manager={manager} /> : null}
 
-      {manager.isAmbiguous ? <AmbiguousManagerState managerIds={manager.matchingManagers.map((item) => item.managerId)} /> : null}
+      {manager.isAmbiguous ? (
+        <AmbiguousManagerState
+          managerIds={manager.matchingManagers.map((item) => item.managerId)}
+        />
+      ) : null}
 
       {manager.requiresCreateManager ? (
         <NoManagerState flow={createFlow} onCreateManager={() => void handleCreateManager()} />
@@ -376,10 +378,7 @@ function ManagerOverview({
         <dl className="grid gap-4 md:grid-cols-2">
           <TerminalDatum label="Manager object" value={manager.managerId ?? 'Unavailable'} />
           <TerminalDatum label="Owner" value={manager.owner ?? 'Unavailable'} />
-          <TerminalDatum
-            label="Wallet DUSDC"
-            value={formatOptionalQuote(walletDusdcBalance)}
-          />
+          <TerminalDatum label="Wallet DUSDC" value={formatOptionalQuote(walletDusdcBalance)} />
           <TerminalDatum
             label="Manager DUSDC"
             value={formatOptionalQuote(summary?.tradingBalanceQuote)}
@@ -492,7 +491,10 @@ function ManagerAmountActionPanel({
         <div className="grid gap-2 border border-[#edf1ef] bg-[#fbfcfc] p-3 text-sm text-[#4f625b]">
           <BalanceRow label={balanceLabel} value={formatOptionalQuote(balanceValue)} />
           <BalanceRow label="Quote asset" value={predictDeploymentConfig.quoteAsset.symbol} />
-          <BalanceRow label="Exact result" value="Confirmed by simulation and post-transaction refresh" />
+          <BalanceRow
+            label="Exact result"
+            value="Confirmed by simulation and post-transaction refresh"
+          />
         </div>
 
         <ActionStatusNotice status={actionStatus} />
@@ -693,7 +695,10 @@ function getAmountActionStatus({
   }
 
   if (balanceValue === null) {
-    return { kind: 'blocked', message: 'Balance must be loaded before this action can be reviewed.' };
+    return {
+      kind: 'blocked',
+      message: 'Balance must be loaded before this action can be reviewed.',
+    };
   }
 
   if (parsedAmount.kind === 'valid' && parsedAmount.amount > balanceValue) {
@@ -846,5 +851,7 @@ function parseDecimalAmount(value: string, decimals: number): ParsedAmount {
 }
 
 function formatOptionalQuote(value: QuoteAmount | null | undefined) {
-  return value === null || value === undefined ? 'Not loaded' : formatQuoteAmount(value, quoteSymbol);
+  return value === null || value === undefined
+    ? 'Not loaded'
+    : formatQuoteAmount(value, quoteSymbol);
 }

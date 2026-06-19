@@ -54,8 +54,7 @@ type ValidatedWithdrawFromManagerInputs =
     };
 
 const WITHDRAW_MANAGER_ACTION = 'WITHDRAW_QUOTE' satisfies PredictTransactionAction;
-const WITHDRAW_MANAGER_DESCRIPTION =
-  'Withdraw manager DUSDC back to the connected wallet.';
+const WITHDRAW_MANAGER_DESCRIPTION = 'Withdraw manager DUSDC back to the connected wallet.';
 
 export function buildWithdrawFromManagerTx({
   amountQuote,
@@ -74,7 +73,10 @@ export function buildWithdrawFromManagerTx({
   try {
     const transaction = new Transaction();
     const withdrawnCoin = transaction.moveCall({
-      arguments: [transaction.object(validation.managerId), transaction.pure.u64(validation.amountQuote)],
+      arguments: [
+        transaction.object(validation.managerId),
+        transaction.pure.u64(validation.amountQuote),
+      ],
       target: predictTxTargets.predictManager.withdraw,
       typeArguments: [predictProtocolTypes.quoteAssetType],
     });
@@ -191,7 +193,9 @@ function createWithdrawAffectedObjects(managerId: ObjectId): AffectedObjectHint[
   ];
 }
 
-function hasConnectedSender(sender: BuildWithdrawFromManagerTxOptions['sender']): sender is SuiAddress {
+function hasConnectedSender(
+  sender: BuildWithdrawFromManagerTxOptions['sender'],
+): sender is SuiAddress {
   return typeof sender === 'string' && sender.trim().length > 0;
 }
 

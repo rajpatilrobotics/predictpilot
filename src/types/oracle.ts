@@ -1,10 +1,6 @@
 import type { ObjectId, Price1e9, SuiAddress, TimestampMs } from './predict';
 
-export type OracleLifecycleStatus =
-  | 'INACTIVE'
-  | 'ACTIVE'
-  | 'PENDING_SETTLEMENT'
-  | 'SETTLED';
+export type OracleLifecycleStatus = 'INACTIVE' | 'ACTIVE' | 'PENDING_SETTLEMENT' | 'SETTLED';
 
 export type OracleFreshnessStatus = 'FRESH' | 'STALE' | 'UNKNOWN';
 

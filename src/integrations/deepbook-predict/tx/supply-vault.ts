@@ -262,9 +262,7 @@ function validateSupplyVaultInputs({
   };
 }
 
-function validateSupplyProtocolConfig(
-  protocolConfig: VaultTxProtocolConfig,
-):
+function validateSupplyProtocolConfig(protocolConfig: VaultTxProtocolConfig):
   | {
       ok: true;
       protocolConfig: Required<VaultTxProtocolConfig>;
@@ -308,7 +306,8 @@ function missingProtocolConfig(field: keyof VaultTxProtocolConfig) {
         field,
       },
       message: 'Vault supply protocol configuration is incomplete.',
-      recovery: 'Verify the current DeepBook Predict deployment config before enabling vault supply.',
+      recovery:
+        'Verify the current DeepBook Predict deployment config before enabling vault supply.',
     }),
     ok: false as const,
   };

@@ -54,8 +54,7 @@ vi.mock('@mysten/dapp-kit-react', () => ({
 
 const predictId = predictDeploymentConfig.predictObjectId;
 const quoteAsset = 'e95040085976bfd54a1a07225cd46c8a2b4e8e2b6732f140a0fc49850ba73e1a::dusdc::DUSDC';
-const sender =
-  '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
+const sender = '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
 
 function createTestWrapper() {
   const queryClient = new QueryClient({
@@ -176,7 +175,9 @@ describe('VaultPage', () => {
     renderVaultPage({ client });
 
     expect(screen.getByRole('status', { name: /Vault summary loading/i })).toBeInTheDocument();
-    expect(screen.getByText(/The vault takes the opposite side of every trade/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/The vault takes the opposite side of every trade/i),
+    ).toBeInTheDocument();
   });
 
   it('renders populated vault metrics, PLP ownership, and performance series', async () => {
@@ -184,7 +185,9 @@ describe('VaultPage', () => {
 
     renderVaultPage({ client });
 
-    expect(await screen.findByRole('status', { name: /Vault summary loaded/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('status', { name: /Vault summary loaded/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Vault / PLP' })).toBeInTheDocument();
     expect(screen.getByText(/PLP represents LP shares in the shared vault/i)).toBeInTheDocument();
     expect(screen.getByText('Vault value')).toBeInTheDocument();
@@ -219,7 +222,9 @@ describe('VaultPage', () => {
 
     expect(await screen.findByText('No performance points yet')).toBeInTheDocument();
     expect(screen.getAllByText('0 PLP').length).toBeGreaterThan(0);
-    expect(screen.getByText('No PLP position yet. Supply DUSDC to the vault to mint PLP shares.')).toBeInTheDocument();
+    expect(
+      screen.getByText('No PLP position yet. Supply DUSDC to the vault to mint PLP shares.'),
+    ).toBeInTheDocument();
   });
 
   it('renders safe summary and performance error states', async () => {
@@ -295,7 +300,9 @@ describe('VaultPage', () => {
 
     expect(await screen.findByText('View transaction on Sui Explorer')).toBeInTheDocument();
     expect(await screen.findByText(/Supply transaction submitted/i)).toBeInTheDocument();
-    expect(screen.getByText('Exact PLP shares out require simulation or onchain confirmation.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Exact PLP shares out require simulation or onchain confirmation.'),
+    ).toBeInTheDocument();
     expect(screen.getAllByText('SUPPLY').length).toBeGreaterThan(0);
     expect(simulationTransport.simulateTransaction).toHaveBeenCalledOnce();
     expect(executionTransport.signAndExecuteTransaction).toHaveBeenCalledOnce();
@@ -332,7 +339,9 @@ describe('VaultPage', () => {
 
     expect(await screen.findByText('View transaction on Sui Explorer')).toBeInTheDocument();
     expect(await screen.findByText(/Withdraw transaction submitted/i)).toBeInTheDocument();
-    expect(screen.getByText('Exact DUSDC returned requires simulation or onchain confirmation.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Exact DUSDC returned requires simulation or onchain confirmation.'),
+    ).toBeInTheDocument();
     expect(screen.getAllByText('WITHDRAW').length).toBeGreaterThan(0);
     expect(simulationTransport.simulateTransaction).toHaveBeenCalledOnce();
     expect(executionTransport.signAndExecuteTransaction).toHaveBeenCalledOnce();
@@ -367,7 +376,9 @@ describe('VaultPage', () => {
     fireEvent.change(screen.getByLabelText('Burn PLP amount'), { target: { value: '1.5' } });
 
     await waitFor(() =>
-      expect(screen.getAllByText('Vault withdrawal is currently unavailable.').length).toBeGreaterThan(0),
+      expect(
+        screen.getAllByText('Vault withdrawal is currently unavailable.').length,
+      ).toBeGreaterThan(0),
     );
     expect(
       screen.getAllByText(

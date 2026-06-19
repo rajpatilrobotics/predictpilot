@@ -6,20 +6,26 @@ test.describe('execution flow safety smoke', () => {
   }) => {
     await page.goto('/strategy');
 
-    await expect(page.getByRole('heading', { level: 1, name: 'Market Detail / Strategy' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Market Detail / Strategy' }),
+    ).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Select a market first' })).toBeVisible();
     await expect(page.getByRole('button', { name: /request wallet signature/i })).toHaveCount(0);
     await expect(page.getByRole('link', { name: /view transaction/i })).toHaveCount(0);
 
     await page.goto('/markets/0x123');
 
-    await expect(page.getByRole('heading', { level: 1, name: 'Market Detail / Strategy' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Market Detail / Strategy' }),
+    ).toBeVisible();
     await expect(page.getByLabel('Persistent execution rail')).toBeVisible();
     await expect(page.getByRole('button', { name: /request wallet signature/i })).toHaveCount(0);
     await expect(page.getByRole('link', { name: /view transaction/i })).toHaveCount(0);
   });
 
-  test('vault and history routes show honest walletless states without fake proof', async ({ page }) => {
+  test('vault and history routes show honest walletless states without fake proof', async ({
+    page,
+  }) => {
     for (const route of ['/vault', '/portfolio', '/history']) {
       await page.goto(route);
 

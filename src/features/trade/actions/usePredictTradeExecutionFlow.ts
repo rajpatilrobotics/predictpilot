@@ -150,17 +150,16 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
       }),
     [currentClient, dAppKit, executionTransport],
   );
-  const canRequestSignature =
-    validatePreSignSecurity({
-      action,
-      nowMs: nowMs(),
-      phase: state.phase,
-      previewPreparedAtMs: state.previewPreparedAtMs,
-      previewTtlMs,
-      request: state.executionRequest,
-      service: `${copy.statusLabel}.canRequestSignature`,
-      simulationPreview: state.simulationPreview,
-    }).ok;
+  const canRequestSignature = validatePreSignSecurity({
+    action,
+    nowMs: nowMs(),
+    phase: state.phase,
+    previewPreparedAtMs: state.previewPreparedAtMs,
+    previewTtlMs,
+    request: state.executionRequest,
+    service: `${copy.statusLabel}.canRequestSignature`,
+    simulationPreview: state.simulationPreview,
+  }).ok;
 
   const closeModal = useCallback(() => {
     setState((current) => ({

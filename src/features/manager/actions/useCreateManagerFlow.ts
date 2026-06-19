@@ -40,7 +40,8 @@ const createManagerFlowCopy = {
 
 const createManagerWarnings = [
   {
-    message: 'The new PredictManager ID is resolved from confirmed transaction effects and refresh.',
+    message:
+      'The new PredictManager ID is resolved from confirmed transaction effects and refresh.',
     severity: 'warning' as const,
   },
 ];

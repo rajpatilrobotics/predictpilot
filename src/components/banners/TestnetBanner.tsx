@@ -9,8 +9,8 @@ export function TestnetBanner() {
     >
       <p className="font-semibold text-[#17211d]">Sui Testnet only</p>
       <p className="mt-1 text-[#445750]">
-        PredictPilot is pinned to {suiConfig.network}. Mainnet and devnet execution are out of
-        scope for this DeepBook Predict build.
+        PredictPilot is pinned to {suiConfig.network}. Mainnet and devnet execution are out of scope
+        for this DeepBook Predict build.
       </p>
     </section>
   );

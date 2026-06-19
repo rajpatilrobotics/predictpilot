@@ -42,65 +42,65 @@ interface HookState {
 
 const hookState = vi.hoisted(
   (): HookState => ({
-  history: {
-    data: undefined,
-    error: null,
-    isError: false,
-    isFetching: false,
-    isLoading: false,
-    isPending: false,
-    isSuccess: false,
-    refetch: vi.fn(),
-  },
-  manager: {
-    authoritativeObject: null,
-    error: null,
-    isAmbiguous: false,
-    isConfirming: false,
-    isLoading: false,
-    isReady: false,
-    manager: null,
-    managerId: null,
-    matchingManagers: [],
-    owner: null,
-    requiresCreateManager: false,
-    status: 'NO_WALLET',
-    warnings: [],
-  },
-  managerSummary: {
-    data: undefined,
-    error: null,
-    isLoading: false,
-    isPending: false,
-  },
-  pnl: {
-    data: undefined,
-    error: null,
-    isLoading: false,
-    isPending: false,
-  },
-  positionsSummary: {
-    data: undefined,
-    error: null,
-    isLoading: false,
-    isPending: false,
-  },
-  wallet: {
-    accountAddress: null,
-    currentNetwork: 'testnet',
-    expectedNetwork: 'testnet',
-    isConnected: false,
-    isConnecting: false,
-    isDisconnected: true,
-    isExpectedNetwork: true,
-    isReconnecting: false,
-    isWrongNetwork: false,
-    shortAddress: null,
-    status: 'disconnected',
-    statusLabel: 'Disconnected',
-    supportedIntentsCount: 0,
-    walletName: null,
-  },
+    history: {
+      data: undefined,
+      error: null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+      isPending: false,
+      isSuccess: false,
+      refetch: vi.fn(),
+    },
+    manager: {
+      authoritativeObject: null,
+      error: null,
+      isAmbiguous: false,
+      isConfirming: false,
+      isLoading: false,
+      isReady: false,
+      manager: null,
+      managerId: null,
+      matchingManagers: [],
+      owner: null,
+      requiresCreateManager: false,
+      status: 'NO_WALLET',
+      warnings: [],
+    },
+    managerSummary: {
+      data: undefined,
+      error: null,
+      isLoading: false,
+      isPending: false,
+    },
+    pnl: {
+      data: undefined,
+      error: null,
+      isLoading: false,
+      isPending: false,
+    },
+    positionsSummary: {
+      data: undefined,
+      error: null,
+      isLoading: false,
+      isPending: false,
+    },
+    wallet: {
+      accountAddress: null,
+      currentNetwork: 'testnet',
+      expectedNetwork: 'testnet',
+      isConnected: false,
+      isConnecting: false,
+      isDisconnected: true,
+      isExpectedNetwork: true,
+      isReconnecting: false,
+      isWrongNetwork: false,
+      shortAddress: null,
+      status: 'disconnected',
+      statusLabel: 'Disconnected',
+      supportedIntentsCount: 0,
+      walletName: null,
+    },
   }),
 );
 
@@ -137,7 +137,9 @@ describe('portfolio, PnL, and history pages', () => {
     render(<PortfolioPage />);
 
     expect(screen.getByRole('heading', { name: 'Portfolio' })).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Connect wallet to view portfolio' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('status', { name: 'Connect wallet to view portfolio' }),
+    ).toBeInTheDocument();
   });
 
   it('shows the no-manager state', () => {
@@ -162,10 +164,7 @@ describe('portfolio, PnL, and history pages', () => {
       isAmbiguous: true,
       isReady: false,
       managerId: null,
-      matchingManagers: [
-        managerCreated(managerId),
-        managerCreated(alternateManagerId),
-      ],
+      matchingManagers: [managerCreated(managerId), managerCreated(alternateManagerId)],
       status: 'AMBIGUOUS',
     };
 
@@ -292,7 +291,9 @@ describe('portfolio, PnL, and history pages', () => {
 
     const rangeSection = screen.getByRole('heading', { name: 'Range Minted' }).closest('section');
     expect(rangeSection).not.toBeNull();
-    expect(within(rangeSection as HTMLElement).getByText(/62,000.00-70,000.00/)).toBeInTheDocument();
+    expect(
+      within(rangeSection as HTMLElement).getByText(/62,000.00-70,000.00/),
+    ).toBeInTheDocument();
   });
 });
 
