@@ -36,6 +36,10 @@ export type PredictTradeFlowPhase =
 
 type PredictTradeOperationLock = 'review' | 'signature' | null;
 
+export const DEFAULT_WALLET_RETURN_TIMEOUT_MS = 45_000;
+export const WALLET_RETURN_RECOVERY_NOTICE =
+  'Wallet approval may have completed; checking indexed Predict state for the submitted transaction.';
+
 export interface PredictTradeTxPreviewBase {
   action: PredictTransactionAction;
   affectedObjects: AffectedObjectHint[];
@@ -52,6 +56,7 @@ export interface PredictTradeFlowState<TPreview extends PredictTradeTxPreviewBas
   builderPreview: TPreview | null;
   completedDigest: TransactionDigest | null;
   error: PredictPilotError | null;
+  executionNotice: string | null;
   executionRequest: PredictTransactionExecutionRequest | null;
   executionResult: PredictTransactionExecutionResult | null;
   modalOpen: boolean;
@@ -66,6 +71,23 @@ export interface PredictTradeFlowState<TPreview extends PredictTradeTxPreviewBas
 export interface TradeExecutionWarning {
   message: string;
   severity?: 'info' | 'warning';
+}
+
+export interface PredictSubmittedTransactionRecoveryContext<
+  TPreview extends PredictTradeTxPreviewBase,
+> {
+  action: PredictTransactionAction;
+  builderPreview: TPreview;
+  executionRequest: PredictTransactionExecutionRequest;
+  requestedAtMs: number;
+}
+
+export interface PredictSubmittedTransactionRecoveryResult {
+  affectedObjects?: AffectedObjectHint[];
+  confirmedStatus?: PredictTransactionExecutionResult['confirmedStatus'];
+  description?: string;
+  digest: TransactionDigest;
+  postSubmitWarning?: PredictPilotError;
 }
 
 export type PreparePredictTradeReviewResult<TPreview extends PredictTradeTxPreviewBase> =
@@ -99,7 +121,11 @@ export interface UsePredictTradeExecutionFlowOptions<
   prepareReview: (input: TInput) => Promise<PreparePredictTradeReviewResult<TPreview>>;
   previewTtlMs?: number;
   queryClient?: Pick<QueryClient, 'invalidateQueries'>;
+  recoverSubmittedTransaction?: (
+    context: PredictSubmittedTransactionRecoveryContext<TPreview>,
+  ) => Promise<PredictSubmittedTransactionRecoveryResult | null>;
   simulationTransport?: PredictSimulationTransport | null;
+  walletReturnTimeoutMs?: number;
 }
 
 export function createInitialPredictTradeFlowState<
@@ -109,6 +135,7 @@ export function createInitialPredictTradeFlowState<
     builderPreview: null,
     completedDigest: null,
     error: null,
+    executionNotice: null,
     executionRequest: null,
     executionResult: null,
     modalOpen: false,
@@ -129,7 +156,9 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
   prepareReview,
   previewTtlMs = DEFAULT_PRE_SIGN_PREVIEW_TTL_MS,
   queryClient,
+  recoverSubmittedTransaction,
   simulationTransport,
+  walletReturnTimeoutMs = DEFAULT_WALLET_RETURN_TIMEOUT_MS,
 }: UsePredictTradeExecutionFlowOptions<TInput, TPreview>) {
   const dAppKit = useDAppKit();
   const currentClient = useCurrentClient();
@@ -279,6 +308,7 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
       setState((current) => ({
         ...current,
         error: lockValidation.error,
+        executionNotice: null,
         phase: 'failure',
       }));
       return;
@@ -294,6 +324,7 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
     setState((current) => ({
       ...current,
       error: null,
+      executionNotice: null,
       phase: 'simulating',
       simulationPreview: loadingPreview,
     }));
@@ -348,6 +379,7 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
       setState((current) => ({
         ...current,
         error: lockValidation.error,
+        executionNotice: null,
         phase: 'failure',
       }));
       return;
@@ -369,13 +401,15 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
       setState((current) => ({
         ...current,
         error,
+        executionNotice: null,
         phase: 'failure',
       }));
       return;
     }
 
     const executionRequest = state.executionRequest;
-    if (executionRequest === null) {
+    const builderPreview = state.builderPreview;
+    if (executionRequest === null || builderPreview === null) {
       return;
     }
 
@@ -384,20 +418,36 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
     setState((current) => ({
       ...current,
       error: null,
+      executionNotice: null,
       phase: 'signing',
     }));
 
     try {
-      const executionResult = await executePredictTransaction(
+      const requestedAtMs = nowMs();
+      const executionResult = await executePredictTransactionWithWalletRecovery({
+        action,
+        builderPreview,
         executionRequest,
-        defaultExecutionTransport,
-      );
+        onRecoveryStart: () => {
+          setState((current) => ({
+            ...current,
+            error: null,
+            executionNotice: WALLET_RETURN_RECOVERY_NOTICE,
+          }));
+        },
+        recoverSubmittedTransaction,
+        service: `${copy.statusLabel}.requestSignature`,
+        transport: defaultExecutionTransport,
+        walletReturnTimeoutMs,
+        requestedAtMs,
+      });
 
       if (executionResult.status === 'failure') {
         setState((current) => ({
           ...current,
           completedDigest: executionResult.digest ?? null,
           error: executionResult.error,
+          executionNotice: null,
           executionResult,
           phase: 'failure',
         }));
@@ -416,6 +466,8 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
       setState((current) => ({
         ...current,
         completedDigest: executionResult.digest,
+        error: null,
+        executionNotice: null,
         executionResult,
         phase: 'success',
         refreshWarning: executionResult.postSubmitWarning ?? refreshWarning,
@@ -431,11 +483,13 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
     invalidationClient,
     nowMs,
     previewTtlMs,
-    state.builderPreview?.postTransactionRefreshKeys,
+    recoverSubmittedTransaction,
+    state.builderPreview,
     state.executionRequest,
     state.phase,
     state.previewPreparedAtMs,
     state.simulationPreview,
+    walletReturnTimeoutMs,
   ]);
 
   return {
@@ -446,6 +500,129 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
     rerunSimulation,
     reset,
     state,
+  };
+}
+
+async function executePredictTransactionWithWalletRecovery<
+  TPreview extends PredictTradeTxPreviewBase,
+>({
+  action,
+  builderPreview,
+  executionRequest,
+  onRecoveryStart,
+  recoverSubmittedTransaction,
+  requestedAtMs,
+  service,
+  transport,
+  walletReturnTimeoutMs,
+}: {
+  action: PredictTransactionAction;
+  builderPreview: TPreview;
+  executionRequest: PredictTransactionExecutionRequest;
+  onRecoveryStart: () => void;
+  recoverSubmittedTransaction?: (
+    context: PredictSubmittedTransactionRecoveryContext<TPreview>,
+  ) => Promise<PredictSubmittedTransactionRecoveryResult | null>;
+  requestedAtMs: number;
+  service: string;
+  transport: PredictTransactionTransport;
+  walletReturnTimeoutMs: number;
+}): Promise<PredictTransactionExecutionResult> {
+  if (walletReturnTimeoutMs <= 0) {
+    return executePredictTransaction(executionRequest, transport);
+  }
+
+  const executionPromise = executePredictTransaction(executionRequest, transport);
+  const walletTimeout = createWalletReturnTimeout(walletReturnTimeoutMs);
+  const raceResult = await Promise.race([
+    executionPromise.then((executionResult) => ({
+      executionResult,
+      kind: 'execution' as const,
+    })),
+    walletTimeout.promise.then(() => ({
+      kind: 'timeout' as const,
+    })),
+  ]);
+
+  walletTimeout.cancel();
+
+  if (raceResult.kind === 'execution') {
+    return raceResult.executionResult;
+  }
+
+  executionPromise.catch(() => undefined);
+
+  if (recoverSubmittedTransaction === undefined) {
+    return createWalletResponseTimeoutResult({ action, executionRequest, service });
+  }
+
+  onRecoveryStart();
+
+  try {
+    const recovered = await recoverSubmittedTransaction({
+      action,
+      builderPreview,
+      executionRequest,
+      requestedAtMs,
+    });
+
+    if (recovered === null) {
+      return createWalletResponseTimeoutResult({ action, executionRequest, service });
+    }
+
+    return {
+      action,
+      affectedObjects: recovered.affectedObjects ?? executionRequest.affectedObjects ?? [],
+      confirmedStatus: recovered.confirmedStatus ?? 'unknown',
+      description: recovered.description ?? executionRequest.description,
+      digest: recovered.digest,
+      postSubmitWarning: recovered.postSubmitWarning,
+      sender: executionRequest.sender,
+      status: 'success',
+    };
+  } catch {
+    return createWalletResponseTimeoutResult({ action, executionRequest, service });
+  }
+}
+
+function createWalletResponseTimeoutResult({
+  action,
+  executionRequest,
+  service,
+}: {
+  action: PredictTransactionAction;
+  executionRequest: PredictTransactionExecutionRequest;
+  service: string;
+}): PredictTransactionExecutionResult {
+  return {
+    action,
+    affectedObjects: executionRequest.affectedObjects ?? [],
+    confirmedStatus: 'unknown',
+    description: executionRequest.description,
+    error: createAppError('WALLET_RESPONSE_TIMEOUT', {
+      context: {
+        action,
+        service,
+      },
+    }),
+    sender: executionRequest.sender,
+    status: 'failure',
+  };
+}
+
+function createWalletReturnTimeout(timeoutMs: number) {
+  let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
+  const promise = new Promise<void>((resolve) => {
+    timeoutId = globalThis.setTimeout(resolve, timeoutMs);
+  });
+
+  return {
+    cancel: () => {
+      if (timeoutId !== null) {
+        globalThis.clearTimeout(timeoutId);
+      }
+    },
+    promise,
   };
 }
 

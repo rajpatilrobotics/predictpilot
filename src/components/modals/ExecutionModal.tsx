@@ -2,9 +2,12 @@ import { type KeyboardEvent, useEffect, useId, useRef } from 'react';
 import type { PredictPtbSimulationPreview } from '@/integrations/deepbook-predict/tx/simulate';
 import { RiskPreview, type RiskPreviewProps } from '@/features/tx/RiskPreview';
 import { TransactionPreview } from '@/features/tx/TransactionPreview';
+import type { PredictPilotError } from '@/lib/errors';
 
 export interface ExecutionModalProps {
   completedDigest?: string;
+  executionError?: PredictPilotError | null;
+  executionNotice?: string | null;
   onClose: () => void;
   onRequestSignature?: () => void;
   onSimulate?: () => void;
@@ -16,6 +19,8 @@ export interface ExecutionModalProps {
 
 export function ExecutionModal({
   completedDigest,
+  executionError,
+  executionNotice,
   onClose,
   onRequestSignature,
   onSimulate,
@@ -122,6 +127,8 @@ export function ExecutionModal({
             <RiskPreview preview={risk} />
             <TransactionPreview
               completedDigest={completedDigest}
+              executionError={executionError}
+              executionNotice={executionNotice}
               onRequestSignature={onRequestSignature}
               onSimulate={onSimulate}
               preview={preview}

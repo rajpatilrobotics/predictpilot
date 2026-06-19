@@ -3,10 +3,13 @@ import { toPredictTxPreviewViewModel } from '@/features/tx/lib/tx-preview';
 import { InlineStateNotice } from '@/components/states/StatePrimitives';
 import { TerminalDatum, TerminalPanel } from '@/components/terminal/TerminalPanels';
 import { TxDigestLink } from '@/components/tx/TxDigestLink';
+import type { PredictPilotError } from '@/lib/errors';
 
 export interface TransactionPreviewProps {
   className?: string;
   completedDigest?: string;
+  executionError?: PredictPilotError | null;
+  executionNotice?: string | null;
   onRequestSignature?: () => void;
   onSimulate?: () => void;
   preview: PredictPtbSimulationPreview;
@@ -15,6 +18,8 @@ export interface TransactionPreviewProps {
 export function TransactionPreview({
   className = '',
   completedDigest,
+  executionError,
+  executionNotice,
   onRequestSignature,
   onSimulate,
   preview,
@@ -62,6 +67,16 @@ export function TransactionPreview({
             <InlineStateNotice tone={viewModel.status === 'error' ? 'error' : 'blocked'}>
               {viewModel.recoveryCopy}
             </InlineStateNotice>
+          )}
+
+          {executionNotice === null || executionNotice === undefined ? null : (
+            <InlineStateNotice tone="warning">{executionNotice}</InlineStateNotice>
+          )}
+
+          {executionError === null || executionError === undefined ? null : (
+            <InlineStateNotice
+              tone={executionError.severity === 'info' ? 'warning' : 'error'}
+            >{`${executionError.title}: ${executionError.message} ${executionError.recovery}`}</InlineStateNotice>
           )}
 
           {completedDigest === undefined ? null : (

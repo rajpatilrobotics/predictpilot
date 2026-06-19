@@ -9,6 +9,10 @@ import {
 } from '@/features/trade/actions/usePredictTradeExecutionFlow';
 import type { WalletStatusModel } from '@/features/wallet/useWalletStatus';
 import {
+  getManagers,
+  type PortfolioReadClient,
+} from '@/integrations/deepbook-predict/api/portfolio';
+import {
   buildCreateManagerTx,
   type CreateManagerTxPreview,
 } from '@/integrations/deepbook-predict/tx/create-manager';
@@ -17,6 +21,7 @@ import { createAppError } from '@/lib/errors';
 import { predictQueryKeys } from '@/lib/query-keys';
 import type { PredictTransactionTransport } from '@/lib/tx-executor';
 import type { SuiAddress } from '@/types/predict';
+import type { PredictManagerCreatedModel } from '@/types/portfolio';
 
 export type CreateManagerFlowPhase = PredictTradeFlowPhase;
 export type CreateManagerFlowPreview = CreateManagerTxPreview & {
@@ -27,9 +32,13 @@ export type CreateManagerFlowState = PredictTradeFlowState<CreateManagerFlowPrev
 export interface UseCreateManagerFlowOptions {
   executionTransport?: PredictTransactionTransport;
   hasExistingManager?: boolean;
+  indexedClient?: PortfolioReadClient;
+  managerRecoveryMaxAttempts?: number;
+  managerRecoveryPollDelayMs?: number;
   queryClient?: Pick<QueryClient, 'invalidateQueries'>;
   simulationTransport?: PredictSimulationTransport | null;
   walletStatus: WalletStatusModel;
+  walletReturnTimeoutMs?: number;
 }
 
 const createManagerFlowCopy = {
@@ -49,9 +58,13 @@ const createManagerWarnings = [
 export function useCreateManagerFlow({
   executionTransport,
   hasExistingManager = false,
+  indexedClient,
+  managerRecoveryMaxAttempts = 15,
+  managerRecoveryPollDelayMs = 2_000,
   queryClient,
   simulationTransport,
   walletStatus,
+  walletReturnTimeoutMs,
 }: UseCreateManagerFlowOptions) {
   const prepareReview = async (): Promise<
     PreparePredictTradeReviewResult<CreateManagerFlowPreview>
@@ -100,7 +113,40 @@ export function useCreateManagerFlow({
     executionTransport,
     prepareReview,
     queryClient,
+    recoverSubmittedTransaction: async ({ executionRequest, requestedAtMs }) => {
+      if (walletStatus.accountAddress === null) {
+        return null;
+      }
+
+      const manager = await recoverCreatedManagerFromIndex({
+        client: indexedClient,
+        maxAttempts: managerRecoveryMaxAttempts,
+        owner: walletStatus.accountAddress as SuiAddress,
+        pollDelayMs: managerRecoveryPollDelayMs,
+        requestedAtMs,
+      });
+
+      if (manager === null) {
+        return null;
+      }
+
+      return {
+        affectedObjects: [
+          ...(executionRequest.affectedObjects ?? []),
+          {
+            id: manager.managerId,
+            kind: 'manager' as const,
+            label: 'Recovered PredictManager',
+          },
+        ],
+        confirmedStatus: 'success' as const,
+        description:
+          'Recovered create-manager digest from the Predict server manager index after wallet handoff.',
+        digest: manager.digest,
+      };
+    },
     simulationTransport,
+    walletReturnTimeoutMs,
   });
 
   return {
@@ -170,6 +216,85 @@ function validateCreateManagerPreconditions({
 
 function createManagerRefreshKeys() {
   return [predictQueryKeys.manager.list(), predictQueryKeys.manager.all()];
+}
+
+async function recoverCreatedManagerFromIndex({
+  client,
+  maxAttempts,
+  owner,
+  pollDelayMs,
+  requestedAtMs,
+}: {
+  client?: PortfolioReadClient;
+  maxAttempts: number;
+  owner: SuiAddress;
+  pollDelayMs: number;
+  requestedAtMs: number;
+}): Promise<PredictManagerCreatedModel | null> {
+  const requestWindowStartMs = BigInt(Math.max(0, requestedAtMs - 120_000));
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const matchingManager = selectNewestRecoveredManager({
+      managers: await getManagers(client === undefined ? {} : { client }),
+      owner,
+      requestWindowStartMs,
+    });
+
+    if (matchingManager !== null) {
+      return matchingManager;
+    }
+
+    if (attempt < maxAttempts - 1 && pollDelayMs > 0) {
+      await sleep(pollDelayMs);
+    }
+  }
+
+  return null;
+}
+
+function selectNewestRecoveredManager({
+  managers,
+  owner,
+  requestWindowStartMs,
+}: {
+  managers: PredictManagerCreatedModel[];
+  owner: SuiAddress;
+  requestWindowStartMs: bigint;
+}) {
+  const ownerLower = owner.toLowerCase();
+  const candidates = managers
+    .filter(
+      (manager) =>
+        manager.owner.toLowerCase() === ownerLower &&
+        manager.checkpointTimestampMs >= requestWindowStartMs,
+    )
+    .sort(compareManagersNewestFirst);
+
+  return candidates[0] ?? null;
+}
+
+function compareManagersNewestFirst(
+  left: PredictManagerCreatedModel,
+  right: PredictManagerCreatedModel,
+) {
+  if (left.checkpointTimestampMs !== right.checkpointTimestampMs) {
+    return left.checkpointTimestampMs > right.checkpointTimestampMs ? -1 : 1;
+  }
+
+  if (left.txIndex !== right.txIndex) {
+    return right.txIndex - left.txIndex;
+  }
+
+  return right.eventIndex - left.eventIndex;
+}
+
+function sleep(delayMs: number) {
+  return new Promise<void>((resolve) => {
+    const timeoutId = globalThis.setTimeout(() => {
+      globalThis.clearTimeout(timeoutId);
+      resolve();
+    }, delayMs);
+  });
 }
 
 function createCreateManagerRiskPreview(errorMessage?: string): RiskPreviewModel {

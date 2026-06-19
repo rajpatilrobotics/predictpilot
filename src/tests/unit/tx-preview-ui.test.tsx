@@ -130,6 +130,38 @@ describe('PP-048 transaction preview UI', () => {
     expect(link).toHaveAttribute('href', expect.stringContaining('/txblock/'));
   });
 
+  it('renders wallet recovery notices and execution errors in the transaction preview', () => {
+    render(
+      <TransactionPreview
+        executionError={createAppError('WALLET_RESPONSE_TIMEOUT')}
+        executionNotice="Wallet approval may have completed; checking indexed Predict state."
+        preview={createReadyPreview()}
+      />,
+    );
+
+    expect(
+      screen.getByText('Wallet approval may have completed; checking indexed Predict state.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Wallet response timed out/i)).toBeInTheDocument();
+    expect(screen.getByText(/Check the wallet activity/i)).toBeInTheDocument();
+  });
+
+  it('renders recovered digest links inside the execution modal', () => {
+    render(
+      <ExecutionModal
+        completedDigest="9QFneskU8tW7UxQf7tE5qFRfcN4FadtC2Z3HAZkgeETd"
+        onClose={vi.fn()}
+        open
+        preview={createReadyPreview()}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: /View transaction/i })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/txblock/'),
+    );
+  });
+
   it('fires modal callbacks only from explicit user actions', () => {
     const onClose = vi.fn();
     const onRequestSignature = vi.fn();

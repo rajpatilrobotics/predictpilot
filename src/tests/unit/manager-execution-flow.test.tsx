@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { predictDeploymentConfig } from '@/config/predict';
 import { useCreateManagerFlow } from '@/features/manager/actions/useCreateManagerFlow';
 import {
   useManagerDepositFlow,
@@ -11,6 +12,7 @@ import {
   useManagerWithdrawFlow,
   type BeginManagerWithdrawReviewInput,
 } from '@/features/manager/actions/useManagerWithdrawFlow';
+import type { PortfolioReadClient } from '@/integrations/deepbook-predict/api/portfolio';
 import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
 import type { PredictTransactionTransport } from '@/lib/tx-executor';
 import type { QuoteAmount } from '@/types/predict';
@@ -20,6 +22,7 @@ import {
   createTradeManagerSummaryPortfolio,
   createTradeWalletStatus,
   tradeTestManagerId,
+  tradeTestOwner,
 } from './trade-test-helpers';
 
 const dAppKitMocks = vi.hoisted(() => ({
@@ -109,6 +112,66 @@ describe('manager execution flows', () => {
     expect(result.current.state.completedDigest).toBe('tx-digest');
     expect(executionTransport.signAndExecuteTransaction).toHaveBeenCalledOnce();
     expect(invalidatedText).toContain('manager');
+  });
+
+  it('recovers a create-manager digest when wallet approval does not return to the app', async () => {
+    const invalidateQueries = vi.fn().mockResolvedValue(undefined);
+    const executionTransport = createTradeExecutionTransport({
+      signAndExecuteTransaction: vi.fn().mockImplementation(createNeverResolvingWalletPromise),
+    });
+    const indexedClient = createManagerIndexClient([
+      createManagerCreatedDto({ digest: 'recovered-create-digest' }),
+    ]);
+    const { result } = renderCreateManagerFlow({
+      executionTransport,
+      indexedClient,
+      managerRecoveryMaxAttempts: 1,
+      managerRecoveryPollDelayMs: 0,
+      queryClient: { invalidateQueries },
+      simulationTransport: createReadyTradeSimulationTransport(),
+      walletReturnTimeoutMs: 1,
+    });
+    await beginCreateManagerReview(result);
+
+    await act(async () => {
+      await result.current.requestSignature();
+    });
+
+    const invalidatedText = JSON.stringify(invalidateQueries.mock.calls);
+
+    expect(result.current.state.phase).toBe('success');
+    expect(result.current.state.completedDigest).toBe('recovered-create-digest');
+    expect(result.current.state.executionNotice).toBeNull();
+    expect(result.current.state.executionResult).toMatchObject({
+      confirmedStatus: 'success',
+      digest: 'recovered-create-digest',
+      status: 'success',
+    });
+    expect(invalidatedText).toContain('manager');
+  });
+
+  it('shows a safe timeout when create-manager wallet recovery cannot prove submission', async () => {
+    const executionTransport = createTradeExecutionTransport({
+      signAndExecuteTransaction: vi.fn().mockImplementation(createNeverResolvingWalletPromise),
+    });
+    const indexedClient = createManagerIndexClient([]);
+    const { result } = renderCreateManagerFlow({
+      executionTransport,
+      indexedClient,
+      managerRecoveryMaxAttempts: 1,
+      managerRecoveryPollDelayMs: 0,
+      simulationTransport: createReadyTradeSimulationTransport(),
+      walletReturnTimeoutMs: 1,
+    });
+    await beginCreateManagerReview(result);
+
+    await act(async () => {
+      await result.current.requestSignature();
+    });
+
+    expect(result.current.state.phase).toBe('failure');
+    expect(result.current.state.error?.code).toBe('WALLET_RESPONSE_TIMEOUT');
+    expect(result.current.state.completedDigest).toBeNull();
   });
 
   it('blocks manager deposit for invalid amount, missing balance, and insufficient wallet DUSDC', async () => {
@@ -210,24 +273,36 @@ describe('manager execution flows', () => {
 function renderCreateManagerFlow({
   executionTransport,
   hasExistingManager = false,
+  indexedClient,
+  managerRecoveryMaxAttempts,
+  managerRecoveryPollDelayMs,
   queryClient,
   simulationTransport = createReadyTradeSimulationTransport(),
   walletStatus = createTradeWalletStatus(),
+  walletReturnTimeoutMs,
 }: {
   executionTransport?: PredictTransactionTransport;
   hasExistingManager?: boolean;
+  indexedClient?: PortfolioReadClient;
+  managerRecoveryMaxAttempts?: number;
+  managerRecoveryPollDelayMs?: number;
   queryClient?: Parameters<typeof useCreateManagerFlow>[0]['queryClient'];
   simulationTransport?: PredictSimulationTransport;
   walletStatus?: ReturnType<typeof createTradeWalletStatus>;
+  walletReturnTimeoutMs?: number;
 } = {}) {
   return renderHook(
     () =>
       useCreateManagerFlow({
         executionTransport,
         hasExistingManager,
+        indexedClient,
+        managerRecoveryMaxAttempts,
+        managerRecoveryPollDelayMs,
         queryClient,
         simulationTransport,
         walletStatus,
+        walletReturnTimeoutMs,
       }),
     { wrapper: createQueryWrapper() },
   );
@@ -358,4 +433,37 @@ async function beginWithdrawReview(
   }
 
   return outcome;
+}
+
+function createNeverResolvingWalletPromise() {
+  return new Promise<never>((resolve) => {
+    void resolve;
+  });
+}
+
+function createManagerIndexClient(managers: Array<ReturnType<typeof createManagerCreatedDto>>) {
+  return {
+    fetchManagersDto: vi.fn().mockResolvedValue(managers),
+  } as unknown as PortfolioReadClient;
+}
+
+function createManagerCreatedDto({
+  digest = 'manager-created-digest',
+  timestampMs = Date.now(),
+}: {
+  digest?: string;
+  timestampMs?: number;
+} = {}) {
+  return {
+    checkpoint: '100',
+    checkpoint_timestamp_ms: String(timestampMs),
+    digest,
+    event_digest: `${digest}-event`,
+    event_index: 0,
+    manager_id: tradeTestManagerId,
+    owner: tradeTestOwner,
+    package: predictDeploymentConfig.packageId,
+    sender: tradeTestOwner,
+    tx_index: 0,
+  };
 }

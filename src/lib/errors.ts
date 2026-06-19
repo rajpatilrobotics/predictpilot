@@ -22,6 +22,7 @@ export type PredictPilotErrorCode =
   | 'TRANSACTION_FAILED'
   | 'TRANSACTION_REJECTED'
   | 'UNKNOWN_ERROR'
+  | 'WALLET_RESPONSE_TIMEOUT'
   | 'WALLET_NOT_CONNECTED'
   | 'WRONG_NETWORK';
 
@@ -219,6 +220,15 @@ const ERROR_DEFINITIONS: Record<PredictPilotErrorCode, ErrorDefinition> = {
     retryable: true,
     severity: 'info',
     title: 'Wallet rejected request',
+  },
+  WALLET_RESPONSE_TIMEOUT: {
+    kind: 'wallet',
+    message: 'PredictPilot did not receive the wallet result after the signature request.',
+    recovery:
+      'Check the wallet activity and wait for indexed state to refresh before trying again.',
+    retryable: true,
+    severity: 'warning',
+    title: 'Wallet response timed out',
   },
   UNKNOWN_ERROR: {
     kind: 'unknown',

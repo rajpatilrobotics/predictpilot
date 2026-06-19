@@ -261,6 +261,8 @@ export function VaultPage({
       {activeFlowState.simulationPreview === null ? null : (
         <ExecutionModal
           completedDigest={activeFlowState.completedDigest ?? undefined}
+          executionError={activeFlowState.error}
+          executionNotice={activeFlowState.executionNotice}
           onClose={activeFlow.closeModal}
           onRequestSignature={
             activeFlow.canRequestSignature ? () => void activeFlow.requestSignature() : undefined

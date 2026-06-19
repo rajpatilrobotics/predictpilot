@@ -136,6 +136,7 @@ export function PredictManagerPage({
   const createFlow = useCreateManagerFlow({
     executionTransport,
     hasExistingManager: manager.isReady,
+    indexedClient,
     simulationTransport,
     walletStatus: effectiveWalletStatus,
   });
@@ -274,6 +275,8 @@ export function PredictManagerPage({
       {activeFlow.state.simulationPreview === null ? null : (
         <ExecutionModal
           completedDigest={activeFlow.state.completedDigest ?? undefined}
+          executionError={activeFlow.state.error}
+          executionNotice={activeFlow.state.executionNotice}
           onClose={activeFlow.closeModal}
           onRequestSignature={
             activeFlow.canRequestSignature ? () => void activeFlow.requestSignature() : undefined

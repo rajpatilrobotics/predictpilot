@@ -384,6 +384,8 @@ export function StrategyBuilder({
       {activeExecutionFlowState.simulationPreview === null ? null : (
         <ExecutionModal
           completedDigest={activeExecutionFlowState.completedDigest ?? undefined}
+          executionError={activeExecutionFlowState.error}
+          executionNotice={activeExecutionFlowState.executionNotice}
           onClose={activeExecutionFlow.closeModal}
           onRequestSignature={
             activeExecutionFlow.canRequestSignature
