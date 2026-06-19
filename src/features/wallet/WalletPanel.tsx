@@ -30,9 +30,8 @@ export function WalletPanel({ variant = 'card' }: WalletPanelProps) {
       </div>
 
       <dl className="mt-3 grid gap-2 border-t border-[#d9dfdc] pt-3 sm:grid-cols-3">
-        <StatusItem compact label="Account" value={walletStatus.shortAddress ?? 'Not connected'} />
+        <StatusItem label="Account" value={walletStatus.shortAddress ?? 'Not connected'} />
         <StatusItem
-          compact
           label="Network"
           value={
             walletStatus.isExpectedNetwork
@@ -40,7 +39,7 @@ export function WalletPanel({ variant = 'card' }: WalletPanelProps) {
               : `${walletStatus.currentNetwork} (expected ${walletStatus.expectedNetwork})`
           }
         />
-        <StatusItem compact label="Status" value={walletStatus.statusLabel} />
+        <StatusItem label="Status" value={walletStatus.statusLabel} />
       </dl>
 
       {walletStatus.isWrongNetwork ? (
@@ -87,8 +86,9 @@ function CompactWalletPanel({ walletStatus }: { walletStatus: WalletStatus }) {
       </div>
 
       <dl className="mt-1.5 grid gap-x-2 gap-y-0.5 border-t border-[#d9dfdc] pt-1.5 sm:grid-cols-3">
-        <StatusItem label="Account" value={walletStatus.shortAddress ?? 'Not connected'} />
+        <StatusItem compact label="Account" value={walletStatus.shortAddress ?? 'Not connected'} />
         <StatusItem
+          compact
           label="Network"
           value={
             walletStatus.isExpectedNetwork
@@ -96,7 +96,7 @@ function CompactWalletPanel({ walletStatus }: { walletStatus: WalletStatus }) {
               : `${walletStatus.currentNetwork} (expected ${walletStatus.expectedNetwork})`
           }
         />
-        <StatusItem label="Status" value={walletStatus.statusLabel} />
+        <StatusItem compact label="Status" value={walletStatus.statusLabel} />
       </dl>
 
       {walletStatus.isWrongNetwork ? (

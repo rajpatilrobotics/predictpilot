@@ -25,7 +25,7 @@ test('loads the PredictPilot app shell', async ({ page }) => {
   await expect(page.getByLabel('Terminal status strip')).toBeVisible();
   await expect(page.getByLabel('Execution readiness')).toBeVisible();
   await expect(page.getByText('Live terminal')).toBeVisible();
-  await expect(page.getByText('Guarded wallet execution')).toBeVisible();
+  await expect(page.getByText('Current page')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
   await expect(page.getByRole('status', { name: /Testnet status/i })).toBeVisible();
 });

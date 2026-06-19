@@ -13,22 +13,17 @@ interface TopBarProps {
 }
 
 export function TopBar({ activeRoute }: TopBarProps) {
-  const primaryStatusItems = [
-    { label: 'Testnet', value: `Sui ${suiConfig.network}` },
-    { label: 'Route', value: activeRoute.title },
-    { label: 'Quote', value: predictDeploymentConfig.quoteAsset.symbol },
-    { label: 'Alerts', value: '0 open' },
-  ] as const;
-  const readinessMetaItems = [
-    { label: 'Oracle feed', value: 'Ready for focused polling' },
-    { label: 'Predict server', value: 'Configured' },
-    { label: 'Manager', value: 'Discovery pending' },
-  ] as const;
+  const statusText = [
+    `Testnet`,
+    predictDeploymentConfig.quoteAsset.symbol,
+    'Manager pending',
+    '0 alerts',
+  ].join(' · ');
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#c8d3ce] bg-white/95 shadow-sm backdrop-blur">
       <div className="mx-auto w-full max-w-[1440px] px-4 py-2 lg:px-6">
-        <div className="grid gap-3 lg:grid-cols-[minmax(300px,420px)_minmax(0,1fr)_minmax(280px,340px)] lg:items-start">
+        <div className="grid gap-3 lg:grid-cols-[minmax(300px,430px)_minmax(0,1fr)_minmax(280px,340px)] lg:items-start">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#446b5e]">
               PredictPilot
@@ -41,32 +36,19 @@ export function TopBar({ activeRoute }: TopBarProps) {
                 Sui {suiConfig.network}
               </span>
               <span className="border border-[#d5dcd9] bg-[#f7f9fb] px-2 py-0.5 text-[#52615c]">
-                {activeRoute.title}
-              </span>
-              <span className="border border-[#d5dcd9] bg-[#f7f9fb] px-2 py-0.5 text-[#52615c]">
                 Live terminal
               </span>
             </div>
           </div>
 
           <div className="min-w-0 space-y-2">
-            <dl
+            <p
               aria-label="Terminal status strip"
-              className="flex max-w-full flex-wrap gap-1.5 text-[0.66rem] lg:justify-end"
+              className="truncate text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#64736e] lg:text-right"
             >
-              {primaryStatusItems.map((item) => (
-                <div
-                  className="flex min-h-5 items-center gap-1 border border-[#d9dfdc] bg-[#fbfcfc]/80 px-1.5 py-0.5"
-                  key={item.label}
-                >
-                  <dt className="font-semibold uppercase tracking-[0.08em] text-[#64736e]">
-                    {item.label}
-                  </dt>
-                  <dd className="max-w-28 truncate font-medium text-[#17211d]">{item.value}</dd>
-                </div>
-              ))}
-            </dl>
-            <ExecutionReadiness activeRoute={activeRoute} metaItems={readinessMetaItems} />
+              {statusText}
+            </p>
+            <ExecutionReadiness activeRoute={activeRoute} />
           </div>
 
           <Suspense fallback={<WalletPanelLoadingState />}>

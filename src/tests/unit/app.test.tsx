@@ -179,8 +179,8 @@ describe('App shell', () => {
     expect(screen.getByRole('main', { name: 'Route content' })).toHaveAttribute('tabindex', '-1');
     expect(screen.getByLabelText('Wallet status')).toBeInTheDocument();
     expect(screen.getByLabelText('Terminal status strip')).toBeInTheDocument();
-    expect(screen.getByText('Ready for focused polling')).toBeInTheDocument();
-    expect(screen.getByText('Discovery pending')).toBeInTheDocument();
+    expect(screen.getByText(/Testnet · DUSDC · Manager pending · 0 alerts/i)).toBeInTheDocument();
+    expect(screen.getByText('Current page')).toBeInTheDocument();
     expect(screen.getByRole('status', { name: /Testnet status/i })).toBeInTheDocument();
     expect(screen.getByLabelText('Execution readiness')).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
