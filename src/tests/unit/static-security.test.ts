@@ -69,6 +69,23 @@ const forbiddenArtifactNames = [
   'cookies',
 ] as const;
 
+const forbiddenUiProtocolPatterns = [
+  {
+    label: 'Sui object or package ID',
+    pattern: /\b0x[a-fA-F0-9]{20,}\b/,
+  },
+  {
+    label: 'public URL',
+    pattern: /\bhttps?:\/\//,
+  },
+  {
+    label: 'concrete Move type',
+    pattern: /\b0x[a-fA-F0-9]+::[A-Za-z_][A-Za-z0-9_]*::[A-Za-z_][A-Za-z0-9_]*\b/,
+  },
+] as const;
+
+const uiSourceRoots = ['src/app/', 'src/components/', 'src/features/'] as const;
+
 describe('static security regression checks', () => {
   it('keeps high-risk browser APIs out of non-test source files', () => {
     const violations = collectSourceFiles(sourceRoot)
@@ -96,6 +113,15 @@ describe('static security regression checks', () => {
         );
       })
       .map((filePath) => relative(projectRoot, filePath))
+      .sort();
+
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
+
+  it('keeps protocol IDs, URLs, and coin types out of UI source files', () => {
+    const violations = collectSourceFiles(sourceRoot)
+      .filter(isUiSourceFile)
+      .flatMap(collectHardcodedProtocolIdentifiers)
       .sort();
 
     expect(violations, violations.join('\n')).toEqual([]);
@@ -143,6 +169,30 @@ function collectUntypedButtonControls(filePath: string): string[] {
   }
 
   visit(sourceFile);
+
+  return violations;
+}
+
+function isUiSourceFile(filePath: string): boolean {
+  const displayPath = relative(projectRoot, filePath).split(sep).join('/');
+
+  return uiSourceRoots.some((sourceRootPath) => displayPath.startsWith(sourceRootPath));
+}
+
+function collectHardcodedProtocolIdentifiers(filePath: string): string[] {
+  const source = readFileSync(filePath, 'utf8');
+  const displayPath = relative(projectRoot, filePath);
+  const violations: string[] = [];
+
+  source.split(/\r?\n/).forEach((lineText, index) => {
+    forbiddenUiProtocolPatterns.forEach(({ label, pattern }) => {
+      if (pattern.test(lineText)) {
+        violations.push(
+          `${displayPath}:${index + 1} - ${label} must come from config or integration modules`,
+        );
+      }
+    });
+  });
 
   return violations;
 }
