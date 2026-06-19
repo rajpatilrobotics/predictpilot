@@ -1,16 +1,8 @@
 import { WalletButton } from '@/features/wallet/WalletButton';
 import { useWalletStatus } from '@/features/wallet/useWalletStatus';
 
-interface WalletPanelProps {
-  variant?: 'card' | 'compact';
-}
-
-export function WalletPanel({ variant = 'card' }: WalletPanelProps) {
+export function WalletPanel() {
   const walletStatus = useWalletStatus();
-
-  if (variant === 'compact') {
-    return <CompactWalletPanel walletStatus={walletStatus} />;
-  }
 
   return (
     <aside
@@ -57,43 +49,6 @@ export function WalletPanel({ variant = 'card' }: WalletPanelProps) {
           ? `${walletStatus.supportedIntentsCount} wallet intent${walletStatus.supportedIntentsCount === 1 ? '' : 's'} available.`
           : 'Connect a Sui wallet to continue on Testnet.'}
       </p>
-    </aside>
-  );
-}
-
-type WalletStatus = ReturnType<typeof useWalletStatus>;
-
-function CompactWalletPanel({ walletStatus }: { walletStatus: WalletStatus }) {
-  return (
-    <aside
-      aria-label="Wallet status"
-      className={`flex min-w-0 flex-wrap items-center gap-1.5 border bg-white px-2 py-1 text-xs text-[#243832] shadow-sm lg:flex-nowrap ${
-        walletStatus.isWrongNetwork ? 'border-[#bd6f53]' : 'border-[#c8d3ce]'
-      }`}
-    >
-      <span className="font-semibold uppercase tracking-[0.12em] text-[#446b5e]">Wallet</span>
-      <span className="truncate font-semibold text-[#17211d]">
-        {walletStatus.walletName ?? 'No wallet'}
-      </span>
-      <span className="truncate text-[#52615c]">
-        {walletStatus.shortAddress ?? 'Not connected'}
-      </span>
-      <span className="border border-[#d9dfdc] bg-[#fbfcfc] px-1.5 py-0.5 font-medium text-[#17211d]">
-        {walletStatus.currentNetwork}
-      </span>
-      <span className="font-medium text-[#17211d]">{walletStatus.statusLabel}</span>
-      <div className="shrink-0">
-        <WalletButton />
-      </div>
-      {walletStatus.isWrongNetwork ? (
-        <p
-          aria-label="Wrong network warning"
-          className="basis-full border border-[#f0c5b6] bg-[#fff4ef] px-2 py-1 font-medium text-[#6b3b2d]"
-          role="alert"
-        >
-          Wrong network. Switch to Testnet before using execution flows.
-        </p>
-      ) : null}
     </aside>
   );
 }
