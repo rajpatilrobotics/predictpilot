@@ -1,8 +1,16 @@
 import { WalletButton } from '@/features/wallet/WalletButton';
 import { useWalletStatus } from '@/features/wallet/useWalletStatus';
 
-export function WalletPanel() {
+interface WalletPanelProps {
+  variant?: 'card' | 'compact';
+}
+
+export function WalletPanel({ variant = 'card' }: WalletPanelProps) {
   const walletStatus = useWalletStatus();
+
+  if (variant === 'compact') {
+    return <CompactWalletPanel walletStatus={walletStatus} />;
+  }
 
   return (
     <aside
@@ -50,6 +58,59 @@ export function WalletPanel() {
           : 'Connect a Sui wallet to continue on Testnet.'}
       </p>
     </aside>
+  );
+}
+
+type WalletStatus = ReturnType<typeof useWalletStatus>;
+
+function CompactWalletPanel({ walletStatus }: { walletStatus: WalletStatus }) {
+  return (
+    <aside
+      aria-label="Wallet status"
+      className={`flex min-w-0 flex-wrap items-center gap-2 border bg-white px-2 py-1 text-xs text-[#243832] shadow-sm ${
+        walletStatus.isWrongNetwork ? 'border-[#bd6f53]' : 'border-[#c8d3ce]'
+      }`}
+    >
+      <div className="min-w-0">
+        <p className="font-semibold uppercase tracking-[0.12em] text-[#446b5e]">Wallet</p>
+        <p className="truncate font-semibold text-[#17211d]">
+          {walletStatus.walletName ?? 'No wallet'}
+        </p>
+      </div>
+      <dl className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        <CompactStatusItem label="Account" value={walletStatus.shortAddress ?? 'Not connected'} />
+        <CompactStatusItem
+          label="Network"
+          value={
+            walletStatus.isExpectedNetwork
+              ? walletStatus.currentNetwork
+              : `${walletStatus.currentNetwork} -> ${walletStatus.expectedNetwork}`
+          }
+        />
+        <CompactStatusItem label="Status" value={walletStatus.statusLabel} />
+      </dl>
+      <div className="ml-auto shrink-0">
+        <WalletButton />
+      </div>
+      {walletStatus.isWrongNetwork ? (
+        <p
+          aria-label="Wrong network warning"
+          className="basis-full border border-[#f0c5b6] bg-[#fff4ef] px-2 py-1 font-medium text-[#6b3b2d]"
+          role="alert"
+        >
+          Wrong network. Switch to Testnet before using execution flows.
+        </p>
+      ) : null}
+    </aside>
+  );
+}
+
+function CompactStatusItem({ label, value }: StatusItemProps) {
+  return (
+    <div className="flex items-baseline gap-1">
+      <dt className="uppercase tracking-[0.08em] text-[#5d6b66]">{label}</dt>
+      <dd className="max-w-36 truncate font-medium text-[#17211d]">{value}</dd>
+    </div>
   );
 }
 
