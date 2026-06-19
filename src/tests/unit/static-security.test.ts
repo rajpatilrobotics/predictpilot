@@ -40,6 +40,11 @@ const forbiddenSourcePatterns = [
     reason: 'PredictPilot should not read or write browser cookies.',
   },
   {
+    label: 'window.open',
+    pattern: /\bwindow\.open\b/,
+    reason: 'Use explicit anchor links with noopener/noreferrer instead of imperative popups.',
+  },
+  {
     label: 'localStorage',
     pattern: /\blocalStorage\b/,
     reason: 'Wallet state and transaction proof should not be persisted in local storage.',

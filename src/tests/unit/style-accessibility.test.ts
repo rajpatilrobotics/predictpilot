@@ -59,6 +59,15 @@ describe('global stylesheet accessibility safeguards', () => {
     expect(violations, violations.join('\n')).toEqual([]);
   });
 
+  it('prefers native button elements over intrinsic role="button" shims', () => {
+    const violations = collectSourceFiles(sourceRoot)
+      .filter((filePath) => filePath.endsWith('.tsx'))
+      .flatMap(collectIntrinsicButtonRoleShims)
+      .sort();
+
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
+
   it('prevents positive tabIndex values that create a custom tab order', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
@@ -423,6 +432,33 @@ function collectNonInteractiveClickHandlers(filePath: string): string[] {
         );
         violations.push(
           `${relative(projectRoot, filePath)}:${line + 1}:${character + 1} - ${tagName} with onClick must be a keyboard-accessible control`,
+        );
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return violations;
+}
+
+function collectIntrinsicButtonRoleShims(filePath: string): string[] {
+  const sourceFile = createTsxSourceFile(filePath);
+  const violations: string[] = [];
+
+  function visit(node: ts.Node): void {
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tagName = node.tagName.getText(sourceFile);
+      const role = getStringJsxAttribute(node, 'role', sourceFile);
+
+      if (isIntrinsicElement(tagName) && role === 'button') {
+        const { character, line } = sourceFile.getLineAndCharacterOfPosition(
+          node.getStart(sourceFile),
+        );
+        violations.push(
+          `${relative(projectRoot, filePath)}:${line + 1}:${character + 1} - use a native button instead of role="button"`,
         );
       }
     }
