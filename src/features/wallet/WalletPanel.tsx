@@ -67,29 +67,22 @@ function CompactWalletPanel({ walletStatus }: { walletStatus: WalletStatus }) {
   return (
     <aside
       aria-label="Wallet status"
-      className={`flex min-w-0 flex-wrap items-center gap-2 border bg-white px-2 py-1 text-xs text-[#243832] shadow-sm ${
+      className={`flex min-w-0 flex-wrap items-center gap-1.5 border bg-white px-2 py-1 text-xs text-[#243832] shadow-sm lg:flex-nowrap ${
         walletStatus.isWrongNetwork ? 'border-[#bd6f53]' : 'border-[#c8d3ce]'
       }`}
     >
-      <div className="min-w-0">
-        <p className="font-semibold uppercase tracking-[0.12em] text-[#446b5e]">Wallet</p>
-        <p className="truncate font-semibold text-[#17211d]">
-          {walletStatus.walletName ?? 'No wallet'}
-        </p>
-      </div>
-      <dl className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-        <CompactStatusItem label="Account" value={walletStatus.shortAddress ?? 'Not connected'} />
-        <CompactStatusItem
-          label="Network"
-          value={
-            walletStatus.isExpectedNetwork
-              ? walletStatus.currentNetwork
-              : `${walletStatus.currentNetwork} -> ${walletStatus.expectedNetwork}`
-          }
-        />
-        <CompactStatusItem label="Status" value={walletStatus.statusLabel} />
-      </dl>
-      <div className="ml-auto shrink-0">
+      <span className="font-semibold uppercase tracking-[0.12em] text-[#446b5e]">Wallet</span>
+      <span className="truncate font-semibold text-[#17211d]">
+        {walletStatus.walletName ?? 'No wallet'}
+      </span>
+      <span className="truncate text-[#52615c]">
+        {walletStatus.shortAddress ?? 'Not connected'}
+      </span>
+      <span className="border border-[#d9dfdc] bg-[#fbfcfc] px-1.5 py-0.5 font-medium text-[#17211d]">
+        {walletStatus.currentNetwork}
+      </span>
+      <span className="font-medium text-[#17211d]">{walletStatus.statusLabel}</span>
+      <div className="shrink-0">
         <WalletButton />
       </div>
       {walletStatus.isWrongNetwork ? (
@@ -102,15 +95,6 @@ function CompactWalletPanel({ walletStatus }: { walletStatus: WalletStatus }) {
         </p>
       ) : null}
     </aside>
-  );
-}
-
-function CompactStatusItem({ label, value }: StatusItemProps) {
-  return (
-    <div className="flex items-baseline gap-1">
-      <dt className="uppercase tracking-[0.08em] text-[#5d6b66]">{label}</dt>
-      <dd className="max-w-36 truncate font-medium text-[#17211d]">{value}</dd>
-    </div>
   );
 }
 
