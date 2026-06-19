@@ -45,6 +45,21 @@ const forbiddenSourcePatterns = [
     reason: 'Dynamic code execution is not needed in the client.',
   },
   {
+    label: 'alert',
+    pattern: /\balert\s*\(/,
+    reason: 'Use PredictPilot state panels or modals instead of blocking browser dialogs.',
+  },
+  {
+    label: 'confirm',
+    pattern: /\bconfirm\s*\(/,
+    reason: 'Use PredictPilot state panels or modals instead of blocking browser dialogs.',
+  },
+  {
+    label: 'prompt',
+    pattern: /\bprompt\s*\(/,
+    reason: 'Use controlled form inputs instead of blocking browser prompts.',
+  },
+  {
     label: 'document.cookie',
     pattern: /\bdocument\.cookie\b/,
     reason: 'PredictPilot should not read or write browser cookies.',
@@ -175,6 +190,15 @@ describe('static security regression checks', () => {
     expect(violations, violations.join('\n')).toEqual([]);
   });
 
+  it('requires accessible labels for JSX form controls', () => {
+    const violations = collectSourceFiles(sourceRoot)
+      .filter((filePath) => filePath.endsWith('.tsx'))
+      .flatMap(collectUnlabeledFormControls)
+      .sort();
+
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
+
   it('requires safe rel attributes for external blank-target links', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
@@ -209,6 +233,33 @@ function collectUntypedButtonControls(filePath: string): string[] {
         const displayPath = relative(projectRoot, filePath);
         violations.push(
           `${displayPath}:${line + 1}:${character + 1} - JSX button needs an explicit type`,
+        );
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return violations;
+}
+
+function collectUnlabeledFormControls(filePath: string): string[] {
+  const sourceFile = createTsxSourceFile(filePath);
+  const violations: string[] = [];
+
+  function visit(node: ts.Node): void {
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tagName = node.tagName.getText(sourceFile);
+
+      if (isFormControlTag(tagName) && !hasAccessibleFormControlLabel(node, sourceFile)) {
+        const { character, line } = sourceFile.getLineAndCharacterOfPosition(
+          node.getStart(sourceFile),
+        );
+        const displayPath = relative(projectRoot, filePath);
+        violations.push(
+          `${displayPath}:${line + 1}:${character + 1} - ${tagName} control needs a label wrapper, aria-label, or aria-labelledby`,
         );
       }
     }
@@ -342,6 +393,48 @@ function isUnsafeAnchorHref(href: string): boolean {
     normalizedHref.startsWith('javascript:') ||
     normalizedHref.startsWith('data:')
   );
+}
+
+function isFormControlTag(tagName: string): boolean {
+  return tagName === 'input' || tagName === 'select' || tagName === 'textarea';
+}
+
+function hasAccessibleFormControlLabel(
+  node: ts.JsxOpeningLikeElement,
+  sourceFile: ts.SourceFile,
+): boolean {
+  return (
+    hasStringJsxAttribute(node, 'aria-label', sourceFile) ||
+    hasStringJsxAttribute(node, 'aria-labelledby', sourceFile) ||
+    hasLabelAncestor(node, sourceFile)
+  );
+}
+
+function hasStringJsxAttribute(
+  node: ts.JsxOpeningLikeElement,
+  name: string,
+  sourceFile: ts.SourceFile,
+): boolean {
+  const value = getStringJsxAttribute(node, name, sourceFile);
+
+  return value !== undefined && value.trim() !== '';
+}
+
+function hasLabelAncestor(node: ts.Node, sourceFile: ts.SourceFile): boolean {
+  let current: ts.Node | undefined = node.parent;
+
+  while (current !== undefined) {
+    if (
+      ts.isJsxElement(current) &&
+      current.openingElement.tagName.getText(sourceFile) === 'label'
+    ) {
+      return true;
+    }
+
+    current = current.parent;
+  }
+
+  return false;
 }
 
 function hasSafeBlankTargetRel(node: ts.JsxOpeningLikeElement, sourceFile: ts.SourceFile): boolean {
