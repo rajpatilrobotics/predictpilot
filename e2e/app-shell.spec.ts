@@ -55,10 +55,15 @@ test('desktop primary navigation stays visible while scrolling route content', a
 
 test('keyboard users can skip shell navigation to route content', async ({ page }) => {
   await page.goto('/dashboard');
+  await expect(page.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeVisible();
 
   const skipLink = page.getByRole('link', { name: 'Skip to route content' });
   const routeContent = page.getByRole('main', { name: 'Route content' });
 
+  await page.evaluate(() => {
+    document.body.tabIndex = -1;
+    document.body.focus();
+  });
   await page.keyboard.press('Tab');
   await expect(skipLink).toBeFocused();
   await expect(skipLink).toBeVisible();

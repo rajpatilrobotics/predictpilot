@@ -161,7 +161,9 @@ describe('App shell', () => {
   it('renders the terminal shell with navigation, wallet status, and Testnet indicator', async () => {
     renderAppAt('/dashboard');
 
-    expect(screen.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /DeepBook Predict Terminal/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: /Primary navigation/i })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: /Mobile navigation/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Skip to route content' })).toHaveAttribute(
@@ -180,7 +182,7 @@ describe('App shell', () => {
 
   it('navigates between shell routes and mounts implemented pages', async () => {
     renderAppAt('/dashboard');
-    const primaryNav = screen.getByRole('navigation', { name: /Primary navigation/i });
+    const primaryNav = await screen.findByRole('navigation', { name: /Primary navigation/i });
 
     fireEvent.click(within(primaryNav).getByRole('link', { name: 'Markets' }));
     expect(await screen.findByRole('heading', { name: 'Markets' })).toBeInTheDocument();
@@ -343,14 +345,14 @@ describe('App shell', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('provides DApp Kit hooks to child components on Testnet', () => {
+  it('provides DApp Kit hooks to child components on Testnet', async () => {
     render(
       <AppProviders>
         <DAppKitHookSmoke />
       </AppProviders>,
     );
 
-    expect(screen.getByTestId('dapp-kit-network')).toHaveTextContent('testnet');
+    expect(await screen.findByTestId('dapp-kit-network')).toHaveTextContent('testnet');
     expect(screen.getByTestId('dapp-kit-account')).toHaveTextContent('no-account');
     expect(screen.getByTestId('dapp-kit-client')).toHaveTextContent('client');
     expect(screen.getByTestId('dapp-kit-instance')).toHaveTextContent('dapp-kit');

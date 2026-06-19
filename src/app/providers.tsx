@@ -1,9 +1,10 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
-import { useState } from 'react';
-import { DAppKitProvider } from '@mysten/dapp-kit-react';
-import { dAppKit } from '@/config/dapp-kit';
+import { lazy, Suspense, type ReactNode, useState } from 'react';
 import { createAppQueryClient } from '@/lib/query-client';
+
+const DAppKitRuntimeProvider = lazy(async () => ({
+  default: (await import('@/app/DAppKitRuntimeProvider')).DAppKitRuntimeProvider,
+}));
 
 type AppProvidersProps = {
   children: ReactNode;
@@ -13,8 +14,22 @@ export function AppProviders({ children }: AppProvidersProps) {
   const [queryClient] = useState(() => createAppQueryClient());
 
   return (
-    <DAppKitProvider dAppKit={dAppKit}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </DAppKitProvider>
+    <Suspense fallback={<AppProviderLoadingState />}>
+      <DAppKitRuntimeProvider>
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      </DAppKitRuntimeProvider>
+    </Suspense>
+  );
+}
+
+function AppProviderLoadingState() {
+  return (
+    <div
+      aria-label="App provider loading state"
+      className="min-h-screen bg-[#f4f7f6] p-4 text-sm font-semibold text-[#315447]"
+      role="status"
+    >
+      Loading PredictPilot wallet runtime...
+    </div>
   );
 }

@@ -1,7 +1,11 @@
+import { lazy, Suspense } from 'react';
 import { predictDeploymentConfig } from '@/config/predict';
 import { suiConfig } from '@/config/sui';
-import { WalletPanel } from '@/features/wallet/WalletPanel';
 import type { AppRoute } from '@/app/routes';
+
+const WalletPanel = lazy(async () => ({
+  default: (await import('@/features/wallet/WalletPanel')).WalletPanel,
+}));
 
 interface TopBarProps {
   activeRoute: AppRoute;
@@ -52,8 +56,46 @@ export function TopBar({ activeRoute }: TopBarProps) {
             ))}
           </dl>
         </div>
-        <WalletPanel />
+        <Suspense fallback={<WalletPanelLoadingState />}>
+          <WalletPanel />
+        </Suspense>
       </div>
     </header>
+  );
+}
+
+function WalletPanelLoadingState() {
+  return (
+    <aside
+      aria-label="Wallet status"
+      className="w-full rounded border border-[#c8d3ce] bg-white px-4 py-3 text-sm text-[#243832] shadow-sm lg:max-w-md"
+      role="status"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#446b5e]">
+            Wallet
+          </p>
+          <p className="mt-1 font-semibold text-[#17211d]">Loading wallet runtime</p>
+        </div>
+        <span className="border border-[#b8c6c0] bg-[#eef3f1] px-4 py-2 text-sm font-semibold text-[#64736e]">
+          Connect Wallet
+        </span>
+      </div>
+      <dl className="mt-3 grid gap-2 border-t border-[#d9dfdc] pt-3 sm:grid-cols-3">
+        <WalletPanelFallbackItem label="Account" value="Pending" />
+        <WalletPanelFallbackItem label="Network" value={suiConfig.network} />
+        <WalletPanelFallbackItem label="Status" value="Loading" />
+      </dl>
+    </aside>
+  );
+}
+
+function WalletPanelFallbackItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs uppercase tracking-[0.08em] text-[#5d6b66]">{label}</dt>
+      <dd className="mt-1 break-words font-medium text-[#17211d]">{value}</dd>
+    </div>
   );
 }
