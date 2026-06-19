@@ -58,8 +58,16 @@ export default tseslint.config(
       ],
       '@typescript-eslint/await-thenable': 'error',
       '@typescript-eslint/no-base-to-string': 'error',
+      '@typescript-eslint/no-confusing-void-expression': [
+        'error',
+        {
+          ignoreArrowShorthand: true,
+          ignoreVoidOperator: true,
+        },
+      ],
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-misused-promises': 'error',
+      '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'error',
       '@typescript-eslint/restrict-template-expressions': [
         'error',
         {

@@ -68,6 +68,15 @@ describe('global stylesheet accessibility safeguards', () => {
     expect(violations, violations.join('\n')).toEqual([]);
   });
 
+  it('prevents JSX autoFocus from stealing keyboard or screen-reader focus', () => {
+    const violations = collectSourceFiles(sourceRoot)
+      .filter((filePath) => filePath.endsWith('.tsx'))
+      .flatMap(collectAutoFocusAttributes)
+      .sort();
+
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
+
   it('prevents aria-hidden from hiding focusable JSX elements', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
@@ -468,6 +477,31 @@ function collectPositiveTabIndexValues(filePath: string): string[] {
           `${relative(projectRoot, filePath)}:${line + 1}:${character + 1} - tabIndex must not be positive`,
         );
       }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return violations;
+}
+
+function collectAutoFocusAttributes(filePath: string): string[] {
+  const sourceFile = createTsxSourceFile(filePath);
+  const violations: string[] = [];
+
+  function visit(node: ts.Node): void {
+    if (
+      (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
+      hasJsxAttribute(node, 'autoFocus', sourceFile)
+    ) {
+      const { character, line } = sourceFile.getLineAndCharacterOfPosition(
+        node.getStart(sourceFile),
+      );
+      violations.push(
+        `${relative(projectRoot, filePath)}:${line + 1}:${character + 1} - autoFocus must not steal focus on route load`,
+      );
     }
 
     ts.forEachChild(node, visit);

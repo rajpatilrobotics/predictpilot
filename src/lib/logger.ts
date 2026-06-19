@@ -21,7 +21,7 @@ const SENSITIVE_KEY_PATTERN =
 const SENSITIVE_VALUE_PATTERN =
   /(BEGIN [A-Z ]*PRIVATE KEY|\.env\.local|\.env\.test|mnemonic|playwright\/\.auth|private key|seed phrase|wallet backup)/i;
 
-const isDevRuntime = typeof import.meta !== 'undefined' && import.meta.env?.DEV === true;
+const isDevRuntime = typeof import.meta !== 'undefined' && Boolean(import.meta.env?.DEV);
 
 export const appLogger = createAppLogger({
   enabled: isDevRuntime,
