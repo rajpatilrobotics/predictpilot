@@ -13,6 +13,7 @@ import {
   type BeginManagerWithdrawReviewInput,
 } from '@/features/manager/actions/useManagerWithdrawFlow';
 import type { PortfolioReadClient } from '@/integrations/deepbook-predict/api/portfolio';
+import type { AuthoritativeSuiClient } from '@/integrations/deepbook-predict/onchain/objects';
 import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
 import type { PredictTransactionTransport } from '@/lib/tx-executor';
 import type { QuoteAmount } from '@/types/predict';
@@ -210,6 +211,80 @@ describe('manager execution flows', () => {
     expect(simulationTransport.simulateTransaction).toHaveBeenCalledOnce();
   });
 
+  it('recovers a manager deposit digest when wallet approval does not return to the app', async () => {
+    const invalidateQueries = vi.fn().mockResolvedValue(undefined);
+    const executionTransport = createTradeExecutionTransport({
+      signAndExecuteTransaction: vi.fn().mockImplementation(createNeverResolvingWalletPromise),
+    });
+    const authoritativeClient = createAuthoritativeManagerClient({
+      previousTransaction: 'recovered-deposit-digest',
+    });
+    const indexedClient = createManagerSummaryClient({
+      tradingBalance: '1000000',
+    });
+    const { result } = renderDepositFlow({
+      authoritativeClient,
+      executionTransport,
+      indexedClient,
+      managerRecoveryMaxAttempts: 1,
+      managerRecoveryPollDelayMs: 0,
+      previousManagerTransactionDigest: 'old-manager-digest',
+      previousTradingBalanceQuote: 0n,
+      queryClient: { invalidateQueries },
+      simulationTransport: createReadyTradeSimulationTransport(),
+      walletReturnTimeoutMs: 1,
+    });
+    await beginDepositReview(result);
+
+    await act(async () => {
+      await result.current.requestSignature();
+    });
+
+    const invalidatedText = JSON.stringify(invalidateQueries.mock.calls);
+
+    expect(result.current.state.phase).toBe('success');
+    expect(result.current.state.completedDigest).toBe('recovered-deposit-digest');
+    expect(result.current.state.executionNotice).toBeNull();
+    expect(result.current.state.executionResult).toMatchObject({
+      confirmedStatus: 'success',
+      digest: 'recovered-deposit-digest',
+      status: 'success',
+    });
+    expect(authoritativeClient.getObject).toHaveBeenCalledOnce();
+    expect(indexedClient.fetchManagerSummaryDto).toHaveBeenCalledWith(tradeTestManagerId);
+    expect(invalidatedText).toContain('manager');
+  });
+
+  it('times out manager deposit recovery when manager state does not prove a new deposit', async () => {
+    const executionTransport = createTradeExecutionTransport({
+      signAndExecuteTransaction: vi.fn().mockImplementation(createNeverResolvingWalletPromise),
+    });
+    const { result } = renderDepositFlow({
+      authoritativeClient: createAuthoritativeManagerClient({
+        previousTransaction: 'old-manager-digest',
+      }),
+      executionTransport,
+      indexedClient: createManagerSummaryClient({
+        tradingBalance: '1000000',
+      }),
+      managerRecoveryMaxAttempts: 1,
+      managerRecoveryPollDelayMs: 0,
+      previousManagerTransactionDigest: 'old-manager-digest',
+      previousTradingBalanceQuote: 0n,
+      simulationTransport: createReadyTradeSimulationTransport(),
+      walletReturnTimeoutMs: 1,
+    });
+    await beginDepositReview(result);
+
+    await act(async () => {
+      await result.current.requestSignature();
+    });
+
+    expect(result.current.state.phase).toBe('failure');
+    expect(result.current.state.error?.code).toBe('WALLET_RESPONSE_TIMEOUT');
+    expect(result.current.state.completedDigest).toBeNull();
+  });
+
   it('blocks manager withdraw for missing summary and insufficient manager balance', async () => {
     const missingSummary = renderWithdrawFlow({ managerSummary: null });
     const insufficient = renderWithdrawFlow({
@@ -249,6 +324,39 @@ describe('manager execution flows', () => {
 
     expect(result.current.state.phase).toBe('failure');
     expect(result.current.state.error?.code).toBe('TRANSACTION_REJECTED');
+  });
+
+  it('recovers a manager withdraw digest when wallet approval does not return to the app', async () => {
+    const executionTransport = createTradeExecutionTransport({
+      signAndExecuteTransaction: vi.fn().mockImplementation(createNeverResolvingWalletPromise),
+    });
+    const { result } = renderWithdrawFlow({
+      authoritativeClient: createAuthoritativeManagerClient({
+        previousTransaction: 'recovered-withdraw-digest',
+      }),
+      executionTransport,
+      indexedClient: createManagerSummaryClient({
+        tradingBalance: '4000000',
+      }),
+      managerRecoveryMaxAttempts: 1,
+      managerRecoveryPollDelayMs: 0,
+      previousManagerTransactionDigest: 'old-manager-digest',
+      simulationTransport: createReadyTradeSimulationTransport(),
+      walletReturnTimeoutMs: 1,
+    });
+    await beginWithdrawReview(result);
+
+    await act(async () => {
+      await result.current.requestSignature();
+    });
+
+    expect(result.current.state.phase).toBe('success');
+    expect(result.current.state.completedDigest).toBe('recovered-withdraw-digest');
+    expect(result.current.state.executionResult).toMatchObject({
+      confirmedStatus: 'success',
+      digest: 'recovered-withdraw-digest',
+      status: 'success',
+    });
   });
 
   it('keeps a manager deposit digest visible when refresh invalidation fails', async () => {
@@ -309,58 +417,101 @@ function renderCreateManagerFlow({
 }
 
 function renderDepositFlow({
+  authoritativeClient,
   executionTransport,
+  indexedClient,
   managerId = tradeTestManagerId,
+  managerRecoveryMaxAttempts,
+  managerRecoveryPollDelayMs,
+  previousManagerTransactionDigest,
+  previousTradingBalanceQuote,
   queryClient,
   simulationTransport = createReadyTradeSimulationTransport(),
   walletDusdcBalanceQuote = 2_000_000n,
   walletStatus = createTradeWalletStatus(),
+  walletReturnTimeoutMs,
 }: {
+  authoritativeClient?: AuthoritativeSuiClient;
   executionTransport?: PredictTransactionTransport;
+  indexedClient?: PortfolioReadClient;
   managerId?: Parameters<typeof useManagerDepositFlow>[0]['managerId'];
+  managerRecoveryMaxAttempts?: number;
+  managerRecoveryPollDelayMs?: number;
+  previousManagerTransactionDigest?: Parameters<
+    typeof useManagerDepositFlow
+  >[0]['previousManagerTransactionDigest'];
+  previousTradingBalanceQuote?: QuoteAmount | null;
   queryClient?: Parameters<typeof useManagerDepositFlow>[0]['queryClient'];
   simulationTransport?: PredictSimulationTransport;
   walletDusdcBalanceQuote?: QuoteAmount | null;
   walletStatus?: ReturnType<typeof createTradeWalletStatus>;
+  walletReturnTimeoutMs?: number;
 } = {}) {
   return renderHook(
     () =>
       useManagerDepositFlow({
+        authoritativeClient,
         executionTransport,
+        indexedClient,
         managerId,
+        managerRecoveryMaxAttempts,
+        managerRecoveryPollDelayMs,
+        previousManagerTransactionDigest,
+        previousTradingBalanceQuote,
         queryClient,
         simulationTransport,
         walletDusdcBalanceQuote,
         walletStatus,
+        walletReturnTimeoutMs,
       }),
     { wrapper: createQueryWrapper() },
   );
 }
 
 function renderWithdrawFlow({
+  authoritativeClient,
   executionTransport,
+  indexedClient,
   managerId = tradeTestManagerId,
+  managerRecoveryMaxAttempts,
+  managerRecoveryPollDelayMs,
   managerSummary = createTradeManagerSummaryPortfolio(),
+  previousManagerTransactionDigest,
   queryClient,
   simulationTransport = createReadyTradeSimulationTransport(),
   walletStatus = createTradeWalletStatus(),
+  walletReturnTimeoutMs,
 }: {
+  authoritativeClient?: AuthoritativeSuiClient;
   executionTransport?: PredictTransactionTransport;
+  indexedClient?: PortfolioReadClient;
   managerId?: Parameters<typeof useManagerWithdrawFlow>[0]['managerId'];
+  managerRecoveryMaxAttempts?: number;
+  managerRecoveryPollDelayMs?: number;
   managerSummary?: Parameters<typeof useManagerWithdrawFlow>[0]['managerSummary'];
+  previousManagerTransactionDigest?: Parameters<
+    typeof useManagerWithdrawFlow
+  >[0]['previousManagerTransactionDigest'];
   queryClient?: Parameters<typeof useManagerWithdrawFlow>[0]['queryClient'];
   simulationTransport?: PredictSimulationTransport;
   walletStatus?: ReturnType<typeof createTradeWalletStatus>;
+  walletReturnTimeoutMs?: number;
 } = {}) {
   return renderHook(
     () =>
       useManagerWithdrawFlow({
+        authoritativeClient,
         executionTransport,
+        indexedClient,
         managerId,
+        managerRecoveryMaxAttempts,
+        managerRecoveryPollDelayMs,
         managerSummary,
+        previousManagerTransactionDigest,
         queryClient,
         simulationTransport,
         walletStatus,
+        walletReturnTimeoutMs,
       }),
     { wrapper: createQueryWrapper() },
   );
@@ -445,6 +596,54 @@ function createManagerIndexClient(managers: Array<ReturnType<typeof createManage
   return {
     fetchManagersDto: vi.fn().mockResolvedValue(managers),
   } as unknown as PortfolioReadClient;
+}
+
+function createManagerSummaryClient({
+  tradingBalance,
+}: {
+  tradingBalance: string;
+}): PortfolioReadClient {
+  return {
+    fetchManagerSummaryDto: vi.fn().mockResolvedValue({
+      account_value: tradingBalance,
+      awaiting_settlement_positions: 0,
+      balances: [
+        {
+          balance: tradingBalance,
+          quote_asset: predictDeploymentConfig.quoteAsset.type,
+        },
+      ],
+      manager_id: tradeTestManagerId,
+      open_exposure: '0',
+      open_positions: 0,
+      owner: tradeTestOwner,
+      realized_pnl: '0',
+      redeemable_value: '0',
+      trading_balance: tradingBalance,
+      unrealized_pnl: '0',
+    }),
+  } as unknown as PortfolioReadClient;
+}
+
+function createAuthoritativeManagerClient({
+  previousTransaction,
+}: {
+  previousTransaction: string | null;
+}): AuthoritativeSuiClient {
+  return {
+    getObject: vi.fn().mockResolvedValue({
+      object: {
+        digest: 'manager-object-digest',
+        json: null,
+        objectId: tradeTestManagerId,
+        owner: tradeTestOwner,
+        previousTransaction,
+        type: `${predictDeploymentConfig.packageId}::predict_manager::PredictManager`,
+        version: '2',
+      },
+    }),
+    listCoins: vi.fn(),
+  };
 }
 
 function createManagerCreatedDto({

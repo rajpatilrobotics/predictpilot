@@ -10,13 +10,16 @@ import {
   buildDepositToManagerTx,
   type DepositToManagerTxPreview,
 } from '@/integrations/deepbook-predict/tx/deposit-manager';
+import type { PortfolioReadClient } from '@/integrations/deepbook-predict/api/portfolio';
+import type { AuthoritativeSuiClient } from '@/integrations/deepbook-predict/onchain/objects';
 import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
 import { createAppError } from '@/lib/errors';
 import type { PredictTransactionTransport } from '@/lib/tx-executor';
-import type { ObjectId, QuoteAmount, SuiAddress } from '@/types/predict';
+import type { ObjectId, QuoteAmount, SuiAddress, TransactionDigest } from '@/types/predict';
 import {
   createManagerQuoteRiskPreview,
   managerWriteRefreshKeys,
+  recoverManagerQuoteActionDigest,
   validateManagerActionBase,
 } from './manager-action-shared';
 
@@ -27,12 +30,19 @@ export type ManagerDepositFlowPreview = DepositToManagerTxPreview & {
 export type ManagerDepositFlowState = PredictTradeFlowState<ManagerDepositFlowPreview>;
 
 export interface UseManagerDepositFlowOptions {
+  authoritativeClient?: AuthoritativeSuiClient;
   executionTransport?: PredictTransactionTransport;
+  indexedClient?: PortfolioReadClient;
   managerId: ObjectId | null;
+  managerRecoveryMaxAttempts?: number;
+  managerRecoveryPollDelayMs?: number;
+  previousManagerTransactionDigest?: TransactionDigest | null;
+  previousTradingBalanceQuote?: QuoteAmount | null;
   queryClient?: Pick<QueryClient, 'invalidateQueries'>;
   simulationTransport?: PredictSimulationTransport | null;
   walletDusdcBalanceQuote?: QuoteAmount | null;
   walletStatus: WalletStatusModel;
+  walletReturnTimeoutMs?: number;
 }
 
 export interface BeginManagerDepositReviewInput {
@@ -54,12 +64,19 @@ const depositWarnings = [
 ];
 
 export function useManagerDepositFlow({
+  authoritativeClient,
   executionTransport,
+  indexedClient,
   managerId,
+  managerRecoveryMaxAttempts,
+  managerRecoveryPollDelayMs,
+  previousManagerTransactionDigest,
+  previousTradingBalanceQuote,
   queryClient,
   simulationTransport,
   walletDusdcBalanceQuote,
   walletStatus,
+  walletReturnTimeoutMs,
 }: UseManagerDepositFlowOptions) {
   const prepareReview = async ({
     amountQuote,
@@ -136,7 +153,21 @@ export function useManagerDepositFlow({
     executionTransport,
     prepareReview,
     queryClient,
+    recoverSubmittedTransaction: async ({ builderPreview }) =>
+      recoverManagerQuoteActionDigest({
+        action: 'DEPOSIT_QUOTE',
+        amountQuote: builderPreview.amountQuote,
+        authoritativeClient,
+        expectedBalanceDirection: 'increase',
+        indexedClient,
+        managerId: builderPreview.managerId,
+        maxAttempts: managerRecoveryMaxAttempts,
+        pollDelayMs: managerRecoveryPollDelayMs,
+        previousManagerTransactionDigest,
+        previousTradingBalanceQuote,
+      }),
     simulationTransport,
+    walletReturnTimeoutMs,
   });
 
   return {

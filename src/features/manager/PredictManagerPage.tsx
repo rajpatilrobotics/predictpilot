@@ -125,6 +125,9 @@ export function PredictManagerPage({
     walletDusdcBalanceQuote === undefined
       ? (walletDusdcQuery.data ?? null)
       : walletDusdcBalanceQuote;
+  const previousManagerTransactionDigest = manager.authoritativeObject?.previousTransaction ?? null;
+  const previousTradingBalanceQuote =
+    managerSummaryQuery.data?.balanceSummary.tradingBalanceQuote ?? null;
   const depositAmount = useMemo(
     () => parseDecimalAmount(depositInput, predictDeploymentConfig.quoteDecimals),
     [depositInput],
@@ -141,16 +144,23 @@ export function PredictManagerPage({
     walletStatus: effectiveWalletStatus,
   });
   const depositFlow = useManagerDepositFlow({
+    authoritativeClient: onchainClient,
     executionTransport,
+    indexedClient,
     managerId,
+    previousManagerTransactionDigest,
+    previousTradingBalanceQuote,
     simulationTransport,
     walletDusdcBalanceQuote: effectiveWalletDusdcBalance,
     walletStatus: effectiveWalletStatus,
   });
   const withdrawFlow = useManagerWithdrawFlow({
+    authoritativeClient: onchainClient,
     executionTransport,
+    indexedClient,
     managerId,
     managerSummary: managerSummaryQuery.data ?? null,
+    previousManagerTransactionDigest,
     simulationTransport,
     walletStatus: effectiveWalletStatus,
   });

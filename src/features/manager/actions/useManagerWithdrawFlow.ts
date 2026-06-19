@@ -11,13 +11,16 @@ import {
   buildWithdrawFromManagerTx,
   type WithdrawFromManagerTxPreview,
 } from '@/integrations/deepbook-predict/tx/withdraw-manager';
+import type { PortfolioReadClient } from '@/integrations/deepbook-predict/api/portfolio';
+import type { AuthoritativeSuiClient } from '@/integrations/deepbook-predict/onchain/objects';
 import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
 import { createAppError } from '@/lib/errors';
 import type { PredictTransactionTransport } from '@/lib/tx-executor';
-import type { ObjectId, QuoteAmount, SuiAddress } from '@/types/predict';
+import type { ObjectId, QuoteAmount, SuiAddress, TransactionDigest } from '@/types/predict';
 import {
   createManagerQuoteRiskPreview,
   managerWriteRefreshKeys,
+  recoverManagerQuoteActionDigest,
   validateManagerActionBase,
 } from './manager-action-shared';
 
@@ -28,12 +31,18 @@ export type ManagerWithdrawFlowPreview = WithdrawFromManagerTxPreview & {
 export type ManagerWithdrawFlowState = PredictTradeFlowState<ManagerWithdrawFlowPreview>;
 
 export interface UseManagerWithdrawFlowOptions {
+  authoritativeClient?: AuthoritativeSuiClient;
   executionTransport?: PredictTransactionTransport;
+  indexedClient?: PortfolioReadClient;
   managerId: ObjectId | null;
+  managerRecoveryMaxAttempts?: number;
+  managerRecoveryPollDelayMs?: number;
   managerSummary?: ManagerSummaryPortfolioModel | null;
+  previousManagerTransactionDigest?: TransactionDigest | null;
   queryClient?: Pick<QueryClient, 'invalidateQueries'>;
   simulationTransport?: PredictSimulationTransport | null;
   walletStatus: WalletStatusModel;
+  walletReturnTimeoutMs?: number;
 }
 
 export interface BeginManagerWithdrawReviewInput {
@@ -55,12 +64,18 @@ const withdrawWarnings = [
 ];
 
 export function useManagerWithdrawFlow({
+  authoritativeClient,
   executionTransport,
+  indexedClient,
   managerId,
+  managerRecoveryMaxAttempts,
+  managerRecoveryPollDelayMs,
   managerSummary,
+  previousManagerTransactionDigest,
   queryClient,
   simulationTransport,
   walletStatus,
+  walletReturnTimeoutMs,
 }: UseManagerWithdrawFlowOptions) {
   const prepareReview = async ({
     amountQuote,
@@ -137,7 +152,21 @@ export function useManagerWithdrawFlow({
     executionTransport,
     prepareReview,
     queryClient,
+    recoverSubmittedTransaction: async ({ builderPreview }) =>
+      recoverManagerQuoteActionDigest({
+        action: 'WITHDRAW_QUOTE',
+        amountQuote: builderPreview.amountQuote,
+        authoritativeClient,
+        expectedBalanceDirection: 'decrease',
+        indexedClient,
+        managerId: builderPreview.managerId,
+        maxAttempts: managerRecoveryMaxAttempts,
+        pollDelayMs: managerRecoveryPollDelayMs,
+        previousManagerTransactionDigest,
+        previousTradingBalanceQuote: managerSummary?.balanceSummary.tradingBalanceQuote,
+      }),
     simulationTransport,
+    walletReturnTimeoutMs,
   });
 
   return {
