@@ -26,9 +26,13 @@ const tsSuppressionPatterns = [
   },
 ] as const;
 
+const compareText = (left: string, right: string) => left.localeCompare(right);
+
 describe('static TypeScript safety regression checks', () => {
   it('prevents app source from using explicit any escape hatches', () => {
-    const violations = collectSourceFiles(sourceRoot).flatMap(collectExplicitAnyUsages).sort();
+    const violations = collectSourceFiles(sourceRoot)
+      .flatMap(collectExplicitAnyUsages)
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -36,7 +40,7 @@ describe('static TypeScript safety regression checks', () => {
   it('prevents TypeScript suppression comments in app source', () => {
     const violations = collectSourceFiles(sourceRoot)
       .flatMap(collectTypeScriptSuppressionComments)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });

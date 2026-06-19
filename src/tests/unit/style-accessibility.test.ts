@@ -12,6 +12,8 @@ import {
   sourceRoot,
 } from './static-source-utils';
 
+const compareText = (left: string, right: string) => left.localeCompare(right);
+
 describe('global stylesheet accessibility safeguards', () => {
   it('honors reduced-motion preferences for global animation and transition effects', () => {
     const stylesheet = readFileSync(join(process.cwd(), 'src/styles/index.css'), 'utf8');
@@ -27,7 +29,7 @@ describe('global stylesheet accessibility safeguards', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
       .flatMap(collectUnnamedFormControls)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -36,7 +38,7 @@ describe('global stylesheet accessibility safeguards', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
       .flatMap(collectUnnamedImageLikeElements)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -45,7 +47,7 @@ describe('global stylesheet accessibility safeguards', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
       .flatMap(collectUnnamedInteractiveControls)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -60,7 +62,7 @@ describe('global stylesheet accessibility safeguards', () => {
           purpose: 'label',
         }),
       )
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -75,7 +77,7 @@ describe('global stylesheet accessibility safeguards', () => {
           purpose: 'description',
         }),
       )
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -84,7 +86,7 @@ describe('global stylesheet accessibility safeguards', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
       .flatMap(collectNonInteractiveClickHandlers)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -93,7 +95,7 @@ describe('global stylesheet accessibility safeguards', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
       .flatMap(collectIntrinsicButtonRoleShims)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -102,7 +104,7 @@ describe('global stylesheet accessibility safeguards', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
       .flatMap(collectPositiveTabIndexValues)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -111,7 +113,7 @@ describe('global stylesheet accessibility safeguards', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
       .flatMap(collectAutoFocusAttributes)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -120,7 +122,7 @@ describe('global stylesheet accessibility safeguards', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
       .flatMap(collectFocusableAriaHiddenElements)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -129,7 +131,7 @@ describe('global stylesheet accessibility safeguards', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
       .flatMap(collectButtonsWithoutExplicitType)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });

@@ -162,6 +162,8 @@ const forbiddenUiProtocolPatterns = [
 
 const uiSourceRoots = ['src/app/', 'src/components/', 'src/features/'] as const;
 
+const compareText = (left: string, right: string) => left.localeCompare(right);
+
 describe('static security regression checks', () => {
   it('keeps high-risk browser APIs out of non-test source files', () => {
     const violations = collectSourceFiles(sourceRoot)
@@ -173,7 +175,7 @@ describe('static security regression checks', () => {
           .filter(({ pattern }) => pattern.test(source))
           .map(({ label, reason }) => `${displayPath}: ${label} - ${reason}`);
       })
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -189,7 +191,7 @@ describe('static security regression checks', () => {
         );
       })
       .map((filePath) => relative(projectRoot, filePath))
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -198,7 +200,7 @@ describe('static security regression checks', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter(isUiSourceFile)
       .flatMap(collectHardcodedProtocolIdentifiers)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -207,7 +209,7 @@ describe('static security regression checks', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => !isCentralHttpClient(filePath))
       .flatMap(collectDirectFetchCalls)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -216,7 +218,7 @@ describe('static security regression checks', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => !isCentralLogger(filePath))
       .flatMap(collectDirectConsoleCalls)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -224,7 +226,7 @@ describe('static security regression checks', () => {
   it('keeps browser lifecycle APIs paired with local cleanup', () => {
     const violations = collectSourceFiles(sourceRoot)
       .flatMap(collectUnpairedBrowserCleanupApis)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -233,7 +235,7 @@ describe('static security regression checks', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
       .flatMap(collectUntypedButtonControls)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -242,7 +244,7 @@ describe('static security regression checks', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
       .flatMap(collectUnlabeledFormControls)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -251,7 +253,7 @@ describe('static security regression checks', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
       .flatMap(collectUnsafeBlankTargetLinks)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -260,7 +262,7 @@ describe('static security regression checks', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
       .flatMap(collectUnsafeAnchorHrefs)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });

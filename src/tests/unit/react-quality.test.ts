@@ -12,12 +12,14 @@ import {
 
 const indexKeyNames = new Set(['i', 'idx', 'index']);
 
+const compareText = (left: string, right: string) => left.localeCompare(right);
+
 describe('static React quality regression checks', () => {
   it('prevents obvious array index values from being used as React keys', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
       .flatMap(collectIndexKeyAttributes)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
@@ -26,7 +28,7 @@ describe('static React quality regression checks', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
       .flatMap(collectUnstableGeneratedKeyAttributes)
-      .sort();
+      .sort(compareText);
 
     expect(violations, violations.join('\n')).toEqual([]);
   });

@@ -39,6 +39,8 @@ vi.mock('@mysten/dapp-kit-react', () => ({
 
 const supplyAmount = 1_000_000n as QuoteAmount;
 const plpAmount = 1_000_000n;
+const defaultSupplyReviewInput: BeginVaultSupplyReviewInput = { amountQuote: supplyAmount };
+const defaultWithdrawReviewInput: BeginVaultWithdrawReviewInput = { plpAmountAtomic: plpAmount };
 
 beforeEach(() => {
   dAppKitMocks.signAndExecuteTransaction.mockReset();
@@ -285,12 +287,12 @@ function createQueryWrapper() {
 
 async function beginSupplyReview(
   result: ReturnType<typeof renderVaultSupplyFlow>['result'],
-  input: BeginVaultSupplyReviewInput = { amountQuote: supplyAmount },
+  input?: BeginVaultSupplyReviewInput,
 ) {
   let outcome: Awaited<ReturnType<typeof result.current.beginSupplyReview>> | undefined;
 
   await act(async () => {
-    outcome = await result.current.beginSupplyReview(input);
+    outcome = await result.current.beginSupplyReview(input ?? defaultSupplyReviewInput);
   });
 
   if (outcome === undefined) {
@@ -302,12 +304,12 @@ async function beginSupplyReview(
 
 async function beginWithdrawReview(
   result: ReturnType<typeof renderVaultWithdrawFlow>['result'],
-  input: BeginVaultWithdrawReviewInput = { plpAmountAtomic: plpAmount },
+  input?: BeginVaultWithdrawReviewInput,
 ) {
   let outcome: Awaited<ReturnType<typeof result.current.beginWithdrawReview>> | undefined;
 
   await act(async () => {
-    outcome = await result.current.beginWithdrawReview(input);
+    outcome = await result.current.beginWithdrawReview(input ?? defaultWithdrawReviewInput);
   });
 
   if (outcome === undefined) {

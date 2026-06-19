@@ -40,6 +40,8 @@ vi.mock('@mysten/dapp-kit-react', () => ({
 
 const depositAmount = 1_000_000n as QuoteAmount;
 const withdrawAmount = 1_000_000n as QuoteAmount;
+const defaultDepositReviewInput: BeginManagerDepositReviewInput = { amountQuote: depositAmount };
+const defaultWithdrawReviewInput: BeginManagerWithdrawReviewInput = { amountQuote: withdrawAmount };
 
 beforeEach(() => {
   dAppKitMocks.signAndExecuteTransaction.mockReset();
@@ -326,12 +328,12 @@ async function beginCreateManagerReview(
 
 async function beginDepositReview(
   result: ReturnType<typeof renderDepositFlow>['result'],
-  input: BeginManagerDepositReviewInput = { amountQuote: depositAmount },
+  input?: BeginManagerDepositReviewInput,
 ) {
   let outcome: Awaited<ReturnType<typeof result.current.beginDepositReview>> | undefined;
 
   await act(async () => {
-    outcome = await result.current.beginDepositReview(input);
+    outcome = await result.current.beginDepositReview(input ?? defaultDepositReviewInput);
   });
 
   if (outcome === undefined) {
@@ -343,12 +345,12 @@ async function beginDepositReview(
 
 async function beginWithdrawReview(
   result: ReturnType<typeof renderWithdrawFlow>['result'],
-  input: BeginManagerWithdrawReviewInput = { amountQuote: withdrawAmount },
+  input?: BeginManagerWithdrawReviewInput,
 ) {
   let outcome: Awaited<ReturnType<typeof result.current.beginWithdrawReview>> | undefined;
 
   await act(async () => {
-    outcome = await result.current.beginWithdrawReview(input);
+    outcome = await result.current.beginWithdrawReview(input ?? defaultWithdrawReviewInput);
   });
 
   if (outcome === undefined) {

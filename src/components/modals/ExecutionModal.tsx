@@ -24,7 +24,7 @@ export function ExecutionModal({
   risk,
   title = 'Execution review',
 }: ExecutionModalProps) {
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const descriptionId = useId();
 
@@ -48,7 +48,7 @@ export function ExecutionModal({
     return null;
   }
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+  const handleKeyDown = (event: KeyboardEvent<HTMLDialogElement>) => {
     if (event.key === 'Escape') {
       event.stopPropagation();
       onClose();
@@ -83,14 +83,14 @@ export function ExecutionModal({
   };
 
   return (
-    <div
+    <dialog
       aria-describedby={descriptionId}
       aria-labelledby={titleId}
       aria-modal="true"
-      className="fixed inset-0 z-50 overflow-y-auto bg-[#07110d]/70 p-3 sm:p-4"
+      className="fixed inset-0 z-50 m-0 h-full max-h-none w-full max-w-none overflow-y-auto border-0 bg-[#07110d]/70 p-3 backdrop:bg-transparent sm:p-4"
       onKeyDown={handleKeyDown}
+      open
       ref={dialogRef}
-      role="dialog"
       tabIndex={-1}
     >
       <div className="mx-auto flex min-h-full max-w-5xl items-center">
@@ -129,7 +129,7 @@ export function ExecutionModal({
           </div>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }
 
