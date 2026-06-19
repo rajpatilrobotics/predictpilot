@@ -1,8 +1,16 @@
 import { WalletButton } from '@/features/wallet/WalletButton';
 import { useWalletStatus } from '@/features/wallet/useWalletStatus';
 
-export function WalletPanel() {
+interface WalletPanelProps {
+  variant?: 'card' | 'compact';
+}
+
+export function WalletPanel({ variant = 'card' }: WalletPanelProps) {
   const walletStatus = useWalletStatus();
+
+  if (variant === 'compact') {
+    return <CompactWalletPanel walletStatus={walletStatus} />;
+  }
 
   return (
     <aside
@@ -45,6 +53,60 @@ export function WalletPanel() {
       ) : null}
 
       <p className="mt-3 text-xs text-[#5d6b66]" aria-live="polite">
+        {walletStatus.isConnected
+          ? `${walletStatus.supportedIntentsCount} wallet intent${walletStatus.supportedIntentsCount === 1 ? '' : 's'} available.`
+          : 'Connect a Sui wallet to continue on Testnet.'}
+      </p>
+    </aside>
+  );
+}
+
+type WalletStatus = ReturnType<typeof useWalletStatus>;
+
+function CompactWalletPanel({ walletStatus }: { walletStatus: WalletStatus }) {
+  return (
+    <aside
+      aria-label="Wallet status"
+      className={`w-full rounded border bg-white px-3 py-2 text-xs text-[#243832] shadow-sm lg:max-w-[380px] ${
+        walletStatus.isWrongNetwork ? 'border-[#bd6f53]' : 'border-[#c8d3ce]'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-semibold uppercase tracking-[0.12em] text-[#446b5e]">Wallet</p>
+          <p className="truncate font-semibold text-[#17211d]">
+            {walletStatus.walletName ?? 'No wallet connected'}
+          </p>
+        </div>
+        <div className="shrink-0">
+          <WalletButton />
+        </div>
+      </div>
+
+      <dl className="mt-2 grid gap-x-3 gap-y-1 border-t border-[#d9dfdc] pt-2 sm:grid-cols-3">
+        <StatusItem label="Account" value={walletStatus.shortAddress ?? 'Not connected'} />
+        <StatusItem
+          label="Network"
+          value={
+            walletStatus.isExpectedNetwork
+              ? walletStatus.currentNetwork
+              : `${walletStatus.currentNetwork} (expected ${walletStatus.expectedNetwork})`
+          }
+        />
+        <StatusItem label="Status" value={walletStatus.statusLabel} />
+      </dl>
+
+      {walletStatus.isWrongNetwork ? (
+        <p
+          aria-label="Wrong network warning"
+          className="mt-2 rounded border border-[#f0c5b6] bg-[#fff4ef] px-2 py-1 font-medium text-[#6b3b2d]"
+          role="alert"
+        >
+          Wrong network. Switch to Testnet before using any execution flow.
+        </p>
+      ) : null}
+
+      <p className="mt-2 text-[#5d6b66]" aria-live="polite">
         {walletStatus.isConnected
           ? `${walletStatus.supportedIntentsCount} wallet intent${walletStatus.supportedIntentsCount === 1 ? '' : 's'} available.`
           : 'Connect a Sui wallet to continue on Testnet.'}
