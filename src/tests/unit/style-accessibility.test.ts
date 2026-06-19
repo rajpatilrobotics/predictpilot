@@ -40,6 +40,15 @@ describe('global stylesheet accessibility safeguards', () => {
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
+
+  it('prevents positive tabIndex values that create a custom tab order', () => {
+    const violations = collectSourceFiles(sourceRoot)
+      .filter((filePath) => filePath.endsWith('.tsx'))
+      .flatMap(collectPositiveTabIndexValues)
+      .sort();
+
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
 });
 
 function collectUnnamedFormControls(filePath: string): string[] {
@@ -193,4 +202,74 @@ function hasJsxAttribute(
   return node.attributes.properties.some(
     (property) => ts.isJsxAttribute(property) && property.name.getText(sourceFile) === name,
   );
+}
+
+function collectPositiveTabIndexValues(filePath: string): string[] {
+  const sourceFile = createTsxSourceFile(filePath);
+  const violations: string[] = [];
+
+  function visit(node: ts.Node): void {
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tabIndex = getNumericJsxAttribute(node, 'tabIndex', sourceFile);
+
+      if (tabIndex !== undefined && tabIndex > 0) {
+        const { character, line } = sourceFile.getLineAndCharacterOfPosition(
+          node.getStart(sourceFile),
+        );
+        violations.push(
+          `${relative(projectRoot, filePath)}:${line + 1}:${character + 1} - tabIndex must not be positive`,
+        );
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return violations;
+}
+
+function getNumericJsxAttribute(
+  node: ts.JsxOpeningLikeElement,
+  name: string,
+  sourceFile: ts.SourceFile,
+): number | undefined {
+  const attribute = node.attributes.properties.find(
+    (property) => ts.isJsxAttribute(property) && property.name.getText(sourceFile) === name,
+  );
+
+  if (attribute === undefined || !ts.isJsxAttribute(attribute)) {
+    return undefined;
+  }
+
+  const initializer = attribute.initializer;
+
+  if (initializer === undefined) {
+    return undefined;
+  }
+
+  if (ts.isStringLiteral(initializer)) {
+    return Number(initializer.text);
+  }
+
+  if (
+    ts.isJsxExpression(initializer) &&
+    initializer.expression !== undefined &&
+    ts.isNumericLiteral(initializer.expression)
+  ) {
+    return Number(initializer.expression.text);
+  }
+
+  if (
+    ts.isJsxExpression(initializer) &&
+    initializer.expression !== undefined &&
+    ts.isPrefixUnaryExpression(initializer.expression) &&
+    initializer.expression.operator === ts.SyntaxKind.MinusToken &&
+    ts.isNumericLiteral(initializer.expression.operand)
+  ) {
+    return -Number(initializer.expression.operand.text);
+  }
+
+  return undefined;
 }
