@@ -12,11 +12,12 @@ import {
   type BinaryTradePreviewWarning,
 } from '@/integrations/deepbook-predict/tx/preview-binary';
 import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
+import type { HistoryReadClient } from '@/integrations/deepbook-predict/api/history';
 import { createAppError, type PredictPilotError } from '@/lib/errors';
 import { getOracleStatus, type OracleStatusModel } from '@/lib/oracle-status';
 import type { PredictTransactionTransport } from '@/lib/tx-executor';
 import type { OracleAskBoundsModel, OracleStateModel } from '@/types/oracle';
-import type { MarketKeyModel, QuoteAmount, SuiAddress } from '@/types/predict';
+import type { MarketKeyModel, ObjectId, QuoteAmount, SuiAddress } from '@/types/predict';
 import type { BinaryPositionSummaryModel, ManagerSummaryModel } from '@/types/portfolio';
 import type { AffectedObjectHint, PredictTransactionExecutionRequest } from '@/types/tx';
 import {
@@ -34,12 +35,14 @@ import {
   useStableInitialNowMs,
   validateTradeWalletManagerBase,
 } from './trade-flow-shared';
+import { recoverBinaryTradeDigest } from './trade-action-recovery';
 
 export type BinaryTradeFlowPhase = PredictTradeFlowPhase;
 
 export interface BinaryTradeTxPreviewBase extends PredictTradeTxPreviewBase {
   action: BinaryTradePreviewAction;
   affectedObjects: AffectedObjectHint[];
+  managerId: ObjectId;
   marketKey: MarketKeyModel;
   oracleId: MarketKeyModel['oracleId'];
 }
@@ -70,13 +73,17 @@ export interface UseBinaryTradeExecutionFlowOptions<TPreview extends BinaryTrade
   copy: BinaryTradeFlowCopy;
   estimateTradeAmounts?: BinaryTradeAmountEstimator;
   executionTransport?: PredictTransactionTransport;
+  historyClient?: HistoryReadClient;
   manager: UsePredictManagerResult;
   managerSummary?: ManagerSummaryModel | null;
   nowMs?: number;
   oracleState: OracleStateModel;
   queryClient?: Pick<QueryClient, 'invalidateQueries'>;
   simulationTransport?: PredictSimulationTransport | null;
+  tradeRecoveryMaxAttempts?: number;
+  tradeRecoveryPollDelayMs?: number;
   walletStatus: WalletStatusModel;
+  walletReturnTimeoutMs?: number;
 }
 
 export interface BinaryTradeFlowCopy {
@@ -128,13 +135,17 @@ export function useBinaryTradeExecutionFlow<TPreview extends BinaryTradeTxPrevie
   copy,
   estimateTradeAmounts,
   executionTransport,
+  historyClient,
   manager,
   managerSummary,
   nowMs,
   oracleState,
   queryClient,
   simulationTransport,
+  tradeRecoveryMaxAttempts,
+  tradeRecoveryPollDelayMs,
   walletStatus,
+  walletReturnTimeoutMs,
 }: UseBinaryTradeExecutionFlowOptions<TPreview>) {
   const initialNowMs = useStableInitialNowMs(nowMs);
   const effectiveNowMs = nowMs ?? initialNowMs;
@@ -242,7 +253,16 @@ export function useBinaryTradeExecutionFlow<TPreview extends BinaryTradeTxPrevie
     executionTransport,
     prepareReview,
     queryClient,
+    recoverSubmittedTransaction: async ({ builderPreview, requestedAtMs }) =>
+      recoverBinaryTradeDigest({
+        client: historyClient,
+        maxAttempts: tradeRecoveryMaxAttempts,
+        pollDelayMs: tradeRecoveryPollDelayMs,
+        preview: builderPreview,
+        requestedAtMs,
+      }),
     simulationTransport,
+    walletReturnTimeoutMs,
   });
 }
 

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { predictDeploymentConfig } from '@/config/predict';
 import {
   useRangeMintFlow,
   type BeginRangeMintReviewInput,
@@ -10,6 +11,7 @@ import {
   useRangeRedeemFlow,
   type BeginRangeRedeemReviewInput,
 } from '@/features/trade/actions/useRangeRedeemFlow';
+import type { HistoryReadClient } from '@/integrations/deepbook-predict/api/history';
 import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
 import type { PredictTransactionTransport } from '@/lib/tx-executor';
 import type { QuoteAmount, RangeKeyModel } from '@/types/predict';
@@ -25,6 +27,7 @@ import {
   tradeTestManagerId,
   tradeTestNowMs,
   tradeTestOracleId,
+  tradeTestOwner,
 } from './trade-test-helpers';
 
 const dAppKitMocks = vi.hoisted(() => ({
@@ -258,24 +261,76 @@ describe('range execution flows', () => {
     expect(result.current.state.completedDigest).toBe('tx-digest');
     expect(result.current.state.refreshWarning?.code).toBe('POST_TX_REFRESH_FAILED');
   });
+
+  it('recovers a submitted range mint digest when wallet handoff does not return', async () => {
+    const invalidateQueries = vi.fn().mockResolvedValue(undefined);
+    const signAndExecuteTransaction = vi.fn(() => new Promise<never>(() => undefined));
+    const waitForTransaction = vi.fn();
+    const historyClient = createHistoryClient({
+      fetchRangeMintHistoryDto: vi.fn().mockImplementation(() =>
+        Promise.resolve([
+          rangeMintDto({
+            checkpoint_timestamp_ms: Date.now() + 1_000,
+            digest: 'recovered-range-mint-digest',
+          }),
+        ]),
+      ),
+    });
+    const { result } = renderRangeMintFlow({
+      executionTransport: createTradeExecutionTransport({
+        signAndExecuteTransaction,
+        waitForTransaction,
+      }),
+      historyClient,
+      queryClient: { invalidateQueries },
+      simulationTransport: createReadyTradeSimulationTransport(),
+      tradeRecoveryMaxAttempts: 1,
+      tradeRecoveryPollDelayMs: 0,
+      walletReturnTimeoutMs: 1,
+    });
+    await beginMintReview(result);
+
+    await act(async () => {
+      await result.current.requestSignature();
+    });
+
+    expect(result.current.state.phase).toBe('success');
+    expect(result.current.state.completedDigest).toBe('recovered-range-mint-digest');
+    expect(result.current.state.executionResult).toMatchObject({
+      confirmedStatus: 'success',
+      digest: 'recovered-range-mint-digest',
+      status: 'success',
+    });
+    expect(invalidateQueries).toHaveBeenCalled();
+    expect(signAndExecuteTransaction).toHaveBeenCalledTimes(1);
+    expect(waitForTransaction).not.toHaveBeenCalled();
+  });
 });
 
 function renderRangeMintFlow({
   executionTransport,
+  historyClient,
   manager = createTradeManagerState(),
   managerSummary = createTradeManagerSummary(),
   oracleState = createTradeOracleState(),
   queryClient,
   simulationTransport = createReadyTradeSimulationTransport(),
+  tradeRecoveryMaxAttempts,
+  tradeRecoveryPollDelayMs,
   walletStatus = createTradeWalletStatus(),
+  walletReturnTimeoutMs,
 }: {
   executionTransport?: PredictTransactionTransport;
+  historyClient?: HistoryReadClient;
   manager?: ReturnType<typeof createTradeManagerState>;
   managerSummary?: ReturnType<typeof createTradeManagerSummary> | null;
   oracleState?: ReturnType<typeof createTradeOracleState>;
   queryClient?: Parameters<typeof useRangeMintFlow>[0]['queryClient'];
   simulationTransport?: PredictSimulationTransport;
+  tradeRecoveryMaxAttempts?: number;
+  tradeRecoveryPollDelayMs?: number;
   walletStatus?: ReturnType<typeof createTradeWalletStatus>;
+  walletReturnTimeoutMs?: number;
 } = {}) {
   const wrapper = createQueryWrapper();
 
@@ -284,13 +339,17 @@ function renderRangeMintFlow({
       useRangeMintFlow({
         askBounds: presentAskBounds(),
         executionTransport,
+        historyClient,
         manager,
         managerSummary,
         nowMs: tradeTestNowMs,
         oracleState,
         queryClient,
         simulationTransport,
+        tradeRecoveryMaxAttempts,
+        tradeRecoveryPollDelayMs,
         walletStatus,
+        walletReturnTimeoutMs,
       }),
     { wrapper },
   );
@@ -395,5 +454,50 @@ function createInvalidRangeKey(): RangeKeyModel {
   return {
     ...rangeKey,
     higherStrike1e9: rangeKey.lowerStrike1e9,
+  };
+}
+
+function createHistoryClient(overrides: Partial<HistoryReadClient>): HistoryReadClient {
+  return {
+    fetchLpSuppliesHistoryDto: vi.fn(),
+    fetchLpWithdrawalsHistoryDto: vi.fn(),
+    fetchOracleTradesDto: vi.fn(),
+    fetchPositionMintHistoryDto: vi.fn(),
+    fetchPositionRedeemHistoryDto: vi.fn(),
+    fetchRangeMintHistoryDto: vi.fn(),
+    fetchRangeRedeemHistoryDto: vi.fn(),
+    ...overrides,
+  };
+}
+
+function rangeMintDto({
+  checkpoint_timestamp_ms = tradeTestNowMs,
+  digest = 'range-mint-digest',
+}: {
+  checkpoint_timestamp_ms?: number;
+  digest?: string;
+}) {
+  const rangeKey = createRangeKey();
+
+  return {
+    event_digest: `${digest}-event`,
+    digest,
+    sender: tradeTestOwner,
+    checkpoint: 1,
+    checkpoint_timestamp_ms,
+    tx_index: 0,
+    event_index: 0,
+    package: predictDeploymentConfig.packageId,
+    ask_price: 901_396_381,
+    cost: 45_069,
+    expiry: String(rangeKey.expiryMs),
+    higher_strike: String(rangeKey.higherStrike1e9),
+    lower_strike: String(rangeKey.lowerStrike1e9),
+    manager_id: tradeTestManagerId,
+    oracle_id: rangeKey.oracleId,
+    predict_id: predictDeploymentConfig.predictObjectId,
+    quantity: String(quantityQuote),
+    quote_asset: predictDeploymentConfig.quoteAsset.type,
+    trader: tradeTestOwner,
   };
 }

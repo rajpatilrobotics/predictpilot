@@ -3,6 +3,7 @@ import {
   type RedeemBinaryTxPreview,
 } from '@/integrations/deepbook-predict/tx/redeem-binary';
 import type { BinaryTradeAmountEstimator } from '@/integrations/deepbook-predict/tx/preview-binary';
+import type { HistoryReadClient } from '@/integrations/deepbook-predict/api/history';
 import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
 import type { UsePredictManagerResult } from '@/features/manager/hooks/usePredictManager';
 import type { WalletStatusModel } from '@/features/wallet/useWalletStatus';
@@ -24,13 +25,17 @@ export interface UseBinaryRedeemFlowOptions {
   askBounds?: OracleAskBoundsModel;
   estimateTradeAmounts?: BinaryTradeAmountEstimator;
   executionTransport?: PredictTransactionTransport;
+  historyClient?: HistoryReadClient;
   manager: UsePredictManagerResult;
   managerSummary?: ManagerSummaryModel | null;
   nowMs?: number;
   oracleState: OracleStateModel;
   queryClient?: Pick<QueryClient, 'invalidateQueries'>;
   simulationTransport?: PredictSimulationTransport | null;
+  tradeRecoveryMaxAttempts?: number;
+  tradeRecoveryPollDelayMs?: number;
   walletStatus: WalletStatusModel;
+  walletReturnTimeoutMs?: number;
 }
 
 export interface BeginBinaryRedeemReviewInput {

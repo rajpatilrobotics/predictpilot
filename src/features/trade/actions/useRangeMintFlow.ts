@@ -3,6 +3,7 @@ import {
   type MintRangeTxPreview,
 } from '@/integrations/deepbook-predict/tx/mint-range';
 import type { RangeTradeAmountEstimator } from '@/integrations/deepbook-predict/tx/preview-range';
+import type { HistoryReadClient } from '@/integrations/deepbook-predict/api/history';
 import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
 import type { UsePredictManagerResult } from '@/features/manager/hooks/usePredictManager';
 import type { WalletStatusModel } from '@/features/wallet/useWalletStatus';
@@ -24,13 +25,17 @@ export interface UseRangeMintFlowOptions {
   askBounds?: OracleAskBoundsModel;
   estimateTradeAmounts?: RangeTradeAmountEstimator;
   executionTransport?: PredictTransactionTransport;
+  historyClient?: HistoryReadClient;
   manager: UsePredictManagerResult;
   managerSummary?: ManagerSummaryModel | null;
   nowMs?: number;
   oracleState: OracleStateModel;
   queryClient?: Pick<QueryClient, 'invalidateQueries'>;
   simulationTransport?: PredictSimulationTransport | null;
+  tradeRecoveryMaxAttempts?: number;
+  tradeRecoveryPollDelayMs?: number;
   walletStatus: WalletStatusModel;
+  walletReturnTimeoutMs?: number;
 }
 
 export interface BeginRangeMintReviewInput {

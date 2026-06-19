@@ -12,6 +12,7 @@ import {
   type RangeTradePreviewWarning,
 } from '@/integrations/deepbook-predict/tx/preview-range';
 import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
+import type { HistoryReadClient } from '@/integrations/deepbook-predict/api/history';
 import { createAppError, type PredictPilotError } from '@/lib/errors';
 import { getOracleStatus, type OracleStatusModel } from '@/lib/oracle-status';
 import type { PredictTransactionTransport } from '@/lib/tx-executor';
@@ -34,6 +35,7 @@ import {
   useStableInitialNowMs,
   validateTradeWalletManagerBase,
 } from './trade-flow-shared';
+import { recoverRangeTradeDigest } from './trade-action-recovery';
 
 export type RangeTradeFlowPhase = PredictTradeFlowPhase;
 
@@ -71,13 +73,17 @@ export interface UseRangeTradeExecutionFlowOptions<TPreview extends RangeTradeTx
   copy: RangeTradeFlowCopy;
   estimateTradeAmounts?: RangeTradeAmountEstimator;
   executionTransport?: PredictTransactionTransport;
+  historyClient?: HistoryReadClient;
   manager: UsePredictManagerResult;
   managerSummary?: ManagerSummaryModel | null;
   nowMs?: number;
   oracleState: OracleStateModel;
   queryClient?: Pick<QueryClient, 'invalidateQueries'>;
   simulationTransport?: PredictSimulationTransport | null;
+  tradeRecoveryMaxAttempts?: number;
+  tradeRecoveryPollDelayMs?: number;
   walletStatus: WalletStatusModel;
+  walletReturnTimeoutMs?: number;
 }
 
 export interface RangeTradeFlowCopy {
@@ -131,13 +137,17 @@ export function useRangeTradeExecutionFlow<TPreview extends RangeTradeTxPreviewB
   copy,
   estimateTradeAmounts,
   executionTransport,
+  historyClient,
   manager,
   managerSummary,
   nowMs,
   oracleState,
   queryClient,
   simulationTransport,
+  tradeRecoveryMaxAttempts,
+  tradeRecoveryPollDelayMs,
   walletStatus,
+  walletReturnTimeoutMs,
 }: UseRangeTradeExecutionFlowOptions<TPreview>) {
   const initialNowMs = useStableInitialNowMs(nowMs);
   const effectiveNowMs = nowMs ?? initialNowMs;
@@ -245,7 +255,16 @@ export function useRangeTradeExecutionFlow<TPreview extends RangeTradeTxPreviewB
     executionTransport,
     prepareReview,
     queryClient,
+    recoverSubmittedTransaction: async ({ builderPreview, requestedAtMs }) =>
+      recoverRangeTradeDigest({
+        client: historyClient,
+        maxAttempts: tradeRecoveryMaxAttempts,
+        pollDelayMs: tradeRecoveryPollDelayMs,
+        preview: builderPreview,
+        requestedAtMs,
+      }),
     simulationTransport,
+    walletReturnTimeoutMs,
   });
 }
 

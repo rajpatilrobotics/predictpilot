@@ -2,10 +2,12 @@ import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { predictDeploymentConfig } from '@/config/predict';
 import {
   useBinaryMintFlow,
   type BeginBinaryMintReviewInput,
 } from '@/features/trade/actions/useBinaryMintFlow';
+import type { HistoryReadClient } from '@/integrations/deepbook-predict/api/history';
 import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
 import type { PredictTransactionTransport } from '@/lib/tx-executor';
 import type { MarketKeyModel, QuoteAmount } from '@/types/predict';
@@ -20,6 +22,7 @@ import {
   tradeTestManagerId,
   tradeTestNowMs,
   tradeTestOracleId,
+  tradeTestOwner,
 } from './trade-test-helpers';
 
 const dAppKitMocks = vi.hoisted(() => ({
@@ -238,24 +241,78 @@ describe('useBinaryMintFlow', () => {
     expect(result.current.state.completedDigest).toBe('tx-digest');
     expect(result.current.state.refreshWarning?.code).toBe('POST_TX_REFRESH_FAILED');
   });
+
+  it('recovers a submitted binary mint digest when wallet handoff does not return', async () => {
+    const invalidateQueries = vi.fn().mockResolvedValue(undefined);
+    const signAndExecuteTransaction = vi.fn(() => new Promise<never>(() => undefined));
+    const waitForTransaction = vi.fn();
+    const historyClient = createHistoryClient({
+      fetchPositionMintHistoryDto: vi.fn().mockImplementation(() =>
+        Promise.resolve([
+          binaryMintDto({
+            checkpoint_timestamp_ms: Date.now() + 1_000,
+            digest: 'recovered-binary-mint-digest',
+          }),
+        ]),
+      ),
+    });
+    const { result } = renderBinaryMintFlow({
+      executionTransport: createTradeExecutionTransport({
+        signAndExecuteTransaction,
+        waitForTransaction,
+      }),
+      historyClient,
+      queryClient: { invalidateQueries },
+      simulationTransport: createReadyTradeSimulationTransport(),
+      tradeRecoveryMaxAttempts: 1,
+      tradeRecoveryPollDelayMs: 0,
+      walletReturnTimeoutMs: 1,
+    });
+    await beginReview(result, { marketKey: createMarketKey(), quantityQuote });
+
+    await act(async () => {
+      await result.current.requestSignature();
+    });
+
+    expect(result.current.state.phase).toBe('success');
+    expect(result.current.state.completedDigest).toBe('recovered-binary-mint-digest');
+    expect(result.current.state.executionResult).toMatchObject({
+      confirmedStatus: 'success',
+      digest: 'recovered-binary-mint-digest',
+      status: 'success',
+    });
+    expect(result.current.state.error).toBeNull();
+    expect(result.current.state.executionNotice).toBeNull();
+    expect(invalidateQueries).toHaveBeenCalled();
+    expect(signAndExecuteTransaction).toHaveBeenCalledTimes(1);
+    expect(waitForTransaction).not.toHaveBeenCalled();
+  });
 });
 
 function renderBinaryMintFlow({
   executionTransport,
+  historyClient,
   manager = createTradeManagerState(),
   managerSummary = createTradeManagerSummary(),
   oracleState = createTradeOracleState(),
   queryClient,
   simulationTransport = createReadyTradeSimulationTransport(),
+  tradeRecoveryMaxAttempts,
+  tradeRecoveryPollDelayMs,
   walletStatus = createTradeWalletStatus(),
+  walletReturnTimeoutMs,
 }: {
   executionTransport?: PredictTransactionTransport;
+  historyClient?: HistoryReadClient;
   manager?: ReturnType<typeof createTradeManagerState>;
   managerSummary?: ReturnType<typeof createTradeManagerSummary> | null;
   oracleState?: ReturnType<typeof createTradeOracleState>;
   queryClient?: Parameters<typeof useBinaryMintFlow>[0]['queryClient'];
   simulationTransport?: PredictSimulationTransport;
+  tradeRecoveryMaxAttempts?: number;
+  tradeRecoveryPollDelayMs?: number;
   walletStatus?: ReturnType<typeof createTradeWalletStatus>;
+  walletReturnTimeoutMs?: number;
 } = {}) {
   const providerClient = new QueryClient({
     defaultOptions: {
@@ -271,13 +328,17 @@ function renderBinaryMintFlow({
       useBinaryMintFlow({
         askBounds: presentAskBounds(),
         executionTransport,
+        historyClient,
         manager,
         managerSummary,
         nowMs: tradeTestNowMs,
         oracleState,
         queryClient,
         simulationTransport,
+        tradeRecoveryMaxAttempts,
+        tradeRecoveryPollDelayMs,
         walletStatus,
+        walletReturnTimeoutMs,
       }),
     { wrapper },
   );
@@ -304,5 +365,50 @@ function createMarketKey(): MarketKeyModel {
     expiryMs: oracleState.oracle.expiryMs,
     oracleId: tradeTestOracleId,
     strike1e9: oracleState.oracle.minStrike1e9,
+  };
+}
+
+function createHistoryClient(overrides: Partial<HistoryReadClient>): HistoryReadClient {
+  return {
+    fetchLpSuppliesHistoryDto: vi.fn(),
+    fetchLpWithdrawalsHistoryDto: vi.fn(),
+    fetchOracleTradesDto: vi.fn(),
+    fetchPositionMintHistoryDto: vi.fn(),
+    fetchPositionRedeemHistoryDto: vi.fn(),
+    fetchRangeMintHistoryDto: vi.fn(),
+    fetchRangeRedeemHistoryDto: vi.fn(),
+    ...overrides,
+  };
+}
+
+function binaryMintDto({
+  checkpoint_timestamp_ms = tradeTestNowMs,
+  digest = 'binary-mint-digest',
+}: {
+  checkpoint_timestamp_ms?: number;
+  digest?: string;
+}) {
+  const marketKey = createMarketKey();
+
+  return {
+    event_digest: `${digest}-event`,
+    digest,
+    sender: tradeTestOwner,
+    checkpoint: 1,
+    checkpoint_timestamp_ms,
+    tx_index: 0,
+    event_index: 0,
+    package: predictDeploymentConfig.packageId,
+    ask_price: 375_992_790,
+    cost: 375_992,
+    expiry: String(marketKey.expiryMs),
+    is_up: marketKey.direction === 'UP',
+    manager_id: tradeTestManagerId,
+    oracle_id: marketKey.oracleId,
+    predict_id: predictDeploymentConfig.predictObjectId,
+    quantity: String(quantityQuote),
+    quote_asset: predictDeploymentConfig.quoteAsset.type,
+    strike: String(marketKey.strike1e9),
+    trader: tradeTestOwner,
   };
 }
