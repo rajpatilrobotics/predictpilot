@@ -1,21 +1,17 @@
 /// <reference types="node" />
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { relative, sep } from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-
-const projectRoot = process.cwd();
-const sourceRoot = join(projectRoot, 'src');
-const ignoredRepoDirectories = new Set([
-  '.git',
-  '.vercel',
-  'coverage',
-  'dist',
-  'node_modules',
-  'playwright-report',
-  'test-results',
-]);
+import {
+  collectRepositoryFiles,
+  collectSourceFiles,
+  createTsxSourceFile,
+  getStringJsxAttribute,
+  projectRoot,
+  sourceRoot,
+} from './static-source-utils';
 
 const forbiddenSourcePatterns = [
   {
@@ -115,64 +111,13 @@ describe('static security regression checks', () => {
   });
 });
 
-function collectSourceFiles(directoryPath: string): string[] {
-  if (!existsSync(directoryPath)) {
-    return [];
-  }
-
-  return readdirSync(directoryPath).flatMap((entry) => {
-    const entryPath = join(directoryPath, entry);
-    const entryStats = statSync(entryPath);
-
-    if (entryStats.isDirectory()) {
-      if (entry === 'tests') {
-        return [];
-      }
-
-      return collectSourceFiles(entryPath);
-    }
-
-    if (entryStats.isFile() && /\.(ts|tsx)$/.test(entry)) {
-      return [entryPath];
-    }
-
-    return [];
-  });
-}
-
-function collectRepositoryFiles(directoryPath: string): string[] {
-  return readdirSync(directoryPath).flatMap((entry) => {
-    if (ignoredRepoDirectories.has(entry)) {
-      return [];
-    }
-
-    const entryPath = join(directoryPath, entry);
-    const entryStats = statSync(entryPath);
-
-    if (entryStats.isDirectory()) {
-      return collectRepositoryFiles(entryPath);
-    }
-
-    return entryStats.isFile() ? [entryPath] : [];
-  });
-}
-
 function collectUntypedButtonControls(filePath: string): string[] {
-  const source = readFileSync(filePath, 'utf8');
-  const sourceFile = ts.createSourceFile(
-    filePath,
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
+  const sourceFile = createTsxSourceFile(filePath);
   const violations: string[] = [];
 
   function visit(node: ts.Node): void {
     if (ts.isJsxOpeningElement(node) && node.tagName.getText(sourceFile) === 'button') {
-      const hasExplicitType = node.attributes.properties.some(
-        (attribute) => ts.isJsxAttribute(attribute) && attribute.name.getText(sourceFile) === 'type',
-      );
+      const hasExplicitType = getStringJsxAttribute(node, 'type', sourceFile) !== undefined;
 
       if (!hasExplicitType) {
         const { character, line } = sourceFile.getLineAndCharacterOfPosition(
