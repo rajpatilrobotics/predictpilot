@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App } from '@/app/App';
 import { appRoutes, resolveAppRoute } from '@/app/routes';
 import { AppProviders } from '@/app/providers';
+import { RouteErrorBoundary } from '@/components/layout/RouteErrorBoundary';
 import { RouteLoadingState } from '@/components/layout/RouteStates';
 
 vi.mock('@mysten/dapp-kit-react/ui', () => ({
@@ -136,6 +137,10 @@ function DAppKitHookSmoke() {
       <span data-testid="dapp-kit-wallet-status">{walletConnection.status}</span>
     </div>
   );
+}
+
+function BrokenRouteSurface(): null {
+  throw new Error('Simulated lazy route failure');
 }
 
 function renderAppAt(pathname: string = '/dashboard') {
@@ -307,6 +312,30 @@ describe('App shell', () => {
     render(<RouteLoadingState />);
 
     expect(screen.getByRole('status', { name: /Route loading state/i })).toBeInTheDocument();
+  });
+
+  it('renders a safe route recovery state when a route surface fails', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const onRecover = vi.fn();
+
+    render(
+      <RouteErrorBoundary
+        onRecover={onRecover}
+        resetKey="/markets"
+        routeTitle="Market Intelligence"
+      >
+        <BrokenRouteSurface />
+      </RouteErrorBoundary>,
+    );
+
+    expect(screen.getByRole('alert', { name: /Route error state/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Could not load Market Intelligence' }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Back to dashboard' }));
+    expect(onRecover).toHaveBeenCalledTimes(1);
+
+    consoleErrorSpy.mockRestore();
   });
 
   it('provides DApp Kit hooks to child components on Testnet', () => {

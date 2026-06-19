@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { TestnetBanner } from '@/components/banners/TestnetBanner';
 import { ExecutionRail } from '@/components/layout/ExecutionRail';
 import { MobileNav } from '@/components/layout/MobileNav';
+import { RouteErrorBoundary } from '@/components/layout/RouteErrorBoundary';
 import { RouteErrorState, RouteLoadingState } from '@/components/layout/RouteStates';
 import { SidebarNav } from '@/components/layout/SidebarNav';
 import { TopBar } from '@/components/layout/TopBar';
@@ -65,9 +66,15 @@ export function AppShell({ activeRoute, isNotFound, onNavigate, routes }: AppShe
                 title="Route not found"
               />
             ) : (
-              <Suspense fallback={<RouteLoadingState title={`Loading ${activeRoute.title}`} />}>
-                <RouteContent onNavigate={onNavigate} route={activeRoute} />
-              </Suspense>
+              <RouteErrorBoundary
+                onRecover={() => onNavigate('/dashboard')}
+                resetKey={activeRoute.href}
+                routeTitle={activeRoute.title}
+              >
+                <Suspense fallback={<RouteLoadingState title={`Loading ${activeRoute.title}`} />}>
+                  <RouteContent onNavigate={onNavigate} route={activeRoute} />
+                </Suspense>
+              </RouteErrorBoundary>
             )}
           </section>
         </main>
