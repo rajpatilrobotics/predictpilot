@@ -47,17 +47,6 @@ export function SidebarNav({ activeRoute, onNavigate, onPreload, routes }: Sideb
           </section>
         ))}
       </div>
-      <div className="border-t border-[#d9dfdc] pt-3 text-xs text-[#52615c]">
-        <div className="flex items-center justify-between gap-2">
-          <span className="font-semibold uppercase tracking-[0.1em]">Testnet</span>
-          <span className="border border-[#a8b7b0] bg-[#edf5f1] px-2 py-1 font-semibold text-[#315447]">
-            Live app
-          </span>
-        </div>
-        <p className="mt-3 leading-5">
-          Build commit and live sync badges can mount here after telemetry is approved.
-        </p>
-      </div>
     </nav>
   );
 }
