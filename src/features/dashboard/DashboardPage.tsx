@@ -606,7 +606,7 @@ function compareBigint(left: bigint, right: bigint) {
 function MetricCard({ metric }: { metric: MetricCardModel }) {
   return (
     <article className={`border p-4 ${metricCardClassName(metric.state)}`}>
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#64736e]">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#52615c]">
         {metric.label}
       </p>
       <p className="mt-3 text-2xl font-semibold text-[#17211d]">{metric.value}</p>
