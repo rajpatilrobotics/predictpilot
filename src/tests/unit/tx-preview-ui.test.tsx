@@ -160,6 +160,7 @@ describe('PP-048 transaction preview UI', () => {
       'href',
       expect.stringContaining('/txblock/'),
     );
+    expect(screen.queryByText(/Wallet response timed out/i)).not.toBeInTheDocument();
   });
 
   it('fires modal callbacks only from explicit user actions', () => {

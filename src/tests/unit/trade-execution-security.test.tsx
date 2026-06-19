@@ -5,13 +5,14 @@ import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import {
   usePredictTradeExecutionFlow,
+  type PredictSubmittedTransactionRecoveryResult,
   type PredictTradeRiskPreview,
   type PredictTradeTxPreviewBase,
   type PreparePredictTradeReviewResult,
 } from '@/features/trade/actions/usePredictTradeExecutionFlow';
 import type { PredictSimulationTransport } from '@/integrations/deepbook-predict/tx/simulate';
 import type { PredictTransactionTransport } from '@/lib/tx-executor';
-import type { ObjectId, QuoteAmount, SuiAddress } from '@/types/predict';
+import type { ObjectId, QuoteAmount, SuiAddress, TransactionDigest } from '@/types/predict';
 import type { AffectedObjectHint, PredictTransactionExecutionRequest } from '@/types/tx';
 
 const dAppKitMocks = vi.hoisted(() => ({
@@ -136,6 +137,77 @@ describe('usePredictTradeExecutionFlow security hardening', () => {
       queryKey: ['security-flow', managerId],
     });
   });
+
+  it('recovers an indexed digest before the wallet return timeout when the wallet promise hangs', async () => {
+    const executionTransport = createPendingExecutionTransport();
+    const recoverSubmittedTransaction = vi
+      .fn()
+      .mockResolvedValue(createRecoveredDigest('indexed-recovery-digest'));
+    const { result } = renderSharedFlow({
+      executionTransport,
+      recoverSubmittedTransaction,
+      walletRecoveryNoticeDelayMs: 0,
+      walletReturnTimeoutMs: 10_000,
+    });
+
+    await act(async () => {
+      await result.current.beginReview(undefined);
+    });
+    await act(async () => {
+      await result.current.requestSignature();
+    });
+
+    expect(result.current.state.phase).toBe('success');
+    expect(result.current.state.completedDigest).toBe('indexed-recovery-digest');
+    expect(recoverSubmittedTransaction).toHaveBeenCalledTimes(1);
+    expect(executionTransport.signAndExecuteTransaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps wallet rejection precedence when no digest has been recovered', async () => {
+    const executionTransport = createRejectedExecutionTransport();
+    const recoverSubmittedTransaction = vi.fn(
+      () => new Promise<PredictSubmittedTransactionRecoveryResult | null>(() => undefined),
+    );
+    const { result } = renderSharedFlow({
+      executionTransport,
+      recoverSubmittedTransaction,
+      walletReturnTimeoutMs: 10_000,
+    });
+
+    await act(async () => {
+      await result.current.beginReview(undefined);
+    });
+    await act(async () => {
+      await result.current.requestSignature();
+    });
+
+    expect(result.current.state.phase).toBe('failure');
+    expect(result.current.state.error?.code).toBe('TRANSACTION_REJECTED');
+    expect(result.current.state.completedDigest).toBeNull();
+    expect(recoverSubmittedTransaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns wallet response timeout when recovery finds no submitted proof', async () => {
+    const executionTransport = createPendingExecutionTransport();
+    const recoverSubmittedTransaction = vi.fn().mockResolvedValue(null);
+    const { result } = renderSharedFlow({
+      executionTransport,
+      recoverSubmittedTransaction,
+      walletRecoveryNoticeDelayMs: 0,
+      walletReturnTimeoutMs: 1,
+    });
+
+    await act(async () => {
+      await result.current.beginReview(undefined);
+    });
+    await act(async () => {
+      await result.current.requestSignature();
+    });
+
+    expect(result.current.state.phase).toBe('failure');
+    expect(result.current.state.error?.code).toBe('WALLET_RESPONSE_TIMEOUT');
+    expect(result.current.state.completedDigest).toBeNull();
+  });
 });
 
 function renderSharedFlow({
@@ -144,14 +216,22 @@ function renderSharedFlow({
   prepareReview = vi.fn().mockResolvedValue(createPreparedReview()),
   previewTtlMs,
   queryClient,
+  recoverSubmittedTransaction,
   simulationTransport = createReadySimulationTransport(),
+  walletRecoveryNoticeDelayMs,
+  walletReturnTimeoutMs,
 }: {
   executionTransport?: PredictTransactionTransport;
   nowMs?: () => number;
   prepareReview?: () => Promise<PreparePredictTradeReviewResult<TestTradePreview>>;
   previewTtlMs?: number;
   queryClient?: Parameters<typeof usePredictTradeExecutionFlow>[0]['queryClient'];
+  recoverSubmittedTransaction?: Parameters<
+    typeof usePredictTradeExecutionFlow<undefined, TestTradePreview>
+  >[0]['recoverSubmittedTransaction'];
   simulationTransport?: PredictSimulationTransport;
+  walletRecoveryNoticeDelayMs?: number;
+  walletReturnTimeoutMs?: number;
 } = {}) {
   const providerClient = new QueryClient({
     defaultOptions: {
@@ -175,7 +255,10 @@ function renderSharedFlow({
         prepareReview,
         previewTtlMs,
         queryClient,
+        recoverSubmittedTransaction,
         simulationTransport,
+        walletRecoveryNoticeDelayMs,
+        walletReturnTimeoutMs,
       }),
     { wrapper },
   );
@@ -258,5 +341,27 @@ function createExecutionTransport(): PredictTransactionTransport {
         effects: { status: { status: 'success' } },
       },
     }),
+  };
+}
+
+function createPendingExecutionTransport(): PredictTransactionTransport {
+  return {
+    signAndExecuteTransaction: vi.fn(() => new Promise<never>(() => undefined)),
+  };
+}
+
+function createRejectedExecutionTransport(): PredictTransactionTransport {
+  return {
+    signAndExecuteTransaction: vi.fn().mockRejectedValue(new Error('User rejected request')),
+  };
+}
+
+function createRecoveredDigest(
+  digest: TransactionDigest,
+): PredictSubmittedTransactionRecoveryResult {
+  return {
+    affectedObjects: [{ id: managerId, kind: 'manager', label: 'PredictManager' }],
+    confirmedStatus: 'unknown',
+    digest,
   };
 }

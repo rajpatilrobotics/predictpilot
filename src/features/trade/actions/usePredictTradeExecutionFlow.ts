@@ -37,6 +37,7 @@ export type PredictTradeFlowPhase =
 type PredictTradeOperationLock = 'review' | 'signature' | null;
 
 export const DEFAULT_WALLET_RETURN_TIMEOUT_MS = 180_000;
+export const DEFAULT_WALLET_RECOVERY_NOTICE_DELAY_MS = 8_000;
 export const WALLET_RETURN_RECOVERY_NOTICE =
   'Wallet approval may have completed; checking indexed Predict state for the submitted transaction.';
 
@@ -125,6 +126,7 @@ export interface UsePredictTradeExecutionFlowOptions<
     context: PredictSubmittedTransactionRecoveryContext<TPreview>,
   ) => Promise<PredictSubmittedTransactionRecoveryResult | null>;
   simulationTransport?: PredictSimulationTransport | null;
+  walletRecoveryNoticeDelayMs?: number;
   walletReturnTimeoutMs?: number;
 }
 
@@ -158,6 +160,7 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
   queryClient,
   recoverSubmittedTransaction,
   simulationTransport,
+  walletRecoveryNoticeDelayMs = DEFAULT_WALLET_RECOVERY_NOTICE_DELAY_MS,
   walletReturnTimeoutMs = DEFAULT_WALLET_RETURN_TIMEOUT_MS,
 }: UsePredictTradeExecutionFlowOptions<TInput, TPreview>) {
   const dAppKit = useDAppKit();
@@ -438,6 +441,7 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
         recoverSubmittedTransaction,
         service: `${copy.statusLabel}.requestSignature`,
         transport: defaultExecutionTransport,
+        walletRecoveryNoticeDelayMs,
         walletReturnTimeoutMs,
         requestedAtMs,
       });
@@ -489,6 +493,7 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
     state.phase,
     state.previewPreparedAtMs,
     state.simulationPreview,
+    walletRecoveryNoticeDelayMs,
     walletReturnTimeoutMs,
   ]);
 
@@ -514,6 +519,7 @@ async function executePredictTransactionWithWalletRecovery<
   requestedAtMs,
   service,
   transport,
+  walletRecoveryNoticeDelayMs,
   walletReturnTimeoutMs,
 }: {
   action: PredictTransactionAction;
@@ -526,63 +532,115 @@ async function executePredictTransactionWithWalletRecovery<
   requestedAtMs: number;
   service: string;
   transport: PredictTransactionTransport;
+  walletRecoveryNoticeDelayMs: number;
   walletReturnTimeoutMs: number;
 }): Promise<PredictTransactionExecutionResult> {
   if (walletReturnTimeoutMs <= 0) {
     return executePredictTransaction(executionRequest, transport);
   }
 
-  const executionPromise = executePredictTransaction(executionRequest, transport);
-  const walletTimeout = createWalletReturnTimeout(walletReturnTimeoutMs);
-  const raceResult = await Promise.race([
-    executionPromise.then((executionResult) => ({
+  const executionEventPromise = executePredictTransaction(executionRequest, transport).then(
+    (executionResult) => ({
       executionResult,
       kind: 'execution' as const,
-    })),
-    walletTimeout.promise.then(() => ({
-      kind: 'timeout' as const,
-    })),
-  ]);
-
-  walletTimeout.cancel();
-
-  if (raceResult.kind === 'execution') {
-    return raceResult.executionResult;
-  }
-
-  executionPromise.catch(() => undefined);
+    }),
+  );
+  const walletTimeout = createWalletReturnTimeout(walletReturnTimeoutMs);
+  const timeoutEventPromise = walletTimeout.promise.then(() => ({
+    kind: 'timeout' as const,
+  }));
 
   if (recoverSubmittedTransaction === undefined) {
-    return createWalletResponseTimeoutResult({ action, executionRequest, service });
-  }
+    const raceResult = await Promise.race([executionEventPromise, timeoutEventPromise]);
+    walletTimeout.cancel();
 
-  onRecoveryStart();
-
-  try {
-    const recovered = await recoverSubmittedTransaction({
-      action,
-      builderPreview,
-      executionRequest,
-      requestedAtMs,
-    });
-
-    if (recovered === null) {
-      return createWalletResponseTimeoutResult({ action, executionRequest, service });
+    if (raceResult.kind === 'execution') {
+      return raceResult.executionResult;
     }
 
-    return {
-      action,
-      affectedObjects: recovered.affectedObjects ?? executionRequest.affectedObjects ?? [],
-      confirmedStatus: recovered.confirmedStatus ?? 'unknown',
-      description: recovered.description ?? executionRequest.description,
-      digest: recovered.digest,
-      postSubmitWarning: recovered.postSubmitWarning,
-      sender: executionRequest.sender,
-      status: 'success',
-    };
-  } catch {
+    executionEventPromise.catch(() => undefined);
     return createWalletResponseTimeoutResult({ action, executionRequest, service });
   }
+
+  const recoveryNotice = createDelayedRecoveryNotice({
+    delayMs: walletRecoveryNoticeDelayMs,
+    onRecoveryStart,
+  });
+  const recoveryEventPromise = recoverSubmittedTransaction({
+    action,
+    builderPreview,
+    executionRequest,
+    requestedAtMs,
+  })
+    .then((recovered) =>
+      recovered === null
+        ? {
+            kind: 'recovery-empty' as const,
+          }
+        : {
+            kind: 'recovered' as const,
+            recovered,
+          },
+    )
+    .catch(() => ({
+      kind: 'recovery-empty' as const,
+    }));
+
+  try {
+    const raceResult = await Promise.race([
+      executionEventPromise,
+      recoveryEventPromise,
+      timeoutEventPromise,
+    ]);
+
+    if (raceResult.kind === 'execution') {
+      return raceResult.executionResult;
+    }
+
+    if (raceResult.kind === 'recovered') {
+      return createRecoveredExecutionResult({
+        action,
+        executionRequest,
+        recovered: raceResult.recovered,
+      });
+    }
+
+    if (raceResult.kind === 'recovery-empty') {
+      const fallbackRaceResult = await Promise.race([executionEventPromise, timeoutEventPromise]);
+
+      if (fallbackRaceResult.kind === 'execution') {
+        return fallbackRaceResult.executionResult;
+      }
+    }
+
+    return createWalletResponseTimeoutResult({ action, executionRequest, service });
+  } finally {
+    walletTimeout.cancel();
+    recoveryNotice.cancel();
+    executionEventPromise.catch(() => undefined);
+    recoveryEventPromise.catch(() => undefined);
+  }
+}
+
+function createRecoveredExecutionResult({
+  action,
+  executionRequest,
+  recovered,
+}: {
+  action: PredictTransactionAction;
+  executionRequest: PredictTransactionExecutionRequest;
+  recovered: PredictSubmittedTransactionRecoveryResult;
+}): PredictTransactionExecutionResult {
+  return {
+    action,
+    affectedObjects: recovered.affectedObjects ?? executionRequest.affectedObjects ?? [],
+    confirmedStatus: recovered.confirmedStatus ?? 'unknown',
+    description: recovered.description ?? executionRequest.description,
+    digest: recovered.digest,
+    postSubmitWarning: recovered.postSubmitWarning,
+    sender: executionRequest.sender,
+    status: 'success',
+  };
 }
 
 function createWalletResponseTimeoutResult({
@@ -623,6 +681,29 @@ function createWalletReturnTimeout(timeoutMs: number) {
       }
     },
     promise,
+  };
+}
+
+function createDelayedRecoveryNotice({
+  delayMs,
+  onRecoveryStart,
+}: {
+  delayMs: number;
+  onRecoveryStart: () => void;
+}) {
+  if (delayMs <= 0) {
+    onRecoveryStart();
+    return {
+      cancel: () => undefined,
+    };
+  }
+
+  const timeoutId = globalThis.setTimeout(onRecoveryStart, delayMs);
+
+  return {
+    cancel: () => {
+      globalThis.clearTimeout(timeoutId);
+    },
   };
 }
 
