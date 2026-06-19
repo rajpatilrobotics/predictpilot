@@ -30,8 +30,9 @@ export function WalletPanel({ variant = 'card' }: WalletPanelProps) {
       </div>
 
       <dl className="mt-3 grid gap-2 border-t border-[#d9dfdc] pt-3 sm:grid-cols-3">
-        <StatusItem label="Account" value={walletStatus.shortAddress ?? 'Not connected'} />
+        <StatusItem compact label="Account" value={walletStatus.shortAddress ?? 'Not connected'} />
         <StatusItem
+          compact
           label="Network"
           value={
             walletStatus.isExpectedNetwork
@@ -39,7 +40,7 @@ export function WalletPanel({ variant = 'card' }: WalletPanelProps) {
               : `${walletStatus.currentNetwork} (expected ${walletStatus.expectedNetwork})`
           }
         />
-        <StatusItem label="Status" value={walletStatus.statusLabel} />
+        <StatusItem compact label="Status" value={walletStatus.statusLabel} />
       </dl>
 
       {walletStatus.isWrongNetwork ? (
@@ -67,14 +68,16 @@ function CompactWalletPanel({ walletStatus }: { walletStatus: WalletStatus }) {
   return (
     <aside
       aria-label="Wallet status"
-      className={`w-full rounded border bg-white px-3 py-2 text-xs text-[#243832] shadow-sm lg:max-w-[380px] ${
+      className={`w-full rounded-sm border bg-white/80 px-2.5 py-1.5 text-xs text-[#243832] shadow-sm lg:max-w-[340px] ${
         walletStatus.isWrongNetwork ? 'border-[#bd6f53]' : 'border-[#c8d3ce]'
       }`}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-semibold uppercase tracking-[0.12em] text-[#446b5e]">Wallet</p>
-          <p className="truncate font-semibold text-[#17211d]">
+          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[#446b5e]">
+            Wallet
+          </p>
+          <p className="truncate text-[0.78rem] font-semibold text-[#17211d]">
             {walletStatus.walletName ?? 'No wallet connected'}
           </p>
         </div>
@@ -83,7 +86,7 @@ function CompactWalletPanel({ walletStatus }: { walletStatus: WalletStatus }) {
         </div>
       </div>
 
-      <dl className="mt-2 grid gap-x-3 gap-y-1 border-t border-[#d9dfdc] pt-2 sm:grid-cols-3">
+      <dl className="mt-1.5 grid gap-x-2 gap-y-0.5 border-t border-[#d9dfdc] pt-1.5 sm:grid-cols-3">
         <StatusItem label="Account" value={walletStatus.shortAddress ?? 'Not connected'} />
         <StatusItem
           label="Network"
@@ -99,14 +102,14 @@ function CompactWalletPanel({ walletStatus }: { walletStatus: WalletStatus }) {
       {walletStatus.isWrongNetwork ? (
         <p
           aria-label="Wrong network warning"
-          className="mt-2 rounded border border-[#f0c5b6] bg-[#fff4ef] px-2 py-1 font-medium text-[#6b3b2d]"
+          className="mt-1.5 rounded-sm border border-[#f0c5b6] bg-[#fff4ef] px-2 py-1 font-medium text-[#6b3b2d]"
           role="alert"
         >
           Wrong network. Switch to Testnet before using any execution flow.
         </p>
       ) : null}
 
-      <p className="mt-2 text-[#5d6b66]" aria-live="polite">
+      <p className="mt-1.5 truncate text-[#5d6b66]" aria-live="polite">
         {walletStatus.isConnected
           ? `${walletStatus.supportedIntentsCount} wallet intent${walletStatus.supportedIntentsCount === 1 ? '' : 's'} available.`
           : 'Connect a Sui wallet to continue on Testnet.'}
@@ -116,15 +119,28 @@ function CompactWalletPanel({ walletStatus }: { walletStatus: WalletStatus }) {
 }
 
 interface StatusItemProps {
+  compact?: boolean;
   label: string;
   value: string;
 }
 
-function StatusItem({ label, value }: StatusItemProps) {
+function StatusItem({ compact = false, label, value }: StatusItemProps) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-[0.08em] text-[#5d6b66]">{label}</dt>
-      <dd className="mt-1 break-words font-medium text-[#17211d]">{value}</dd>
+      <dt
+        className={`uppercase tracking-[0.08em] text-[#5d6b66] ${
+          compact ? 'text-[0.66rem]' : 'text-xs'
+        }`}
+      >
+        {label}
+      </dt>
+      <dd
+        className={`break-words font-medium text-[#17211d] ${
+          compact ? 'mt-0.5 text-[0.74rem]' : 'mt-1'
+        }`}
+      >
+        {value}
+      </dd>
     </div>
   );
 }
