@@ -186,6 +186,7 @@ export async function previewPredictTransactionSimulation({
   }
 
   try {
+    prepareTransactionForSimulation(request.transaction, request.sender);
     const rawResult = await transport.simulateTransaction({
       checksEnabled,
       include: PREDICT_SIMULATION_INCLUDE,
@@ -593,6 +594,13 @@ function isMoveType(value: unknown): value is MoveType {
 
 function isTransactionLike(transaction: unknown): transaction is Transaction {
   return isRecord(transaction) && typeof transaction.getData === 'function';
+}
+
+function prepareTransactionForSimulation(
+  transaction: Transaction,
+  sender: PredictTransactionExecutionRequest['sender'],
+) {
+  transaction.setSenderIfNotSet(sender);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

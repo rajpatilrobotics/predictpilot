@@ -5,6 +5,7 @@ import { predictProtocolTypes } from '@/integrations/deepbook-predict/targets';
 import {
   createLoadingPtbPreview,
   previewPredictTransactionSimulation,
+  type PredictSimulationTransportInput,
   type PredictSimulationTransport,
 } from '@/integrations/deepbook-predict/tx/simulate';
 import { isPredictTxPreviewReady, toPredictTxPreviewViewModel } from '@/features/tx/lib/tx-preview';
@@ -142,6 +143,35 @@ describe('PTB simulation preview adapter', () => {
         },
       ]),
     );
+  });
+
+  it('sets the transaction sender before calling the simulation transport', async () => {
+    const txBuild = createDepositRequest();
+    expect(txBuild.transaction.getData().sender).toBeNull();
+
+    const transport = {
+      simulateTransaction: vi.fn().mockImplementation((input: PredictSimulationTransportInput) => {
+        expect(input.transaction.getData().sender).toBe(sender);
+
+        return Promise.resolve({
+          $kind: 'Transaction',
+          Transaction: {
+            balanceChanges: [{ amount: '1' }],
+            effects: { status: { status: 'success' } },
+          },
+          commandResults: [],
+        });
+      }),
+    } satisfies PredictSimulationTransport;
+
+    const preview = await previewPredictTransactionSimulation({
+      builderPreview: txBuild.preview,
+      request: txBuild.executionRequest,
+      transport,
+    });
+
+    expect(preview.status).toBe('ready');
+    expect(txBuild.transaction.getData().sender).toBe(sender);
   });
 
   it('returns blocked state for failed simulation', async () => {
