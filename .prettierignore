@@ -3,6 +3,7 @@ dist
 coverage
 playwright-report
 test-results
+.playwright-cli
 .vite
 .pnpm-store
 pnpm-lock.yaml

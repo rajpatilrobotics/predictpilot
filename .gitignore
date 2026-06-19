@@ -146,6 +146,7 @@ vite.config.ts.timestamp-*
 dist/
 playwright-report/
 test-results/
+.playwright-cli/
 
 # Local wallet/test auth state
 playwright/.auth/

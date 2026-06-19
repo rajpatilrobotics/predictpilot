@@ -287,6 +287,41 @@ describe('useBinaryMintFlow', () => {
     expect(signAndExecuteTransaction).toHaveBeenCalledTimes(1);
     expect(waitForTransaction).not.toHaveBeenCalled();
   });
+
+  it('recovers a binary mint digest when the indexed checkpoint is slightly before the local request clock', async () => {
+    const checkpointTimestampMs = Date.now() - 60_000;
+    const invalidateQueries = vi.fn().mockResolvedValue(undefined);
+    const signAndExecuteTransaction = vi.fn(() => new Promise<never>(() => undefined));
+    const historyClient = createHistoryClient({
+      fetchPositionMintHistoryDto: vi.fn().mockResolvedValue([
+        binaryMintDto({
+          checkpoint_timestamp_ms: checkpointTimestampMs,
+          digest: 'recovered-early-checkpoint-digest',
+        }),
+      ]),
+    });
+    const { result } = renderBinaryMintFlow({
+      executionTransport: createTradeExecutionTransport({
+        signAndExecuteTransaction,
+      }),
+      historyClient,
+      queryClient: { invalidateQueries },
+      simulationTransport: createReadyTradeSimulationTransport(),
+      tradeRecoveryMaxAttempts: 1,
+      tradeRecoveryPollDelayMs: 0,
+      walletReturnTimeoutMs: 1,
+    });
+    await beginReview(result, { marketKey: createMarketKey(), quantityQuote });
+
+    await act(async () => {
+      await result.current.requestSignature();
+    });
+
+    expect(result.current.state.phase).toBe('success');
+    expect(result.current.state.completedDigest).toBe('recovered-early-checkpoint-digest');
+    expect(result.current.state.error).toBeNull();
+    expect(invalidateQueries).toHaveBeenCalled();
+  });
 });
 
 function renderBinaryMintFlow({

@@ -29,7 +29,8 @@ export interface TradeDigestRecoveryOptions<TPreview> {
 
 const DEFAULT_TRADE_RECOVERY_ATTEMPTS = 60;
 const DEFAULT_TRADE_RECOVERY_POLL_DELAY_MS = 2_000;
-const RECOVERY_TIMESTAMP_TOLERANCE_MS = 10_000n;
+const RECOVERY_TIMESTAMP_EARLY_TOLERANCE_MS = 120_000n;
+const RECOVERY_TIMESTAMP_LATE_TOLERANCE_MS = 10_000n;
 
 export async function recoverBinaryTradeDigest<TPreview extends BinaryTradeTxPreviewBase>({
   client,
@@ -181,7 +182,11 @@ function newestDigest<
 }
 
 function isFreshEnough(timestampMs: bigint, requestedAtMs: number): boolean {
-  return timestampMs + RECOVERY_TIMESTAMP_TOLERANCE_MS >= BigInt(requestedAtMs);
+  const requestedAt = BigInt(requestedAtMs);
+  return (
+    timestampMs + RECOVERY_TIMESTAMP_EARLY_TOLERANCE_MS >= requestedAt &&
+    timestampMs <= requestedAt + RECOVERY_TIMESTAMP_LATE_TOLERANCE_MS
+  );
 }
 
 function isRecordKindForBinaryAction(
