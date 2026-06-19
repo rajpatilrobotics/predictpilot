@@ -109,6 +109,15 @@ describe('static security regression checks', () => {
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
+
+  it('requires safe rel attributes for external blank-target links', () => {
+    const violations = collectSourceFiles(sourceRoot)
+      .filter((filePath) => filePath.endsWith('.tsx'))
+      .flatMap(collectUnsafeBlankTargetLinks)
+      .sort();
+
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
 });
 
 function collectUntypedButtonControls(filePath: string): string[] {
@@ -136,4 +145,43 @@ function collectUntypedButtonControls(filePath: string): string[] {
   visit(sourceFile);
 
   return violations;
+}
+
+function collectUnsafeBlankTargetLinks(filePath: string): string[] {
+  const sourceFile = createTsxSourceFile(filePath);
+  const violations: string[] = [];
+
+  function visit(node: ts.Node): void {
+    if (ts.isJsxOpeningElement(node) && node.tagName.getText(sourceFile) === 'a') {
+      const target = getStringJsxAttribute(node, 'target', sourceFile);
+
+      if (target === '_blank' && !hasSafeBlankTargetRel(node, sourceFile)) {
+        const { character, line } = sourceFile.getLineAndCharacterOfPosition(
+          node.getStart(sourceFile),
+        );
+        const displayPath = relative(projectRoot, filePath);
+        violations.push(
+          `${displayPath}:${line + 1}:${character + 1} - target="_blank" links need rel="noopener noreferrer"`,
+        );
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return violations;
+}
+
+function hasSafeBlankTargetRel(node: ts.JsxOpeningLikeElement, sourceFile: ts.SourceFile): boolean {
+  const rel = getStringJsxAttribute(node, 'rel', sourceFile);
+
+  if (rel === undefined) {
+    return false;
+  }
+
+  const relTokens = new Set(rel.split(/\s+/).filter(Boolean));
+
+  return relTokens.has('noopener') && relTokens.has('noreferrer');
 }
