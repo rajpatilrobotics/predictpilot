@@ -53,7 +53,28 @@ describe('global stylesheet accessibility safeguards', () => {
   it('keeps static aria-labelledby references connected to local heading IDs', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
-      .flatMap(collectBrokenStaticAriaLabelledByReferences)
+      .flatMap((filePath) =>
+        collectBrokenStaticAriaIdReferences({
+          attributeName: 'aria-labelledby',
+          filePath,
+          purpose: 'label',
+        }),
+      )
+      .sort();
+
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
+
+  it('keeps static aria-describedby references connected to local description IDs', () => {
+    const violations = collectSourceFiles(sourceRoot)
+      .filter((filePath) => filePath.endsWith('.tsx'))
+      .flatMap((filePath) =>
+        collectBrokenStaticAriaIdReferences({
+          attributeName: 'aria-describedby',
+          filePath,
+          purpose: 'description',
+        }),
+      )
       .sort();
 
     expect(violations, violations.join('\n')).toEqual([]);
@@ -423,26 +444,36 @@ function createInteractiveNameViolation(
   return `${relative(projectRoot, filePath)}:${line + 1}:${character + 1} - ${tagName} needs visible text or an accessible name`;
 }
 
-function collectBrokenStaticAriaLabelledByReferences(filePath: string): string[] {
+interface StaticAriaIdReferenceCheck {
+  attributeName: 'aria-describedby' | 'aria-labelledby';
+  filePath: string;
+  purpose: 'description' | 'label';
+}
+
+function collectBrokenStaticAriaIdReferences({
+  attributeName,
+  filePath,
+  purpose,
+}: StaticAriaIdReferenceCheck): string[] {
   const sourceFile = createTsxSourceFile(filePath);
   const localLabelIds = collectLocalLabelIds(sourceFile);
   const violations: string[] = [];
 
   function visit(node: ts.Node): void {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
-      const ariaLabelledBy = getStringJsxAttribute(node, 'aria-labelledby', sourceFile);
+      const ariaReference = getStringJsxAttribute(node, attributeName, sourceFile);
 
-      if (ariaLabelledBy !== undefined) {
-        const missingIds = ariaLabelledBy
+      if (ariaReference !== undefined) {
+        const missingIds = ariaReference
           .split(/\s+/)
-          .filter((labelId) => labelId.length > 0 && !localLabelIds.has(labelId));
+          .filter((referencedId) => referencedId.length > 0 && !localLabelIds.has(referencedId));
 
         if (missingIds.length > 0) {
           const { character, line } = sourceFile.getLineAndCharacterOfPosition(
             node.getStart(sourceFile),
           );
           violations.push(
-            `${relative(projectRoot, filePath)}:${line + 1}:${character + 1} - aria-labelledby references missing local id(s): ${missingIds.join(', ')}`,
+            `${relative(projectRoot, filePath)}:${line + 1}:${character + 1} - ${attributeName} references missing local ${purpose} id(s): ${missingIds.join(', ')}`,
           );
         }
       }

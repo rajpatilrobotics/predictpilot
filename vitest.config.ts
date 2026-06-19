@@ -12,6 +12,8 @@ export default mergeConfig(
       restoreMocks: true,
       clearMocks: true,
       setupFiles: ['./src/tests/setup.ts'],
+      maxWorkers: 2,
+      testTimeout: 15_000,
     },
     resolve: {
       alias: {

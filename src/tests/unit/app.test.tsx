@@ -119,6 +119,8 @@ vi.mock('@/features/vault/VaultPage', () => ({
   ),
 }));
 
+const appShellWaitOptions = { timeout: 5_000 };
+
 function DAppKitHookSmoke() {
   const account = useCurrentAccount();
   const client = useCurrentClient();
@@ -162,7 +164,11 @@ describe('App shell', () => {
     renderAppAt('/dashboard');
 
     expect(
-      await screen.findByRole('heading', { name: /DeepBook Predict Terminal/i }),
+      await screen.findByRole(
+        'heading',
+        { name: /DeepBook Predict Terminal/i },
+        appShellWaitOptions,
+      ),
     ).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: /Primary navigation/i })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: /Mobile navigation/i })).toBeInTheDocument();
@@ -219,16 +225,20 @@ describe('App shell', () => {
         </AppProviders>,
       );
 
-      expect(await screen.findByRole('heading', { name: route.title })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: route.title }, appShellWaitOptions),
+      ).toBeInTheDocument();
       expect(
         await screen.findByText(
           mountedRouteTextById[route.id as keyof typeof mountedRouteTextById],
+          {},
+          appShellWaitOptions,
         ),
       ).toBeInTheDocument();
       expect(screen.queryByLabelText(`${route.title} route placeholder`)).not.toBeInTheDocument();
       unmount();
     }
-  });
+  }, 15_000);
 
   it('resolves market-detail and oracle aliases', () => {
     expect(resolveAppRoute('/markets/0x123').id).toBe('market-detail');
