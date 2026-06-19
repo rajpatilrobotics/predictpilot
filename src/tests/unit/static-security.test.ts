@@ -212,6 +212,15 @@ describe('static security regression checks', () => {
     expect(violations, violations.join('\n')).toEqual([]);
   });
 
+  it('keeps direct console calls behind the telemetry-safe logger', () => {
+    const violations = collectSourceFiles(sourceRoot)
+      .filter((filePath) => !isCentralLogger(filePath))
+      .flatMap(collectDirectConsoleCalls)
+      .sort();
+
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
+
   it('keeps browser lifecycle APIs paired with local cleanup', () => {
     const violations = collectSourceFiles(sourceRoot)
       .flatMap(collectUnpairedBrowserCleanupApis)
@@ -321,6 +330,10 @@ function isCentralHttpClient(filePath: string): boolean {
   return relative(projectRoot, filePath).split(sep).join('/') === 'src/lib/http.ts';
 }
 
+function isCentralLogger(filePath: string): boolean {
+  return relative(projectRoot, filePath).split(sep).join('/') === 'src/lib/logger.ts';
+}
+
 function collectDirectFetchCalls(filePath: string): string[] {
   const sourceFile = createTsxSourceFile(filePath);
   const violations: string[] = [];
@@ -337,6 +350,33 @@ function collectDirectFetchCalls(filePath: string): string[] {
       const displayPath = relative(projectRoot, filePath);
       violations.push(
         `${displayPath}:${line + 1}:${character + 1} - use src/lib/http.ts so network responses stay timeout/retry/schema validated`,
+      );
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return violations;
+}
+
+function collectDirectConsoleCalls(filePath: string): string[] {
+  const sourceFile = createTsxSourceFile(filePath);
+  const violations: string[] = [];
+
+  function visit(node: ts.Node): void {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      node.expression.expression.getText(sourceFile) === 'console'
+    ) {
+      const { character, line } = sourceFile.getLineAndCharacterOfPosition(
+        node.getStart(sourceFile),
+      );
+      const displayPath = relative(projectRoot, filePath);
+      violations.push(
+        `${displayPath}:${line + 1}:${character + 1} - use appLogger so logs stay sanitized and disabled in production`,
       );
     }
 
