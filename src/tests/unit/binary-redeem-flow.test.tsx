@@ -258,7 +258,7 @@ describe('useBinaryRedeemFlow', () => {
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([
           binaryRedeemDto({
-            checkpoint_timestamp_ms: Date.now() + 1_000,
+            checkpoint_timestamp_ms: Date.now() + 90_000,
             digest: 'recovered-binary-redeem-digest',
           }),
         ]),
