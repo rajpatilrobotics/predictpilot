@@ -1,3 +1,4 @@
+import { type KeyboardEvent, useEffect, useId, useRef } from 'react';
 import type { PredictPtbSimulationPreview } from '@/integrations/deepbook-predict/tx/simulate';
 import { RiskPreview, type RiskPreviewProps } from '@/features/tx/RiskPreview';
 import { TransactionPreview } from '@/features/tx/TransactionPreview';
@@ -23,15 +24,72 @@ export function ExecutionModal({
   risk,
   title = 'Execution review',
 }: ExecutionModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const descriptionId = useId();
+
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+
+    const previouslyFocusedElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusableElement = getFocusableElements(dialogRef.current)[0] ?? dialogRef.current;
+
+    focusableElement?.focus();
+
+    return () => {
+      previouslyFocusedElement?.focus();
+    };
+  }, [open]);
+
   if (!open) {
     return null;
   }
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      onClose();
+      return;
+    }
+
+    if (event.key !== 'Tab') {
+      return;
+    }
+
+    const focusableElements = getFocusableElements(dialogRef.current);
+
+    if (focusableElements.length === 0) {
+      event.preventDefault();
+      dialogRef.current?.focus();
+      return;
+    }
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements.at(-1);
+
+    if (event.shiftKey && document.activeElement === firstElement) {
+      event.preventDefault();
+      lastElement?.focus();
+      return;
+    }
+
+    if (!event.shiftKey && document.activeElement === lastElement) {
+      event.preventDefault();
+      firstElement.focus();
+    }
+  };
+
   return (
     <div
-      aria-label={title}
+      aria-describedby={descriptionId}
+      aria-labelledby={titleId}
       aria-modal="true"
       className="fixed inset-0 z-50 overflow-y-auto bg-[#07110d]/70 p-3 sm:p-4"
+      onKeyDown={handleKeyDown}
+      ref={dialogRef}
       role="dialog"
       tabIndex={-1}
     >
@@ -42,8 +100,10 @@ export function ExecutionModal({
               <p className="text-xs font-semibold uppercase text-[#446b5e]">
                 PredictPilot pre-sign terminal
               </p>
-              <h2 className="mt-2 text-2xl font-semibold text-[#17211d]">{title}</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#53645f]">
+              <h2 className="mt-2 text-2xl font-semibold text-[#17211d]" id={titleId}>
+                {title}
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#53645f]" id={descriptionId}>
                 Review risk, simulation, and affected Predict objects before requesting a wallet
                 signature.
               </p>
@@ -71,4 +131,16 @@ export function ExecutionModal({
       </div>
     </div>
   );
+}
+
+function getFocusableElements(container: HTMLElement | null) {
+  if (container === null) {
+    return [];
+  }
+
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter((element) => !element.hasAttribute('aria-hidden'));
 }

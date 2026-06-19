@@ -13,22 +13,16 @@ import type {
 import { createAppError } from '@/lib/errors';
 import type { ObjectId, SuiAddress } from '@/types/predict';
 
-const sender =
-  '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
-const managerId =
-  '0x640e9ab9bdd5c68e57ddf293260ed319abf85ea0d6d0da076952de023fe961b3' as ObjectId;
-const oracleId =
-  '0x175331eba3cbb60face9193d05d2efac052868d6cccaf80a62775e2e7eb0b462' as ObjectId;
+const sender = '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
+const managerId = '0x640e9ab9bdd5c68e57ddf293260ed319abf85ea0d6d0da076952de023fe961b3' as ObjectId;
+const oracleId = '0x175331eba3cbb60face9193d05d2efac052868d6cccaf80a62775e2e7eb0b462' as ObjectId;
 
 describe('PP-048 transaction preview UI', () => {
   it('enables wallet signature only for ready simulation previews', () => {
     const onRequestSignature = vi.fn();
 
     render(
-      <TransactionPreview
-        onRequestSignature={onRequestSignature}
-        preview={createReadyPreview()}
-      />,
+      <TransactionPreview onRequestSignature={onRequestSignature} preview={createReadyPreview()} />,
     );
 
     const signButton = screen.getByRole('button', { name: 'Request wallet signature' });
@@ -47,12 +41,7 @@ describe('PP-048 transaction preview UI', () => {
     (_status, preview) => {
       const onRequestSignature = vi.fn();
 
-      render(
-        <TransactionPreview
-          onRequestSignature={onRequestSignature}
-          preview={preview}
-        />,
-      );
+      render(<TransactionPreview onRequestSignature={onRequestSignature} preview={preview} />);
 
       const signButton = screen.getByRole('button', { name: 'Request wallet signature' });
       expect(signButton).toBeDisabled();
@@ -69,8 +58,12 @@ describe('PP-048 transaction preview UI', () => {
     render(<TransactionPreview preview={createReadyPreview()} />);
 
     const warnings = screen.getByRole('list', { name: 'Transaction warnings' });
-    expect(within(warnings).getByText('Ask bounds are present but not fully decoded.')).toBeInTheDocument();
-    expect(within(warnings).getByText('Simulation returned no balance changes.')).toBeInTheDocument();
+    expect(
+      within(warnings).getByText('Ask bounds are present but not fully decoded.'),
+    ).toBeInTheDocument();
+    expect(
+      within(warnings).getByText('Simulation returned no balance changes.'),
+    ).toBeInTheDocument();
   });
 
   it('shows estimated cost and payout risk rows without inventing values', () => {
@@ -166,15 +159,38 @@ describe('PP-048 transaction preview UI', () => {
     expect(onRequestSignature).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
 
-    rerender(
+    rerender(<ExecutionModal onClose={onClose} open={false} preview={createReadyPreview()} />);
+
+    expect(screen.queryByRole('dialog', { name: 'Execution review' })).not.toBeInTheDocument();
+  });
+
+  it('keeps keyboard focus inside the execution modal and closes with Escape', () => {
+    const onClose = vi.fn();
+
+    render(
       <ExecutionModal
         onClose={onClose}
-        open={false}
+        onRequestSignature={vi.fn()}
+        onSimulate={vi.fn()}
+        open
         preview={createReadyPreview()}
       />,
     );
 
-    expect(screen.queryByRole('dialog', { name: 'Execution review' })).not.toBeInTheDocument();
+    const dialog = screen.getByRole('dialog', { name: 'Execution review' });
+    const closeButton = screen.getByRole('button', { name: 'Close execution review' });
+    const signButton = screen.getByRole('button', { name: 'Request wallet signature' });
+
+    expect(closeButton).toHaveFocus();
+
+    fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true });
+    expect(signButton).toHaveFocus();
+
+    fireEvent.keyDown(dialog, { key: 'Tab' });
+    expect(closeButton).toHaveFocus();
+
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 
