@@ -216,24 +216,6 @@ describe('App shell', () => {
     }
   });
 
-  it('keeps unimplemented routes as safe placeholders', () => {
-    const placeholderRouteIds = new Set<string>();
-
-    for (const route of appRoutes.filter((item) => placeholderRouteIds.has(item.id))) {
-      window.history.pushState({}, '', route.href);
-      const { unmount } = render(
-        <AppProviders>
-          <App />
-        </AppProviders>,
-      );
-
-      expect(screen.getByRole('heading', { name: route.title })).toBeInTheDocument();
-      expect(screen.getByLabelText(`${route.title} route placeholder`)).toBeInTheDocument();
-      expect(screen.getByText(route.focus)).toBeInTheDocument();
-      unmount();
-    }
-  });
-
   it('resolves market-detail and oracle aliases', () => {
     expect(resolveAppRoute('/markets/0x123').id).toBe('market-detail');
     expect(resolveAppRoute('/svi').id).toBe('svi');
