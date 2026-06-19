@@ -41,6 +41,15 @@ describe('global stylesheet accessibility safeguards', () => {
     expect(violations, violations.join('\n')).toEqual([]);
   });
 
+  it('keeps interactive buttons and links accessible by name', () => {
+    const violations = collectSourceFiles(sourceRoot)
+      .filter((filePath) => filePath.endsWith('.tsx'))
+      .flatMap(collectUnnamedInteractiveControls)
+      .sort();
+
+    expect(violations, violations.join('\n')).toEqual([]);
+  });
+
   it('keeps click handlers on keyboard-accessible intrinsic elements', () => {
     const violations = collectSourceFiles(sourceRoot)
       .filter((filePath) => filePath.endsWith('.tsx'))
@@ -261,6 +270,112 @@ function createAccessibilityViolation(
   const { character, line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
 
   return `${relative(projectRoot, filePath)}:${line + 1}:${character + 1} - ${tagName} needs an accessible image name or aria-hidden="true"`;
+}
+
+function collectUnnamedInteractiveControls(filePath: string): string[] {
+  const sourceFile = createTsxSourceFile(filePath);
+  const violations: string[] = [];
+
+  function visit(node: ts.Node): void {
+    if (ts.isJsxElement(node)) {
+      const openingElement = node.openingElement;
+      const tagName = openingElement.tagName.getText(sourceFile);
+
+      if (
+        requiresInteractiveNameCheck(openingElement, tagName, sourceFile) &&
+        !hasInteractiveAccessibleName(openingElement, node.children, sourceFile)
+      ) {
+        violations.push(
+          createInteractiveNameViolation(filePath, sourceFile, openingElement, tagName),
+        );
+      }
+
+      node.children.forEach(visit);
+      return;
+    }
+
+    if (ts.isJsxSelfClosingElement(node)) {
+      const tagName = node.tagName.getText(sourceFile);
+
+      if (
+        requiresInteractiveNameCheck(node, tagName, sourceFile) &&
+        !hasInteractiveAccessibleName(node, [], sourceFile)
+      ) {
+        violations.push(createInteractiveNameViolation(filePath, sourceFile, node, tagName));
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return violations;
+}
+
+function requiresInteractiveNameCheck(
+  node: ts.JsxOpeningLikeElement,
+  tagName: string,
+  sourceFile: ts.SourceFile,
+): boolean {
+  if (!isIntrinsicElement(tagName)) {
+    return false;
+  }
+
+  return tagName === 'button' || (tagName === 'a' && hasJsxAttribute(node, 'href', sourceFile));
+}
+
+function hasInteractiveAccessibleName(
+  node: ts.JsxOpeningLikeElement,
+  children: readonly ts.JsxChild[],
+  sourceFile: ts.SourceFile,
+): boolean {
+  return (
+    hasJsxAttribute(node, 'aria-label', sourceFile) ||
+    hasJsxAttribute(node, 'aria-labelledby', sourceFile) ||
+    hasJsxAttribute(node, 'title', sourceFile) ||
+    hasVisibleAccessibleText(children, sourceFile)
+  );
+}
+
+function hasVisibleAccessibleText(
+  children: readonly ts.JsxChild[],
+  sourceFile: ts.SourceFile,
+): boolean {
+  return children.some((child) => {
+    if (ts.isJsxText(child)) {
+      return child.getText(sourceFile).trim().length > 0;
+    }
+
+    if (ts.isJsxExpression(child)) {
+      return child.expression !== undefined;
+    }
+
+    if (ts.isJsxElement(child)) {
+      if (isIntentionallyHiddenImage(child.openingElement, sourceFile)) {
+        return false;
+      }
+
+      return hasVisibleAccessibleText(child.children, sourceFile);
+    }
+
+    if (ts.isJsxSelfClosingElement(child)) {
+      return hasJsxAttribute(child, 'aria-label', sourceFile);
+    }
+
+    return false;
+  });
+}
+
+function createInteractiveNameViolation(
+  filePath: string,
+  sourceFile: ts.SourceFile,
+  node: ts.JsxOpeningLikeElement,
+  tagName: string,
+): string {
+  const { character, line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+
+  return `${relative(projectRoot, filePath)}:${line + 1}:${character + 1} - ${tagName} needs visible text or an accessible name`;
 }
 
 function collectNonInteractiveClickHandlers(filePath: string): string[] {
