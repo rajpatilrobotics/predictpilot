@@ -9,6 +9,7 @@ export type AppRouteId =
   | 'oracle-status'
   | 'pnl'
   | 'portfolio'
+  | 'proof'
   | 'strategy'
   | 'svi'
   | 'vault';
@@ -40,6 +41,7 @@ const routeSpecs = [
   'vault|/vault|Assets|Vault / PLP|Vault|Vault liquidity, PLP, and exposure|Vault and PLP view for shared liquidity, exposure, supply review, and withdraw review.|Vault actions|Supply DUSDC or withdraw PLP through guarded simulation and wallet signature review.',
   'history|/history|Assets|History|History|Server-backed activity and digest proof|Server-backed activity timeline for mints, redeems, LP activity, and digest proof context.|Activity proof|Use history after execution to confirm indexed activity and capture final demo evidence.',
   'demo|/demo|Demo|Demo Mode|Demo|Judge walkthrough and proof checkpoints|Honest offline demo walkthrough for judges when wallet funding or live proof is unavailable.|Demo flow|Walk through the intended proof story without fake wallet signatures or fabricated digests.',
+  'proof|/proof|Demo|Proof Mode|Proof|Judge-verifiable execution proof|Source-labeled proof cockpit for wallet readiness, chain digest evidence, indexed reconciliation, and local session context.|Proof mode|Verify wallet, chain digest, indexed refresh, and proof readiness without fake transaction evidence.',
 ] as const;
 
 export const appRoutes = routeSpecs.map(parseRouteSpec) as readonly AppRoute[];
@@ -99,6 +101,7 @@ function isListedRouteId(id: string | undefined): id is ListedAppRouteId {
     id === 'oracle-status' ||
     id === 'pnl' ||
     id === 'portfolio' ||
+    id === 'proof' ||
     id === 'strategy' ||
     id === 'svi' ||
     id === 'vault'

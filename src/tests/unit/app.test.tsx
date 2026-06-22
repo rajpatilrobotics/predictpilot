@@ -91,6 +91,15 @@ vi.mock('@/features/portfolio/PnlPage', () => ({
   ),
 }));
 
+vi.mock('@/features/proof/ProofModePage', () => ({
+  ProofModePage: () => (
+    <article aria-label="Proof mode page">
+      <h1>Proof Mode</h1>
+      <p>Proof mode page mounted</p>
+    </article>
+  ),
+}));
+
 vi.mock('@/features/history/HistoryPage', () => ({
   HistoryPage: () => (
     <article aria-label="History page">
@@ -212,6 +221,7 @@ describe('App shell', () => {
       'oracle-status': 'Oracle status page mounted',
       pnl: 'PnL page mounted',
       portfolio: 'Portfolio page mounted',
+      proof: 'Proof mode page mounted',
       strategy: 'Strategy route mounted',
       svi: 'SVI surface page mounted',
       vault: 'Vault page mounted',

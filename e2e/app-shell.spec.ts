@@ -15,6 +15,7 @@ const shellRoutes = [
   { heading: 'Vault / PLP', path: '/vault' },
   { heading: 'History', path: '/history' },
   { heading: 'Demo Mode', path: '/demo' },
+  { heading: 'Proof Mode', path: '/proof' },
 ] as const;
 
 test('loads the PredictPilot app shell', async ({ page }) => {
@@ -39,6 +40,11 @@ test('reaches mounted and placeholder routes from navigation', async ({ page }) 
 
   await page.getByRole('link', { name: 'Demo Mode' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Demo Mode' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Proof Mode' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Proof Mode' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /request wallet signature/i })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /view transaction/i })).toHaveCount(0);
 });
 
 test('overview navigation preloads and switches quickly from execute routes', async ({ page }) => {

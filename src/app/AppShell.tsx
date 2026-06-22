@@ -14,6 +14,7 @@ import {
   loadOracleStatusPage,
   loadPnlPage,
   loadPortfolioPage,
+  loadProofModePage,
   loadPredictManagerPage,
   loadSVISurfacePage,
   loadVaultPage,
@@ -49,6 +50,9 @@ const PnlPage = lazy(async () => ({
 }));
 const PortfolioPage = lazy(async () => ({
   default: (await loadPortfolioPage()).PortfolioPage,
+}));
+const ProofModePage = lazy(async () => ({
+  default: (await loadProofModePage()).ProofModePage,
 }));
 const MarketDetailPage = lazy(async () => ({
   default: (await loadMarketDetailPage()).MarketDetailPage,
@@ -150,6 +154,8 @@ function RouteContent({
       return <OracleStatusPage oracleId={getOracleIdFromQuery(route.href)} />;
     case 'portfolio':
       return <PortfolioPage />;
+    case 'proof':
+      return <ProofModePage />;
     case 'pnl':
       return <PnlPage />;
     case 'history':

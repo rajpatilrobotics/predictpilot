@@ -38,6 +38,10 @@ export function loadPnlPage() {
   return loadRouteModule('pnl', () => import('@/features/portfolio/PnlPage'));
 }
 
+export function loadProofModePage() {
+  return loadRouteModule('proof', () => import('@/features/proof/ProofModePage'));
+}
+
 export function loadPortfolioPage() {
   return loadRouteModule('portfolio', () => import('@/features/portfolio/PortfolioPage'));
 }
@@ -104,6 +108,8 @@ function loadRouteModuleById(routeId: RouteModuleId) {
       return loadPnlPage();
     case 'portfolio':
       return loadPortfolioPage();
+    case 'proof':
+      return loadProofModePage();
     case 'svi':
       return loadSVISurfacePage();
     case 'vault':

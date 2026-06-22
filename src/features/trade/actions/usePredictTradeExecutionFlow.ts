@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useCurrentClient, useDAppKit } from '@mysten/dapp-kit-react';
 import { useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query';
 import type { Transaction } from '@mysten/sui/transactions';
+import { useProofSession } from '@/features/proof/proof-session-context';
 import type { RiskPreviewProps } from '@/features/tx/RiskPreview';
 import {
   createLoadingPtbPreview,
@@ -167,6 +168,7 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
   const currentClient = useCurrentClient();
   const defaultQueryClient = useQueryClient();
   const invalidationClient = queryClient ?? defaultQueryClient;
+  const proofSession = useProofSession();
   const operationLockRef = useRef<PredictTradeOperationLock>(null);
   const [state, setState] = useState<PredictTradeFlowState<TPreview>>(() =>
     createInitialPredictTradeFlowState<TPreview>(),
@@ -278,6 +280,15 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
           transport: defaultSimulationTransport,
         });
 
+        if (simulationPreview.status === 'ready') {
+          proofSession.recordPreparedProof({
+            builderPreview: prepared.builderPreview,
+            executionRequest: prepared.executionRequest,
+            preparedAtMs,
+            simulationStatus: simulationPreview.status,
+          });
+        }
+
         setState((current) => ({
           ...current,
           error: 'error' in simulationPreview ? simulationPreview.error : null,
@@ -292,7 +303,15 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
         operationLockRef.current = null;
       }
     },
-    [action, copy.statusLabel, defaultSimulationTransport, nowMs, prepareReview, state.phase],
+    [
+      action,
+      copy.statusLabel,
+      defaultSimulationTransport,
+      nowMs,
+      prepareReview,
+      proofSession,
+      state.phase,
+    ],
   );
 
   const rerunSimulation = useCallback(async () => {
@@ -338,12 +357,22 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
         request: state.executionRequest,
         transport: defaultSimulationTransport,
       });
+      const preparedAtMs = nowMs();
+
+      if (simulationPreview.status === 'ready') {
+        proofSession.recordPreparedProof({
+          builderPreview: state.builderPreview,
+          executionRequest: state.executionRequest,
+          preparedAtMs,
+          simulationStatus: simulationPreview.status,
+        });
+      }
 
       setState((current) => ({
         ...current,
         error: 'error' in simulationPreview ? simulationPreview.error : null,
         phase: simulationPreview.status === 'ready' ? 'ready' : 'failure',
-        previewPreparedAtMs: nowMs(),
+        previewPreparedAtMs: preparedAtMs,
         simulationPreview,
       }));
     } finally {
@@ -354,6 +383,7 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
     copy.statusLabel,
     defaultSimulationTransport,
     nowMs,
+    proofSession,
     state.builderPreview,
     state.executionRequest,
     state.phase,
@@ -466,6 +496,14 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
         queryKeys: state.builderPreview?.postTransactionRefreshKeys ?? [],
         service: `${copy.statusLabel}.postTransactionRefresh`,
       });
+      const finalRefreshWarning = executionResult.postSubmitWarning ?? refreshWarning;
+
+      proofSession.recordSubmittedProof({
+        builderPreview,
+        executionResult,
+        recordedAtMs: nowMs(),
+        refreshWarning: finalRefreshWarning,
+      });
 
       setState((current) => ({
         ...current,
@@ -474,7 +512,7 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
         executionNotice: null,
         executionResult,
         phase: 'success',
-        refreshWarning: executionResult.postSubmitWarning ?? refreshWarning,
+        refreshWarning: finalRefreshWarning,
       }));
     } finally {
       operationLockRef.current = null;
@@ -487,6 +525,7 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
     invalidationClient,
     nowMs,
     previewTtlMs,
+    proofSession,
     recoverSubmittedTransaction,
     state.builderPreview,
     state.executionRequest,

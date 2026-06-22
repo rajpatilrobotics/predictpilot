@@ -1,5 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { lazy, Suspense, type ReactNode, useState } from 'react';
+import { ProofSessionProvider } from '@/features/proof/ProofSessionProvider';
 import { createAppQueryClient } from '@/lib/query-client';
 
 const DAppKitRuntimeProvider = lazy(async () => ({
@@ -16,7 +17,9 @@ export function AppProviders({ children }: AppProvidersProps) {
   return (
     <Suspense fallback={<AppProviderLoadingState />}>
       <DAppKitRuntimeProvider>
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        <QueryClientProvider client={queryClient}>
+          <ProofSessionProvider>{children}</ProofSessionProvider>
+        </QueryClientProvider>
       </DAppKitRuntimeProvider>
     </Suspense>
   );
