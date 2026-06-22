@@ -37,6 +37,10 @@ describe('DemoModePage', () => {
     render(<DemoModePage onNavigate={onNavigate} />);
 
     const proofRoutes = screen.getByLabelText('Jump to live proof routes');
+    fireEvent.click(within(proofRoutes).getByRole('button', { name: 'Start Judge Demo' }));
+
+    expect(onNavigate).toHaveBeenCalledWith('/judge-demo');
+
     fireEvent.click(within(proofRoutes).getByRole('button', { name: 'Open live markets' }));
 
     expect(onNavigate).toHaveBeenCalledWith('/markets');

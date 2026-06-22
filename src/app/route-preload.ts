@@ -18,6 +18,10 @@ export function loadHistoryPage() {
   return loadRouteModule('history', () => import('@/features/history/HistoryPage'));
 }
 
+export function loadJudgeDemoPathPage() {
+  return loadRouteModule('judge-demo', () => import('@/features/demo/JudgeDemoPathPage'));
+}
+
 export function loadMarketIntelligencePage() {
   return loadRouteModule('markets', () => import('@/features/markets/MarketIntelligencePage'));
 }
@@ -95,6 +99,8 @@ function loadRouteModuleById(routeId: RouteModuleId) {
       return loadDemoModePage();
     case 'history':
       return loadHistoryPage();
+    case 'judge-demo':
+      return loadJudgeDemoPathPage();
     case 'manager':
       return loadPredictManagerPage();
     case 'market-detail':

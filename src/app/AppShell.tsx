@@ -9,6 +9,7 @@ import {
   loadDashboardPage,
   loadDemoModePage,
   loadHistoryPage,
+  loadJudgeDemoPathPage,
   loadMarketDetailPage,
   loadMarketIntelligencePage,
   loadOracleStatusPage,
@@ -32,6 +33,9 @@ const DemoModePage = lazy(async () => ({
 }));
 const HistoryPage = lazy(async () => ({
   default: (await loadHistoryPage()).HistoryPage,
+}));
+const JudgeDemoPathPage = lazy(async () => ({
+  default: (await loadJudgeDemoPathPage()).JudgeDemoPathPage,
 }));
 const MarketIntelligencePage = lazy(async () => ({
   default: (await loadMarketIntelligencePage()).MarketIntelligencePage,
@@ -160,6 +164,8 @@ function RouteContent({
       return <PnlPage />;
     case 'history':
       return <HistoryPage />;
+    case 'judge-demo':
+      return <JudgeDemoPathPage />;
     case 'vault':
       return <VaultPage />;
     case 'market-detail':

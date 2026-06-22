@@ -93,6 +93,7 @@ function DemoModePageContent({ onNavigate }: { onNavigate?: (path: string) => vo
 
       <TerminalPanel title="Jump to live proof routes">
         <div className="flex flex-wrap gap-2">
+          <DemoRouteButton label="Start Judge Demo" onClick={() => onNavigate?.('/judge-demo')} />
           <DemoRouteButton label="Open live markets" onClick={() => onNavigate?.('/markets')} />
           <DemoRouteButton label="Open PredictManager" onClick={() => onNavigate?.('/manager')} />
           <DemoRouteButton label="Open Vault / PLP" onClick={() => onNavigate?.('/vault')} />

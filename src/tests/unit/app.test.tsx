@@ -35,6 +35,15 @@ vi.mock('@/features/demo/DemoModePage', () => ({
   ),
 }));
 
+vi.mock('@/features/demo/JudgeDemoPathPage', () => ({
+  JudgeDemoPathPage: () => (
+    <article aria-label="Judge demo path page">
+      <h1>Judge Demo Path</h1>
+      <p>Judge demo path page mounted</p>
+    </article>
+  ),
+}));
+
 vi.mock('@/features/markets/MarketIntelligencePage', () => ({
   MarketIntelligencePage: () => (
     <article aria-label="Market intelligence page">
@@ -216,6 +225,7 @@ describe('App shell', () => {
       dashboard: 'Dashboard page mounted',
       demo: 'Demo mode page mounted',
       history: 'History page mounted',
+      'judge-demo': 'Judge demo path page mounted',
       manager: 'PredictManager page mounted',
       markets: 'Market intelligence page mounted',
       'oracle-status': 'Oracle status page mounted',

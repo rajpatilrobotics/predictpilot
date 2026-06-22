@@ -15,6 +15,7 @@ const shellRoutes = [
   { heading: 'Vault / PLP', path: '/vault' },
   { heading: 'History', path: '/history' },
   { heading: 'Demo Mode', path: '/demo' },
+  { heading: 'Judge Demo Path', path: '/judge-demo' },
   { heading: 'Proof Mode', path: '/proof' },
 ] as const;
 
@@ -33,15 +34,21 @@ test('loads the PredictPilot app shell', async ({ page }) => {
 
 test('reaches mounted and placeholder routes from navigation', async ({ page }) => {
   await page.goto('/dashboard');
+  const primaryNav = page.getByRole('navigation', { name: /Primary navigation/i });
 
-  await page.getByRole('link', { name: 'Vault / PLP' }).click();
+  await primaryNav.getByRole('link', { name: 'Vault / PLP' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Vault / PLP' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Vault actions' })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Demo Mode' }).click();
+  await primaryNav.getByRole('link', { name: 'Demo Mode' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Demo Mode' })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Proof Mode' }).click();
+  await primaryNav.getByRole('link', { name: 'Judge Demo Path' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Judge Demo Path' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /request wallet signature/i })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /view transaction/i })).toHaveCount(0);
+
+  await primaryNav.getByRole('link', { name: 'Proof Mode' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Proof Mode' })).toBeVisible();
   await expect(page.getByRole('button', { name: /request wallet signature/i })).toHaveCount(0);
   await expect(page.getByRole('link', { name: /view transaction/i })).toHaveCount(0);
@@ -179,6 +186,14 @@ test('demo mode is visibly offline and never claims execution proof', async ({ p
   await expect(page.getByText('Not live Testnet proof').first()).toBeVisible();
   await expect(page.getByText('No wallet signature will be requested').first()).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Oracle readiness' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Start Judge Demo' }).click();
+  await expect(page).toHaveURL(/\/judge-demo$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Judge Demo Path' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /request wallet signature/i })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /view transaction/i })).toHaveCount(0);
+
+  await page.goto('/demo');
 
   await page.getByRole('button', { name: 'Next step' }).click();
   await expect(page.getByRole('heading', { name: 'Strategy preview' })).toBeVisible();

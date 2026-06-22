@@ -2,6 +2,7 @@ export type AppRouteId =
   | 'dashboard'
   | 'demo'
   | 'history'
+  | 'judge-demo'
   | 'manager'
   | 'market-detail'
   | 'markets'
@@ -41,6 +42,7 @@ const routeSpecs = [
   'vault|/vault|Assets|Vault / PLP|Vault|Vault liquidity, PLP, and exposure|Vault and PLP view for shared liquidity, exposure, supply review, and withdraw review.|Vault actions|Supply DUSDC or withdraw PLP through guarded simulation and wallet signature review.',
   'history|/history|Assets|History|History|Server-backed activity and digest proof|Server-backed activity timeline for mints, redeems, LP activity, and digest proof context.|Activity proof|Use history after execution to confirm indexed activity and capture final demo evidence.',
   'demo|/demo|Demo|Demo Mode|Demo|Judge walkthrough and proof checkpoints|Honest offline demo walkthrough for judges when wallet funding or live proof is unavailable.|Demo flow|Walk through the intended proof story without fake wallet signatures or fabricated digests.',
+  'judge-demo|/judge-demo|Demo|Judge Demo Path|Judge|Guided live proof runway|Guided judge runway from wallet readiness to best market, strategy review, digest, reconciliation, and Proof Mode.|Judge path|Follow the next safe live step without using fixtures as proof.',
   'proof|/proof|Demo|Proof Mode|Proof|Judge-verifiable execution proof|Source-labeled proof cockpit for wallet readiness, chain digest evidence, indexed reconciliation, and local session context.|Proof mode|Verify wallet, chain digest, indexed refresh, and proof readiness without fake transaction evidence.',
 ] as const;
 
@@ -96,6 +98,7 @@ function isListedRouteId(id: string | undefined): id is ListedAppRouteId {
     id === 'dashboard' ||
     id === 'demo' ||
     id === 'history' ||
+    id === 'judge-demo' ||
     id === 'manager' ||
     id === 'markets' ||
     id === 'oracle-status' ||
