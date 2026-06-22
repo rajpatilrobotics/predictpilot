@@ -1,4 +1,4 @@
-import { useCallback, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { TxDigestLink } from '@/components/tx/TxDigestLink';
 import {
   TerminalDatum,
@@ -19,6 +19,7 @@ import {
   type ProofRowStatus,
   type ProofSourceLabel,
 } from './proof-selectors';
+import { buildProofSummary, type ProofSummaryModel } from './proof-summary';
 
 const PROOF_TITLE_ID = 'proof-mode-title';
 
@@ -55,6 +56,16 @@ export function ProofModePage() {
     positionsLoading: positions.isLoading || positions.isFetching,
     wallet,
   });
+  const proofSummary = useMemo(
+    () =>
+      buildProofSummary({
+        generatedAtMs: latestSubmittedProof?.recordedAtMs ?? latestPreparedReview?.preparedAtMs,
+        latestPreparedReview,
+        latestSubmittedProof,
+        viewModel,
+      }),
+    [latestPreparedReview, latestSubmittedProof, viewModel],
+  );
 
   const refreshProof = useCallback(() => {
     void Promise.all([managerSummary.refetch(), positions.refetch(), history.refetch()]);
@@ -82,10 +93,62 @@ export function ProofModePage() {
           <ProofRowsPanel rows={viewModel.reconciliationRows} title="Reconciliation" />
         </div>
 
+        <ProofSummaryCard summary={proofSummary} />
         <DigestProofCard digest={viewModel.digest} />
         <ProofActionLinks digest={viewModel.digest} />
       </div>
     </article>
+  );
+}
+
+function ProofSummaryCard({ summary }: { summary: ProofSummaryModel }) {
+  const [copyStatus, setCopyStatus] = useState<'copied' | 'error' | 'idle'>('idle');
+
+  const copySummary = useCallback(async () => {
+    if (!summary.canCopy) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(summary.text);
+      setCopyStatus('copied');
+    } catch {
+      setCopyStatus('error');
+    }
+  }, [summary]);
+
+  return (
+    <section aria-label="Copy proof summary" className="border border-[#c8d3ce] bg-[#fbfcfc] p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#557266]">
+            Demo proof recorder
+          </p>
+          <h2 className="mt-2 text-xl font-semibold text-[#17211d]">{summary.title}</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5b6b65]">{summary.description}</p>
+        </div>
+        <button
+          className="border border-[#8ba79c] bg-white px-3 py-2 text-sm font-semibold text-[#315447] transition enabled:hover:bg-[#edf5f1] disabled:cursor-not-allowed disabled:border-[#d9dfdc] disabled:text-[#8a9691] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315447]"
+          disabled={!summary.canCopy}
+          onClick={() => void copySummary()}
+          type="button"
+        >
+          {summary.mode === 'LOCAL_PREVIEW_ONLY' ? 'Copy preview summary' : 'Copy proof summary'}
+        </button>
+      </div>
+      <pre className="mt-4 max-h-80 overflow-auto whitespace-pre-wrap border border-[#d9dfdc] bg-white p-4 text-xs leading-5 text-[#17211d]">
+        {summary.text}
+      </pre>
+      <p aria-live="polite" className="mt-3 text-sm font-semibold text-[#557266]">
+        {copyStatus === 'copied'
+          ? 'Proof summary copied.'
+          : copyStatus === 'error'
+            ? 'Copy unavailable in this browser. You can select the summary text manually.'
+            : summary.canCopy
+              ? 'Copy keeps source labels and proof status intact.'
+              : 'No proof summary can be copied yet.'}
+      </p>
+    </section>
   );
 }
 

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProofModePage } from '@/features/proof/ProofModePage';
 import type { ProofSessionContextValue } from '@/features/proof/proof-session-context';
@@ -70,17 +70,22 @@ describe('ProofModePage', () => {
     proofSessionMock = proofSessionFixture();
   });
 
-  it('renders blocked copy for disconnected wallets without fake digest or copy button', () => {
+  it('renders blocked copy for disconnected wallets without fake digest or enabled copy', () => {
     render(<ProofModePage />);
 
     expect(screen.getByRole('heading', { name: 'Proof Mode' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Proof blocked' })).toBeInTheDocument();
     expect(screen.getAllByText(/No submitted transaction/i).length).toBeGreaterThan(0);
     expect(screen.queryByRole('link', { name: /View transaction/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /copy proof/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /copy proof summary/i })).toBeDisabled();
   });
 
-  it('renders verified digest evidence when submitted proof reconciles with history', () => {
+  it('renders verified digest evidence and copies the proof summary', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
     walletMock = walletFixture({ isConnected: true });
     managerMock = managerFixture({ isReady: true });
     proofSessionMock = proofSessionFixture({
@@ -105,6 +110,13 @@ describe('ProofModePage', () => {
     expect(
       screen.queryByRole('button', { name: /request wallet signature/i }),
     ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /copy proof summary/i }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    expect(writeText.mock.calls[0]?.[0]).toContain('PREDICTPILOT PROOF SUMMARY');
+    expect(writeText.mock.calls[0]?.[0]).toContain(`Digest [C]: ${digest}`);
+    expect(screen.getByText('Proof summary copied.')).toBeInTheDocument();
   });
 });
 
