@@ -78,6 +78,44 @@ test('overview navigation preloads and switches quickly from execute routes', as
   }
 });
 
+test('markets exposes Best Demo Markets and safe strategy routing', async ({ page }) => {
+  await page.goto('/markets');
+  await expect(page.getByRole('heading', { level: 1, name: 'Market Intelligence' })).toBeVisible();
+
+  const bestDemoMarkets = page.getByLabel('Best Demo Markets');
+  await expect(bestDemoMarkets).toBeVisible({ timeout: 15_000 });
+
+  const openBestStrategy = bestDemoMarkets.getByRole('link', { name: 'Open Best Strategy' });
+
+  if ((await openBestStrategy.count()) > 0) {
+    const href = await openBestStrategy.first().getAttribute('href');
+    expect(href).toContain('source=best-market-finder');
+
+    await openBestStrategy.first().click();
+    await expect(page).toHaveURL(/\/markets\/0x[0-9a-f]+.*source=best-market-finder/i);
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Market Detail / Strategy' }),
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: /request wallet signature/i })).toHaveCount(0);
+  } else {
+    await expect(bestDemoMarkets.getByText('No good demo markets found')).toBeVisible();
+  }
+});
+
+test('dashboard exposes a Best Demo Markets path when market data is available', async ({
+  page,
+}) => {
+  await page.goto('/dashboard');
+  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+
+  const bestDemoMarkets = page.getByLabel('Best Demo Markets');
+
+  if ((await bestDemoMarkets.count()) > 0) {
+    await expect(bestDemoMarkets).toBeVisible({ timeout: 15_000 });
+    await expect(bestDemoMarkets).toContainText(/Best demo market|No good demo markets found/);
+  }
+});
+
 test('desktop primary navigation stays visible while scrolling route content', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/dashboard');

@@ -1,11 +1,20 @@
 import { useMemo, useState } from 'react';
 import { predictDeploymentConfig } from '@/config/predict';
 import { StatePanel, StateSkeletonGrid } from '@/components/states/StatePrimitives';
+import { usePredictManager } from '@/features/manager/hooks/usePredictManager';
+import { BestDemoMarketsPanel } from '@/features/markets/BestDemoMarketsPanel';
 import { useAskBounds } from '@/features/markets/hooks/useAskBounds';
 import { useOracleState } from '@/features/markets/hooks/useOracleState';
 import { usePredictOracles } from '@/features/markets/hooks/usePredictOracles';
 import { usePredictState } from '@/features/markets/hooks/usePredictState';
+import {
+  rankBestDemoMarkets,
+  type BestDemoMarketEnrichment,
+  type BestDemoMarketReadiness,
+} from '@/features/markets/lib/best-market-finder';
 import { useLiveOracleTape } from '@/features/oracle/hooks/useLiveOracleTape';
+import { useManagerSummary } from '@/features/portfolio/hooks/useManagerSummary';
+import { useWalletStatus } from '@/features/wallet/useWalletStatus';
 import { getOracleStatus, type OracleActionAvailability } from '@/lib/oracle-status';
 import type {
   OracleAskBoundsModel,
@@ -44,6 +53,12 @@ export function MarketIntelligencePage({ nowMs }: MarketIntelligencePageProps) {
   const [visibleOracleCount, setVisibleOracleCount] = useState(oracleListInitialCount);
   const renderNowMs = nowMs ?? mountedAtMs;
 
+  const wallet = useWalletStatus();
+  const manager = usePredictManager();
+  const managerSummary = useManagerSummary({
+    enabled: manager.isReady && manager.managerId !== null,
+    managerId: manager.isReady && manager.managerId !== null ? manager.managerId : undefined,
+  });
   const predictStateQuery = usePredictState();
   const oraclesQuery = usePredictOracles({
     predictId: predictDeploymentConfig.predictObjectId,
@@ -74,6 +89,66 @@ export function MarketIntelligencePage({ nowMs }: MarketIntelligencePageProps) {
   const visibleOracles = useMemo(
     () => filteredOracles.slice(0, visibleOracleCount),
     [filteredOracles, visibleOracleCount],
+  );
+  const bestMarketReadiness = useMemo<BestDemoMarketReadiness>(
+    () => ({
+      hasManagerDusdc:
+        managerSummary.data !== undefined &&
+        managerSummary.data.balanceSummary.tradingBalanceQuote > 0n,
+      isManagerReady: manager.isReady,
+      isWalletConnected: wallet.isConnected,
+      isWalletOnTestnet: wallet.isExpectedNetwork,
+    }),
+    [manager.isReady, managerSummary.data, wallet.isConnected, wallet.isExpectedNetwork],
+  );
+  const summaryBestDemoMarkets = useMemo(
+    () =>
+      rankBestDemoMarkets({
+        nowMs: renderNowMs,
+        oracles,
+        readiness: bestMarketReadiness,
+      }),
+    [bestMarketReadiness, oracles, renderNowMs],
+  );
+  const bestMarketOracleId = summaryBestDemoMarkets[0]?.oracleId ?? fallbackOracleId;
+  const hasBestMarketCandidate = summaryBestDemoMarkets.length > 0;
+  const bestMarketOracleStateQuery = useOracleState({
+    enabled: hasBestMarketCandidate,
+    oracleId: bestMarketOracleId,
+  });
+  const bestMarketAskBoundsQuery = useAskBounds({
+    enabled: hasBestMarketCandidate,
+    oracleId: bestMarketOracleId,
+  });
+  const bestMarketEnrichments = useMemo(() => {
+    if (!hasBestMarketCandidate) {
+      return new Map<ObjectId, BestDemoMarketEnrichment>();
+    }
+
+    return new Map<ObjectId, BestDemoMarketEnrichment>([
+      [
+        bestMarketOracleId,
+        {
+          askBounds: bestMarketAskBoundsQuery.data,
+          oracleState: bestMarketOracleStateQuery.data,
+        },
+      ],
+    ]);
+  }, [
+    bestMarketAskBoundsQuery.data,
+    bestMarketOracleId,
+    bestMarketOracleStateQuery.data,
+    hasBestMarketCandidate,
+  ]);
+  const bestDemoMarkets = useMemo(
+    () =>
+      rankBestDemoMarkets({
+        enrichments: bestMarketEnrichments,
+        nowMs: renderNowMs,
+        oracles,
+        readiness: bestMarketReadiness,
+      }),
+    [bestMarketEnrichments, bestMarketReadiness, oracles, renderNowMs],
   );
   const selectedOracleQueryId = selectedOracle?.oracleId ?? fallbackOracleId;
   const hasSelectedOracle = selectedOracle !== undefined;
@@ -171,6 +246,7 @@ export function MarketIntelligencePage({ nowMs }: MarketIntelligencePageProps) {
       {!initialLoadPending && blockingError === null && oracles.length > 0 ? (
         <>
           <PredictStatePanel predictState={predictStateQuery.data} />
+          <BestDemoMarketsPanel candidates={bestDemoMarkets} nowMs={renderNowMs} />
 
           <section className="grid gap-4 lg:grid-cols-[minmax(0,0.92fr)_minmax(360px,1.08fr)]">
             <div className="space-y-4">

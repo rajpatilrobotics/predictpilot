@@ -73,6 +73,7 @@ const predictId = '0xc8736204d12f0a7277c86388a68bf8a194b0a14c5538ad13f22cbd8e2a3
 const managerId = '0x640e9ab9bdd5c68e57ddf293260ed319abf85ea0d6d0da076952de023fe961b3' as ObjectId;
 const owner = '0x195b8d58415745c17c2877478818c44b8c41172c9d16282a76ea6e3582db756c' as SuiAddress;
 const oracleId = '0x9c2da49c103556e6def22273d716f81f3d206c2a5823ea49c5bb6bf425a3238d' as ObjectId;
+const nowMs = 1_781_635_255_000;
 
 describe('DashboardPage', () => {
   beforeEach(() => {
@@ -135,10 +136,15 @@ describe('DashboardPage', () => {
     hookState.managerSummary = successQuery(createManagerSummary());
     hookState.positions = successQuery(createPositionsSummary());
 
-    render(<DashboardPage />);
+    render(<DashboardPage nowMs={nowMs} />);
 
     expect(screen.getByText('BTC')).toBeInTheDocument();
     expect(screen.getByText('ETH')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Best demo market' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open Best Strategy' })).toHaveAttribute(
+      'href',
+      `/markets/${oracleId}?source=best-market-finder`,
+    );
     expect(screen.getByText('ACTIVE')).toBeInTheDocument();
     expect(screen.getByText('SETTLED')).toBeInTheDocument();
     expect(screen.getAllByText('1.25 dUSDC').length).toBeGreaterThan(0);

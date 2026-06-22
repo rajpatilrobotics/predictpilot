@@ -1,6 +1,10 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  usePredictManager,
+  type UsePredictManagerResult,
+} from '@/features/manager/hooks/usePredictManager';
 import { MarketIntelligencePage } from '@/features/markets/MarketIntelligencePage';
 import { useAskBounds } from '@/features/markets/hooks/useAskBounds';
 import { useOracleState } from '@/features/markets/hooks/useOracleState';
@@ -12,6 +16,9 @@ import {
   type LiveOracleTapeModel,
 } from '@/features/oracle/hooks/useLiveOracleTape';
 import type * as LiveOracleTapeModule from '@/features/oracle/hooks/useLiveOracleTape';
+import { useManagerSummary } from '@/features/portfolio/hooks/useManagerSummary';
+import type { ManagerSummaryPortfolioModel } from '@/features/portfolio/lib/portfolio-selectors';
+import { useWalletStatus, type WalletStatusModel } from '@/features/wallet/useWalletStatus';
 import type { PredictPilotError } from '@/lib/errors';
 import type {
   OracleAskBoundsModel,
@@ -26,6 +33,10 @@ vi.mock('@/features/markets/hooks/useAskBounds', () => ({
   useAskBounds: vi.fn(),
 }));
 
+vi.mock('@/features/manager/hooks/usePredictManager', () => ({
+  usePredictManager: vi.fn(),
+}));
+
 vi.mock('@/features/markets/hooks/useOracleState', () => ({
   useOracleState: vi.fn(),
 }));
@@ -36,6 +47,14 @@ vi.mock('@/features/markets/hooks/usePredictOracles', () => ({
 
 vi.mock('@/features/markets/hooks/usePredictState', () => ({
   usePredictState: vi.fn(),
+}));
+
+vi.mock('@/features/portfolio/hooks/useManagerSummary', () => ({
+  useManagerSummary: vi.fn(),
+}));
+
+vi.mock('@/features/wallet/useWalletStatus', () => ({
+  useWalletStatus: vi.fn(),
 }));
 
 vi.mock('@/features/oracle/hooks/useLiveOracleTape', async () => {
@@ -57,6 +76,7 @@ const ethOracleId =
   '0xa12da49c103556e6def22273d716f81f3d206c2a5823ea49c5bb6bf425a3238d' as ObjectId;
 const packageId = '0xf5ea2b3749c65d6e56507cc35388719aadb28f9cab873696a2f8687f5c785138' as ObjectId;
 const sender = '0xcca26f7ae2e40604498294e95bacccc4652cc8cb2aa074d7ee608c7e7bdf0c29' as SuiAddress;
+const managerId = '0x640e9ab9bdd5c68e57ddf293260ed319abf85ea0d6d0da076952de023fe961b3' as ObjectId;
 
 const predictState: PredictStateModel = {
   predictId,
@@ -90,6 +110,15 @@ describe('MarketIntelligencePage', () => {
     render(<MarketIntelligencePage nowMs={nowMs} />);
 
     expect(screen.getByRole('heading', { name: 'Market Intelligence' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Best demo market' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open Best Strategy' })).toHaveAttribute(
+      'href',
+      `/markets/${btcOracleId}?source=best-market-finder`,
+    );
+    expect(screen.getByRole('link', { name: 'Audit Oracle' })).toHaveAttribute(
+      'href',
+      `/oracle-status?oracleId=${btcOracleId}&source=best-market-finder`,
+    );
     expect(screen.getByText('DUSDC supported')).toBeInTheDocument();
     expect(screen.getByText('TODO VERIFY missing')).toBeInTheDocument();
 
@@ -182,6 +211,17 @@ describe('MarketIntelligencePage', () => {
     );
   });
 
+  it('shows an honest Best Demo Markets fallback when no loaded oracle qualifies', () => {
+    vi.mocked(usePredictOracles).mockReturnValue(querySuccess<OracleSummaryModel[]>([ethOracle]));
+
+    render(<MarketIntelligencePage nowMs={nowMs} />);
+
+    expect(screen.getByLabelText('Best Demo Markets')).toHaveTextContent(
+      'No good demo markets found',
+    );
+    expect(screen.queryByRole('link', { name: 'Open Best Strategy' })).not.toBeInTheDocument();
+  });
+
   it('shows a safe error state when required market data fails', () => {
     vi.mocked(usePredictState).mockReturnValue(
       queryError<PredictStateModel>(new Error('Predict server unavailable')),
@@ -220,6 +260,9 @@ describe('MarketIntelligencePage', () => {
 });
 
 function installDefaultHookMocks() {
+  vi.mocked(useWalletStatus).mockReturnValue(createWalletStatus());
+  vi.mocked(usePredictManager).mockReturnValue(createManagerState());
+  vi.mocked(useManagerSummary).mockReturnValue(querySuccess(createManagerSummary()));
   vi.mocked(usePredictState).mockReturnValue(querySuccess(predictState));
   vi.mocked(usePredictOracles).mockReturnValue(querySuccess([btcOracle, ethOracle]));
   vi.mocked(useOracleState).mockImplementation(({ oracleId }) =>
@@ -440,5 +483,90 @@ function createLiveTape(): LiveOracleTapeModel {
     pollIntervalMs: 3_000,
     source: ORACLE_LIVE_TAPE_SOURCE,
     updateCount: 2,
+  };
+}
+
+function createWalletStatus(overrides: Partial<WalletStatusModel> = {}): WalletStatusModel {
+  return {
+    accountAddress: sender,
+    currentNetwork: 'testnet',
+    expectedNetwork: 'testnet',
+    isConnected: true,
+    isConnecting: false,
+    isDisconnected: false,
+    isExpectedNetwork: true,
+    isReconnecting: false,
+    isWrongNetwork: false,
+    shortAddress: '0xcca2...0c29',
+    status: 'connected',
+    statusLabel: 'Connected',
+    supportedIntentsCount: 1,
+    walletName: 'Slush',
+    ...overrides,
+  };
+}
+
+function createManagerState(
+  overrides: Partial<UsePredictManagerResult> = {},
+): UsePredictManagerResult {
+  return {
+    authoritativeObject: null,
+    error: null,
+    isAmbiguous: false,
+    isConfirming: false,
+    isLoading: false,
+    isReady: true,
+    manager: {
+      checkpoint: 100n,
+      checkpointTimestampMs: BigInt(nowMs - 60_000),
+      digest: 'manager-created-digest',
+      eventDigest: 'manager-created-digest',
+      eventIndex: 0,
+      managerId,
+      owner: sender,
+      packageId,
+      sender,
+      txIndex: 0,
+    },
+    managerId,
+    matchingManagers: [],
+    owner: sender,
+    requiresCreateManager: false,
+    status: 'READY',
+    warnings: [],
+    ...overrides,
+  };
+}
+
+function createManagerSummary(): ManagerSummaryPortfolioModel {
+  return {
+    balanceSummary: {
+      accountValueQuote: 2_000_000n,
+      awaitingSettlementPositions: 0,
+      balances: [],
+      managerId,
+      openExposureQuote: 0n,
+      openPositions: 0,
+      owner: sender,
+      realizedPnlQuote: 0n,
+      redeemableValueQuote: 0n,
+      totalManagerBalanceQuote: 2_000_000n,
+      tradingBalanceQuote: 2_000_000n,
+      unrealizedPnlQuote: 0n,
+    },
+    summary: {
+      accountValueQuote: 2_000_000n,
+      awaitingSettlementPositions: 0,
+      balances: [],
+      lastRefreshedAtMs: BigInt(nowMs),
+      managerId,
+      openExposureQuote: 0n,
+      openPositions: 0,
+      owner: sender,
+      realizedPnlQuote: 0n,
+      redeemableValueQuote: 0n,
+      tradingBalanceQuote: 2_000_000n,
+      unrealizedPnlQuote: 0n,
+    },
   };
 }

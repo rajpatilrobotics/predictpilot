@@ -1,9 +1,14 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   InlineStateNotice,
   StatePanel,
   StateSkeletonGrid,
 } from '@/components/states/StatePrimitives';
+import { BestDemoMarketsPanel } from '@/features/markets/BestDemoMarketsPanel';
+import {
+  rankBestDemoMarkets,
+  type BestDemoMarketReadiness,
+} from '@/features/markets/lib/best-market-finder';
 import {
   usePredictManager,
   type UsePredictManagerResult,
@@ -35,11 +40,16 @@ export interface DashboardQuerySnapshot<TData> {
 export interface DashboardViewModel {
   manager: UsePredictManagerResult;
   managerSummary: DashboardQuerySnapshot<ManagerSummaryPortfolioModel>;
+  nowMs: number;
   oracles: DashboardQuerySnapshot<OracleSummaryModel[]>;
   positions: DashboardQuerySnapshot<NormalizedManagerPositionsSummaryModel>;
   predictState: DashboardQuerySnapshot<PredictStateModel>;
   vault: DashboardQuerySnapshot<VaultModel>;
   wallet: WalletStatusModel;
+}
+
+interface DashboardPageProps {
+  nowMs?: number;
 }
 
 interface MetricCardModel {
@@ -54,7 +64,8 @@ interface QuickStartStep {
   state: 'blocked' | 'current' | 'later' | 'ready';
 }
 
-export function DashboardPage() {
+export function DashboardPage({ nowMs }: DashboardPageProps) {
+  const [capturedNowMs] = useState(() => Date.now());
   const wallet = useWalletStatus();
   const manager = usePredictManager();
   const predictState = usePredictState();
@@ -70,18 +81,20 @@ export function DashboardPage() {
     enabled: manager.isReady,
     managerId: resolvedManagerId,
   });
+  const effectiveNowMs = nowMs ?? capturedNowMs;
 
   const model = useMemo<DashboardViewModel>(
     () => ({
       manager,
       managerSummary: toQuerySnapshot(managerSummary),
+      nowMs: effectiveNowMs,
       oracles: toQuerySnapshot(oracles),
       positions: toQuerySnapshot(positions),
       predictState: toQuerySnapshot(predictState),
       vault: toQuerySnapshot(vault),
       wallet,
     }),
-    [manager, managerSummary, oracles, positions, predictState, vault, wallet],
+    [effectiveNowMs, manager, managerSummary, oracles, positions, predictState, vault, wallet],
   );
 
   return <DashboardView model={model} />;
@@ -93,6 +106,14 @@ export function DashboardView({ model }: { model: DashboardViewModel }) {
   const errors = collectDashboardErrors(model);
   const hasLoadingState = metrics.some((metric) => metric.state === 'loading');
   const oracleRows = createOracleRows(model.oracles.data ?? []);
+  const bestDemoMarkets =
+    model.oracles.data === undefined
+      ? []
+      : rankBestDemoMarkets({
+          nowMs: model.nowMs,
+          oracles: model.oracles.data,
+          readiness: createBestDemoMarketReadiness(model),
+        });
 
   return (
     <section aria-labelledby="dashboard-title" className="space-y-5">
@@ -156,6 +177,15 @@ export function DashboardView({ model }: { model: DashboardViewModel }) {
           <MetricCard key={metric.label} metric={metric} />
         ))}
       </div>
+
+      {bestDemoMarkets.length > 0 ? (
+        <BestDemoMarketsPanel
+          candidates={bestDemoMarkets}
+          isCompact
+          maxAlternates={3}
+          nowMs={model.nowMs}
+        />
+      ) : null}
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.8fr)_minmax(260px,0.7fr)]">
         <Panel
@@ -348,6 +378,17 @@ function toQuerySnapshot<TData>({
   }
 
   return { data, error: null, status: 'empty' };
+}
+
+function createBestDemoMarketReadiness(model: DashboardViewModel): BestDemoMarketReadiness {
+  return {
+    hasManagerDusdc:
+      model.managerSummary.data !== undefined &&
+      model.managerSummary.data.balanceSummary.tradingBalanceQuote > 0n,
+    isManagerReady: model.manager.isReady,
+    isWalletConnected: model.wallet.isConnected,
+    isWalletOnTestnet: model.wallet.isExpectedNetwork,
+  };
 }
 
 function createMetricCards(model: DashboardViewModel): MetricCardModel[] {
