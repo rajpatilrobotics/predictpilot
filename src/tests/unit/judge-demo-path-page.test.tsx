@@ -68,7 +68,9 @@ describe('JudgeDemoPathPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Judge Demo Path' })).toBeInTheDocument();
     expect(screen.getByRole('alert', { name: 'Judge demo verdict' })).toHaveTextContent('Blocked');
-    expect(screen.getByRole('heading', { name: 'Connect wallet and confirm Testnet' }));
+    expect(
+      screen.getByRole('heading', { name: 'Connect wallet and confirm Testnet' }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /request wallet signature/i }),
     ).not.toBeInTheDocument();

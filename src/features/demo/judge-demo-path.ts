@@ -102,7 +102,7 @@ export function selectJudgeDemoPathViewModel({
 
   const steps: JudgeDemoStep[] = [
     step({
-      actionHref: wallet.isConnected ? '/dashboard' : '/dashboard',
+      actionHref: '/dashboard',
       actionLabel: wallet.isConnected ? 'Review wallet status' : 'Connect wallet',
       description: hasWalletReady
         ? 'Wallet is connected on Sui Testnet.'
@@ -138,7 +138,7 @@ export function selectJudgeDemoPathViewModel({
       title: 'Validate oracle tradeability',
     }),
     step({
-      actionHref: manager.requiresCreateManager || !hasManagerReady ? '/manager' : '/manager',
+      actionHref: '/manager',
       actionLabel: hasManagerReady ? 'Review manager funding' : 'Open PredictManager',
       description: getManagerFundingDescription({
         hasManagerDusdc,

@@ -376,7 +376,7 @@ function normalizePreviewWarnings(preview: PayoffPreviewLike): PayoffVisualizerW
               }
             : {
                 code: warning.code ?? 'WARNING',
-                level: warning.severity === 'info' ? ('caution' as const) : ('caution' as const),
+                level: 'caution' as const,
                 message: warning.message,
               },
         )
