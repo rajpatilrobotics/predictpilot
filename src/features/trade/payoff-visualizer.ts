@@ -121,8 +121,49 @@ export function createDraftPayoffVisualizerModel({
   validationErrors = [],
   validationWarnings = [],
 }: CreateDraftPayoffVisualizerModelOptions): PayoffVisualizerModel {
+  return createPayoffVisualizerModelFromSnapshot(
+    createDraftPayoffVisualizerSnapshot({
+      action,
+      direction,
+      expiryMs,
+      higherStrike1e9,
+      kind,
+      lowerStrike1e9,
+      managerBalanceQuote,
+      managerId,
+      oracleFreshness,
+      oracleId,
+      oracleStatus,
+      quantityQuote,
+      strike1e9,
+      underlyingAsset,
+      validationErrors,
+      validationWarnings,
+    }),
+  );
+}
+
+export function createDraftPayoffVisualizerSnapshot({
+  action,
+  direction,
+  expiryMs,
+  higherStrike1e9,
+  kind,
+  lowerStrike1e9,
+  managerBalanceQuote,
+  managerId,
+  oracleFreshness,
+  oracleId,
+  oracleStatus,
+  quantityQuote,
+  strike1e9,
+  underlyingAsset,
+  validationErrors = [],
+  validationWarnings = [],
+}: CreateDraftPayoffVisualizerModelOptions): PayoffVisualizerSnapshot {
   const quoteSymbol = predictDeploymentConfig.quoteAsset.symbol;
-  const snapshot: PayoffVisualizerSnapshot = {
+
+  return {
     action,
     direction,
     expiryMs,
@@ -151,8 +192,6 @@ export function createDraftPayoffVisualizerModel({
       })),
     ],
   };
-
-  return createPayoffVisualizerModelFromSnapshot(snapshot);
 }
 
 export function createPayoffVisualizerModelFromPreview(

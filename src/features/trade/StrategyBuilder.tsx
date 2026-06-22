@@ -3,6 +3,8 @@ import { ExecutionModal } from '@/components/modals/ExecutionModal';
 import { InlineStateNotice, StatePanel } from '@/components/states/StatePrimitives';
 import { TxDigestLink } from '@/components/tx/TxDigestLink';
 import { TerminalMetricCard, TerminalPanel } from '@/components/terminal/TerminalPanels';
+import { StrategyReceiptCard } from '@/features/proof/StrategyReceiptCard';
+import { buildDraftStrategyReceipt } from '@/features/proof/strategy-receipt';
 import { OracleHealthAuditCard } from '@/features/oracle/OracleHealthAuditCard';
 import { createOracleHealthAudit } from '@/features/oracle/lib/oracle-health-audit';
 import { PayoffRiskVisualizer } from '@/features/trade/PayoffRiskVisualizer';
@@ -38,7 +40,10 @@ import type { RangeTradePreviewModel } from '@/integrations/deepbook-predict/tx/
 import type { PredictPilotError } from '@/lib/errors';
 import { getOracleStatus } from '@/lib/oracle-status';
 import { formatLifecycleLabel, formatPrice1e9, formatQuoteAmount } from '@/lib/formatters';
-import { createDraftPayoffVisualizerModel } from './payoff-visualizer';
+import {
+  createDraftPayoffVisualizerSnapshot,
+  createPayoffVisualizerModelFromSnapshot,
+} from './payoff-visualizer';
 
 type StrategyMode = 'binary' | 'range';
 interface ExecutionStatusLabels {
@@ -187,11 +192,11 @@ export function StrategyBuilder({
       strikeInput,
     ],
   );
-  const activePayoffModel = useMemo(() => {
+  const activePayoffSnapshot = useMemo(() => {
     const oracleStatus = getOracleStatus({ nowMs: renderNowMs, oracleState });
 
     if (mode === 'binary') {
-      return createDraftPayoffVisualizerModel({
+      return createDraftPayoffVisualizerSnapshot({
         action: binaryAction,
         direction,
         expiryMs: oracleState.oracle.expiryMs,
@@ -209,7 +214,7 @@ export function StrategyBuilder({
       });
     }
 
-    return createDraftPayoffVisualizerModel({
+    return createDraftPayoffVisualizerSnapshot({
       action: rangeAction,
       expiryMs: oracleState.oracle.expiryMs,
       higherStrike1e9: rangeKeyResult.ok ? rangeKeyResult.key.higherStrike1e9 : undefined,
@@ -239,6 +244,19 @@ export function StrategyBuilder({
     rangeKeyResult,
     renderNowMs,
   ]);
+  const activePayoffModel = useMemo(
+    () => createPayoffVisualizerModelFromSnapshot(activePayoffSnapshot),
+    [activePayoffSnapshot],
+  );
+  const draftReceipt = useMemo(
+    () =>
+      buildDraftStrategyReceipt({
+        network: wallet.currentNetwork,
+        payoffSnapshot: activePayoffSnapshot,
+        sender: wallet.accountAddress,
+      }),
+    [activePayoffSnapshot, wallet.accountAddress, wallet.currentNetwork],
+  );
 
   function resetPreview() {
     setPreviewState({ status: 'idle' });
@@ -455,6 +473,11 @@ export function StrategyBuilder({
             />
 
             <PayoffRiskVisualizer model={activePayoffModel} />
+            <StrategyReceiptCard
+              receipt={draftReceipt}
+              title="Strategy receipt"
+              variant="compact"
+            />
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <button

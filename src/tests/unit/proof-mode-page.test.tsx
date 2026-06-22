@@ -101,7 +101,13 @@ describe('ProofModePage', () => {
     expect(screen.getByRole('region', { name: 'Oracle health audit' })).toHaveTextContent(
       'Audit unavailable',
     );
+    expect(screen.getByRole('region', { name: 'Strategy receipt proof card' })).toHaveTextContent(
+      'No live proof yet',
+    );
     expect(screen.queryByRole('link', { name: /View transaction/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /Open receipt explorer proof/i }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /copy proof summary/i })).toBeDisabled();
   });
 
@@ -146,7 +152,11 @@ describe('ProofModePage', () => {
     expect(screen.getByRole('region', { name: 'Oracle health audit' })).toHaveTextContent(
       'Use with caution',
     );
+    expect(screen.getByRole('region', { name: 'Strategy receipt proof card' })).toHaveTextContent(
+      'Verified',
+    );
     expect(screen.getAllByText(digest).length).toBeGreaterThan(0);
+    expect(screen.getByRole('link', { name: /Open receipt explorer proof/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Open explorer proof/i })).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /request wallet signature/i }),

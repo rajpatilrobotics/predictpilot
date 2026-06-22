@@ -18,6 +18,7 @@ import { PayoffRiskVisualizer } from '@/features/trade/PayoffRiskVisualizer';
 import { createPayoffVisualizerModelFromSnapshot } from '@/features/trade/payoff-visualizer';
 import { useWalletStatus } from '@/features/wallet/useWalletStatus';
 import { predictDeploymentConfig } from '@/config/predict';
+import { StrategyReceiptCard } from './StrategyReceiptCard';
 import { useProofSession } from './proof-session-context';
 import {
   selectProofModeViewModel,
@@ -27,6 +28,7 @@ import {
   type ProofSourceLabel,
 } from './proof-selectors';
 import { buildProofSummary, type ProofSummaryModel } from './proof-summary';
+import { buildProofStrategyReceipt } from './strategy-receipt';
 
 const PROOF_TITLE_ID = 'proof-mode-title';
 
@@ -112,6 +114,15 @@ export function ProofModePage() {
       }),
     [latestPreparedReview, latestSubmittedProof, viewModel],
   );
+  const strategyReceipt = useMemo(
+    () =>
+      buildProofStrategyReceipt({
+        latestPreparedReview,
+        latestSubmittedProof,
+        viewModel,
+      }),
+    [latestPreparedReview, latestSubmittedProof, viewModel],
+  );
 
   const refreshProof = useCallback(() => {
     void Promise.all([managerSummary.refetch(), positions.refetch(), history.refetch()]);
@@ -141,6 +152,11 @@ export function ProofModePage() {
           audit={proofOracleAudit}
           title="Oracle health audit"
           variant="compact"
+        />
+        <StrategyReceiptCard
+          receipt={strategyReceipt}
+          title="Strategy receipt proof card"
+          variant="expanded"
         />
 
         <div className="grid gap-4 xl:grid-cols-3">

@@ -160,10 +160,14 @@ describe('PP-048 transaction preview UI', () => {
       />,
     );
 
-    expect(screen.getByRole('link', { name: /View transaction/i })).toHaveAttribute(
+    expect(screen.getByRole('region', { name: 'Pre-sign strategy receipt' })).toHaveTextContent(
+      'Submitted to Sui Testnet',
+    );
+    expect(screen.getByRole('link', { name: /Open receipt explorer proof/i })).toHaveAttribute(
       'href',
       expect.stringContaining('/txblock/'),
     );
+    expect(screen.getAllByRole('link', { name: /View transaction/i }).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Wallet response timed out/i)).not.toBeInTheDocument();
   });
 
@@ -184,6 +188,9 @@ describe('PP-048 transaction preview UI', () => {
     );
 
     expect(screen.getByRole('dialog', { name: 'Execution review' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Pre-sign strategy receipt' })).toHaveTextContent(
+      'Simulation ready',
+    );
     expect(onClose).not.toHaveBeenCalled();
     expect(onRequestSignature).not.toHaveBeenCalled();
     expect(onSimulate).not.toHaveBeenCalled();

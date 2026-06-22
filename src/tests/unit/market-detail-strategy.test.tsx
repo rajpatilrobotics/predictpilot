@@ -207,6 +207,12 @@ describe('MarketDetailPage and StrategyBuilder', () => {
     expect(screen.getByRole('region', { name: 'Oracle Health Audit' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Pre-sign oracle health' })).toBeInTheDocument();
     expect(screen.getByText(/UP wins if settlement > strike/i)).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Strategy receipt' })).toHaveTextContent(
+      'No live proof yet',
+    );
+    expect(screen.getByRole('region', { name: 'Strategy receipt' })).toHaveTextContent(
+      'UP @ 50,000.00',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'Preview strategy' }));
 
@@ -258,6 +264,9 @@ describe('MarketDetailPage and StrategyBuilder', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Range' }));
     expect(screen.getByText(/wins if settlement is in \(/i)).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Strategy receipt' })).toHaveTextContent(
+      '50,000.00 to 50,001.00',
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Preview strategy' }));
 
     await waitFor(() => expect(beginMintRangeReview).toHaveBeenCalledTimes(1));

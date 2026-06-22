@@ -1,5 +1,7 @@
 import { type KeyboardEvent, useEffect, useId, useRef } from 'react';
 import type { PredictPtbSimulationPreview } from '@/integrations/deepbook-predict/tx/simulate';
+import { StrategyReceiptCard } from '@/features/proof/StrategyReceiptCard';
+import { buildExecutionStrategyReceipt } from '@/features/proof/strategy-receipt';
 import { RiskPreview, type RiskPreviewProps } from '@/features/tx/RiskPreview';
 import { TransactionPreview } from '@/features/tx/TransactionPreview';
 import type { PredictPilotError } from '@/lib/errors';
@@ -86,6 +88,12 @@ export function ExecutionModal({
       firstElement.focus();
     }
   };
+  const receipt = buildExecutionStrategyReceipt({
+    completedDigest,
+    executionError,
+    preview,
+    risk,
+  });
 
   return (
     <dialog
@@ -124,6 +132,11 @@ export function ExecutionModal({
           </header>
 
           <div className="mt-4 grid gap-4">
+            <StrategyReceiptCard
+              receipt={receipt}
+              title="Pre-sign strategy receipt"
+              variant="compact"
+            />
             <RiskPreview preview={risk} />
             <TransactionPreview
               completedDigest={completedDigest}
