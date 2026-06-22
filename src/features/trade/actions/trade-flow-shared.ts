@@ -6,9 +6,10 @@ import type { WalletStatusModel } from '@/features/wallet/useWalletStatus';
 import { createAppError, type PredictPilotError } from '@/lib/errors';
 import type { OracleStatusModel } from '@/lib/oracle-status';
 import type { OracleStateModel } from '@/types/oracle';
-import type { QuoteAmount, SuiAddress } from '@/types/predict';
+import type { BinaryDirection, QuoteAmount, SuiAddress } from '@/types/predict';
 import type { ManagerSummaryModel } from '@/types/portfolio';
 import type { PredictTransactionAction } from '@/types/tx';
+import type { PayoffVisualizerKind } from '@/features/trade/payoff-visualizer';
 
 export interface TradeFlowCopyBase {
   missingManagerSummaryMessage: string;
@@ -120,6 +121,7 @@ export function createSimulationRequiredRiskPreview({
   managerSummary,
   oracleState,
   oracleStatus,
+  payoff,
   quantityQuote,
   warnings,
 }: {
@@ -129,6 +131,13 @@ export function createSimulationRequiredRiskPreview({
   managerSummary: ManagerSummaryModel;
   oracleState: OracleStateModel;
   oracleStatus: OracleStatusModel;
+  payoff?: {
+    direction?: BinaryDirection;
+    higherStrike1e9?: bigint;
+    kind: PayoffVisualizerKind;
+    lowerStrike1e9?: bigint;
+    strike1e9?: bigint;
+  };
   quantityQuote: QuoteAmount;
   warnings: TradeFlowWarning[];
 }): RiskPreviewModel {
@@ -141,6 +150,15 @@ export function createSimulationRequiredRiskPreview({
     oracleFreshness: oracleStatus.freshness.aggregateStatus,
     oracleId: oracleState.oracle.oracleId,
     oracleStatus: oracleStatus.lifecycleStatus,
+    ...(payoff === undefined
+      ? {}
+      : {
+          direction: payoff.direction,
+          higherStrike1e9: payoff.higherStrike1e9,
+          lowerStrike1e9: payoff.lowerStrike1e9,
+          payoffKind: payoff.kind,
+          strike1e9: payoff.strike1e9,
+        }),
     quantityQuote,
     quoteAsset: predictDeploymentConfig.quoteAsset,
     title: copy.reviewTitle,
@@ -163,6 +181,13 @@ export function createBlockedRiskPreview(options: {
   managerSummary: ManagerSummaryModel;
   oracleState: OracleStateModel;
   oracleStatus: OracleStatusModel;
+  payoff?: {
+    direction?: BinaryDirection;
+    higherStrike1e9?: bigint;
+    kind: PayoffVisualizerKind;
+    lowerStrike1e9?: bigint;
+    strike1e9?: bigint;
+  };
   quantityQuote: QuoteAmount;
   warnings: TradeFlowWarning[];
 }): RiskPreviewModel {

@@ -202,6 +202,11 @@ export function useBinaryTradeExecutionFlow<TPreview extends BinaryTradeTxPrevie
             managerSummary: preconditions.managerSummary,
             oracleState,
             oracleStatus: preconditions.oracleStatus,
+            payoff: {
+              direction: preconditions.marketKey.direction,
+              kind: 'binary',
+              strike1e9: preconditions.marketKey.strike1e9,
+            },
             quantityQuote: preconditions.quantityQuote,
             warnings: riskResult.warnings,
           }),
@@ -498,6 +503,11 @@ async function createBinaryTradeRiskPreview({
       managerSummary,
       oracleState,
       oracleStatus,
+      payoff: {
+        direction: marketKey.direction,
+        kind: 'binary',
+        strike1e9: marketKey.strike1e9,
+      },
       quantityQuote,
       warnings: previewResult.warnings,
     }),

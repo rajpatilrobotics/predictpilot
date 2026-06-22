@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react';
+import type { PayoffVisualizerSnapshot } from '@/features/trade/payoff-visualizer';
 import type { PredictPilotError } from '@/lib/errors';
 import type { ObjectId, QuoteAmount, SuiAddress, TransactionDigest } from '@/types/predict';
 import type {
@@ -15,6 +16,7 @@ export interface ProofPreparedReviewRecord {
   description?: string;
   managerId: ObjectId | null;
   oracleId: ObjectId | null;
+  payoffSnapshot?: PayoffVisualizerSnapshot | null;
   plpAmountAtomic?: bigint;
   preparedAtMs: number;
   quantityQuote?: QuoteAmount;
@@ -31,6 +33,7 @@ export interface ProofSubmittedRecord {
   description?: string;
   managerId: ObjectId | null;
   oracleId: ObjectId | null;
+  payoffSnapshot?: PayoffVisualizerSnapshot | null;
   plpAmountAtomic?: bigint;
   quantityQuote?: QuoteAmount;
   recordedAtMs: number;
@@ -48,6 +51,7 @@ export interface RecordPreparedProofInput {
     sender: SuiAddress;
   };
   executionRequest: PredictTransactionExecutionRequest;
+  payoffSnapshot?: PayoffVisualizerSnapshot | null;
   preparedAtMs: number;
   simulationStatus: string;
 }
@@ -62,6 +66,7 @@ export interface RecordSubmittedProofInput {
     sender: SuiAddress;
   };
   executionResult: Extract<PredictTransactionExecutionResult, { status: 'success' }>;
+  payoffSnapshot?: PayoffVisualizerSnapshot | null;
   recordedAtMs: number;
   refreshWarning: PredictPilotError | null;
 }

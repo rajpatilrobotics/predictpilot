@@ -204,6 +204,7 @@ describe('MarketDetailPage and StrategyBuilder', () => {
 
     expect(screen.getByRole('heading', { name: 'Market Detail / Strategy' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Strategy builder' })).toBeInTheDocument();
+    expect(screen.getByText(/UP wins if settlement > strike/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Preview strategy' }));
 
@@ -254,6 +255,7 @@ describe('MarketDetailPage and StrategyBuilder', () => {
     render(<MarketDetailPage nowMs={tradeTestNowMs} oracleId={tradeTestOracleId} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Range' }));
+    expect(screen.getByText(/wins if settlement is in \(/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Preview strategy' }));
 
     await waitFor(() => expect(beginMintRangeReview).toHaveBeenCalledTimes(1));

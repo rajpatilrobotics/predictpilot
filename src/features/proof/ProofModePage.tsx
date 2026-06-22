@@ -10,6 +10,8 @@ import { useTransactionHistory } from '@/features/history/hooks/useTransactionHi
 import { usePredictManager } from '@/features/manager/hooks/usePredictManager';
 import { useManagerSummary } from '@/features/portfolio/hooks/useManagerSummary';
 import { usePositionsSummary } from '@/features/portfolio/hooks/usePositionsSummary';
+import { PayoffRiskVisualizer } from '@/features/trade/PayoffRiskVisualizer';
+import { createPayoffVisualizerModelFromSnapshot } from '@/features/trade/payoff-visualizer';
 import { useWalletStatus } from '@/features/wallet/useWalletStatus';
 import { useProofSession } from './proof-session-context';
 import {
@@ -41,6 +43,12 @@ export function ProofModePage() {
     owner: manager.owner,
   });
   const { latestPreparedReview, latestSubmittedProof } = useProofSession();
+  const payoffModel = useMemo(() => {
+    const payoffSnapshot =
+      latestSubmittedProof?.payoffSnapshot ?? latestPreparedReview?.payoffSnapshot ?? null;
+
+    return payoffSnapshot === null ? null : createPayoffVisualizerModelFromSnapshot(payoffSnapshot);
+  }, [latestPreparedReview?.payoffSnapshot, latestSubmittedProof?.payoffSnapshot]);
   const viewModel = selectProofModeViewModel({
     history: history.data,
     historyError: history.error,
@@ -86,6 +94,11 @@ export function ProofModePage() {
       <div className="mt-5 grid gap-4">
         <ProofVerdictBanner onRefresh={refreshProof} viewModel={viewModel} />
         <SourceLabelStrip labels={viewModel.sourceLabels} />
+        <PayoffRiskVisualizer
+          fallbackDescription="Proof Mode shows payoff recap only after a binary or range review records enough local context."
+          model={payoffModel}
+          title="Payoff recap"
+        />
 
         <div className="grid gap-4 xl:grid-cols-3">
           <ProofRowsPanel rows={viewModel.readinessRows} title="Readiness" />

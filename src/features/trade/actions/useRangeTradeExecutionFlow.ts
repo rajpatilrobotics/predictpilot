@@ -204,6 +204,11 @@ export function useRangeTradeExecutionFlow<TPreview extends RangeTradeTxPreviewB
             managerSummary: preconditions.managerSummary,
             oracleState,
             oracleStatus: preconditions.oracleStatus,
+            payoff: {
+              higherStrike1e9: preconditions.rangeKey.higherStrike1e9,
+              kind: 'range',
+              lowerStrike1e9: preconditions.rangeKey.lowerStrike1e9,
+            },
             quantityQuote: preconditions.quantityQuote,
             warnings: riskResult.warnings,
           }),
@@ -516,6 +521,11 @@ async function createRangeTradeRiskPreview({
       managerSummary,
       oracleState,
       oracleStatus,
+      payoff: {
+        higherStrike1e9: rangeKey.higherStrike1e9,
+        kind: 'range',
+        lowerStrike1e9: rangeKey.lowerStrike1e9,
+      },
       quantityQuote,
       warnings: previewResult.warnings,
     }),

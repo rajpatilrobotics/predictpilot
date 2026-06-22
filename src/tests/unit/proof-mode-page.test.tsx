@@ -76,6 +76,9 @@ describe('ProofModePage', () => {
     expect(screen.getByRole('heading', { name: 'Proof Mode' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Proof blocked' })).toBeInTheDocument();
     expect(screen.getAllByText(/No submitted transaction/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole('status', { name: 'Payoff recap unavailable' })).toHaveTextContent(
+      'Payoff recap unavailable',
+    );
     expect(screen.queryByRole('link', { name: /View transaction/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /copy proof summary/i })).toBeDisabled();
   });
@@ -96,6 +99,18 @@ describe('ProofModePage', () => {
         confirmedStatus: 'success',
         managerId,
         oracleId: null,
+        payoffSnapshot: {
+          action: 'MINT',
+          direction: 'UP',
+          expiryMs: 1_791_003_600_000n,
+          kind: 'binary',
+          managerBalanceQuote: 5_000_000n,
+          oracleId: '0xca4663000000000000000000000000000000000000000000000000000066775a',
+          oracleStatus: 'ACTIVE',
+          quantityQuote: 1_000_000n,
+          strike1e9: 50_000_000_000_000n,
+          underlyingAsset: 'BTC',
+        },
         recordedAtMs: 1_791_000_000_000,
         refreshWarning: null,
         sender: walletAddress,
@@ -105,6 +120,7 @@ describe('ProofModePage', () => {
     render(<ProofModePage />);
 
     expect(screen.getByRole('heading', { name: 'Proof verified' })).toBeInTheDocument();
+    expect(screen.getByText(/UP wins if settlement > strike/i)).toBeInTheDocument();
     expect(screen.getAllByText(digest).length).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: /Open explorer proof/i })).toBeInTheDocument();
     expect(

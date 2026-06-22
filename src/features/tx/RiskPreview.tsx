@@ -2,6 +2,12 @@ import type { BinaryTradePreviewModel } from '@/integrations/deepbook-predict/tx
 import type { RangeTradePreviewModel } from '@/integrations/deepbook-predict/tx/preview-range';
 import { InlineStateNotice } from '@/components/states/StatePrimitives';
 import { TerminalDatum, TerminalPanel } from '@/components/terminal/TerminalPanels';
+import { PayoffRiskVisualizer } from '@/features/trade/PayoffRiskVisualizer';
+import {
+  createPayoffVisualizerModelFromPreview,
+  type PayoffVisualizerKind,
+} from '@/features/trade/payoff-visualizer';
+import type { BinaryDirection } from '@/types/predict';
 
 type RiskWarningInput =
   | string
@@ -19,17 +25,22 @@ export interface RiskPreviewModel {
   estimatedCostQuote?: bigint;
   estimatedPayoutQuote?: bigint;
   expiryMs?: bigint | number;
+  direction?: BinaryDirection;
+  higherStrike1e9?: bigint;
+  lowerStrike1e9?: bigint;
   managerBalanceQuote?: bigint;
   managerId?: string;
   oracleFreshness?: string;
   oracleId?: string;
   oracleStatus?: string;
+  payoffKind?: PayoffVisualizerKind;
   plpAmountAtomic?: bigint;
   quantityQuote?: bigint;
   quoteAsset?: {
     symbol: string;
   };
   title?: string;
+  strike1e9?: bigint;
   underlyingAsset?: string;
   vaultValueQuote?: bigint;
   warnings?: RiskWarningInput[];
@@ -44,6 +55,7 @@ export interface RiskPreviewProps {
 const unavailableCopy = 'Unavailable / TODO VERIFY';
 
 export function RiskPreview({ className = '', preview, title = 'Risk preview' }: RiskPreviewProps) {
+  const payoffModel = createPayoffVisualizerModelFromPreview(preview);
   const model = normalizeRiskPreview(preview);
   const rows = createRiskRows(model);
   const warnings = normalizeWarnings(model.warnings);
@@ -52,6 +64,12 @@ export function RiskPreview({ className = '', preview, title = 'Risk preview' }:
   return (
     <TerminalPanel title={title}>
       <div className={className}>
+        {payoffModel === null ? null : (
+          <div className="mb-4">
+            <PayoffRiskVisualizer compact model={payoffModel} title="Payoff semantics" />
+          </div>
+        )}
+
         <dl className="grid gap-3 md:grid-cols-2">
           {rows.map((row) => (
             <TerminalDatum key={row.label} label={row.label} value={row.value} />
@@ -101,6 +119,9 @@ function normalizeRiskPreview(
     estimatedCostQuote: preview.estimatedCostQuote,
     estimatedPayoutQuote: preview.estimatedPayoutQuote,
     expiryMs: preview.expiryMs,
+    direction: getManualField(preview, 'direction'),
+    higherStrike1e9: getManualField(preview, 'higherStrike1e9'),
+    lowerStrike1e9: getManualField(preview, 'lowerStrike1e9'),
     managerBalanceQuote: preview.managerBalanceQuote,
     managerId: preview.managerId,
     oracleFreshness: hasOracleStatusModel(preview)
@@ -110,9 +131,11 @@ function normalizeRiskPreview(
     oracleStatus: hasOracleStatusModel(preview)
       ? preview.oracleStatus.lifecycleStatus
       : getManualField(preview, 'oracleStatus'),
+    payoffKind: getManualField(preview, 'payoffKind'),
     plpAmountAtomic: getManualField(preview, 'plpAmountAtomic'),
     quantityQuote: preview.quantityQuote,
     quoteAsset: preview.quoteAsset,
+    strike1e9: getManualField(preview, 'strike1e9'),
     underlyingAsset: preview.underlyingAsset,
     vaultValueQuote: getManualField(preview, 'vaultValueQuote'),
     warnings: preview.warnings,

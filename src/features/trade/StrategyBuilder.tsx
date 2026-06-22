@@ -3,6 +3,7 @@ import { ExecutionModal } from '@/components/modals/ExecutionModal';
 import { InlineStateNotice, StatePanel } from '@/components/states/StatePrimitives';
 import { TxDigestLink } from '@/components/tx/TxDigestLink';
 import { TerminalMetricCard, TerminalPanel } from '@/components/terminal/TerminalPanels';
+import { PayoffRiskVisualizer } from '@/features/trade/PayoffRiskVisualizer';
 import { RiskPreview } from '@/features/tx/RiskPreview';
 import { useWalletStatus, type WalletStatusModel } from '@/features/wallet/useWalletStatus';
 import type { UsePredictManagerResult } from '@/features/manager/hooks/usePredictManager';
@@ -33,7 +34,9 @@ import type { NormalizedManagerPositionsSummaryModel } from '@/features/portfoli
 import type { BinaryTradePreviewModel } from '@/integrations/deepbook-predict/tx/preview-binary';
 import type { RangeTradePreviewModel } from '@/integrations/deepbook-predict/tx/preview-range';
 import type { PredictPilotError } from '@/lib/errors';
+import { getOracleStatus } from '@/lib/oracle-status';
 import { formatLifecycleLabel, formatPrice1e9, formatQuoteAmount } from '@/lib/formatters';
+import { createDraftPayoffVisualizerModel } from './payoff-visualizer';
 
 type StrategyMode = 'binary' | 'range';
 interface ExecutionStatusLabels {
@@ -152,6 +155,58 @@ export function StrategyBuilder({
     [effectiveAskBounds, higherStrikeInput, lowerStrikeInput, oracleState.oracle],
   );
   const activeValidation = mode === 'binary' ? binaryKeyResult : rangeKeyResult;
+  const activePayoffModel = useMemo(() => {
+    const oracleStatus = getOracleStatus({ nowMs: renderNowMs, oracleState });
+
+    if (mode === 'binary') {
+      return createDraftPayoffVisualizerModel({
+        action: binaryAction,
+        direction,
+        expiryMs: oracleState.oracle.expiryMs,
+        kind: 'binary',
+        managerBalanceQuote: managerSummary?.tradingBalanceQuote,
+        managerId: managerSummary?.managerId ?? manager.managerId,
+        oracleFreshness: oracleStatus.freshness.aggregateStatus,
+        oracleId: oracleState.oracle.oracleId,
+        oracleStatus: oracleStatus.lifecycleStatus,
+        quantityQuote,
+        strike1e9: binaryKeyResult.ok ? binaryKeyResult.key.strike1e9 : undefined,
+        underlyingAsset: oracleState.oracle.underlyingAsset,
+        validationErrors: binaryKeyResult.ok ? [] : binaryKeyResult.errors,
+        validationWarnings: binaryKeyResult.warnings,
+      });
+    }
+
+    return createDraftPayoffVisualizerModel({
+      action: rangeAction,
+      expiryMs: oracleState.oracle.expiryMs,
+      higherStrike1e9: rangeKeyResult.ok ? rangeKeyResult.key.higherStrike1e9 : undefined,
+      kind: 'range',
+      lowerStrike1e9: rangeKeyResult.ok ? rangeKeyResult.key.lowerStrike1e9 : undefined,
+      managerBalanceQuote: managerSummary?.tradingBalanceQuote,
+      managerId: managerSummary?.managerId ?? manager.managerId,
+      oracleFreshness: oracleStatus.freshness.aggregateStatus,
+      oracleId: oracleState.oracle.oracleId,
+      oracleStatus: oracleStatus.lifecycleStatus,
+      quantityQuote,
+      underlyingAsset: oracleState.oracle.underlyingAsset,
+      validationErrors: rangeKeyResult.ok ? [] : rangeKeyResult.errors,
+      validationWarnings: rangeKeyResult.warnings,
+    });
+  }, [
+    binaryAction,
+    binaryKeyResult,
+    direction,
+    manager.managerId,
+    managerSummary?.managerId,
+    managerSummary?.tradingBalanceQuote,
+    mode,
+    oracleState,
+    quantityQuote,
+    rangeAction,
+    rangeKeyResult,
+    renderNowMs,
+  ]);
 
   function resetPreview() {
     setPreviewState({ status: 'idle' });
@@ -360,6 +415,8 @@ export function StrategyBuilder({
               errors={activeValidation.ok ? [] : activeValidation.errors}
               warnings={activeValidation.warnings}
             />
+
+            <PayoffRiskVisualizer model={activePayoffModel} />
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <button

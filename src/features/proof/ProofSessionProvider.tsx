@@ -24,6 +24,7 @@ export function ProofSessionProvider({ children }: { children: ReactNode }) {
     ({
       builderPreview,
       executionRequest,
+      payoffSnapshot,
       preparedAtMs,
       simulationStatus,
     }: RecordPreparedProofInput) => {
@@ -34,6 +35,7 @@ export function ProofSessionProvider({ children }: { children: ReactNode }) {
         description: executionRequest.description,
         managerId: getFirstAffectedObjectId(builderPreview.affectedObjects, 'manager'),
         oracleId: getFirstAffectedObjectId(builderPreview.affectedObjects, 'oracle'),
+        payoffSnapshot,
         plpAmountAtomic: builderPreview.plpAmountAtomic,
         preparedAtMs,
         quantityQuote: builderPreview.quantityQuote,
@@ -48,6 +50,7 @@ export function ProofSessionProvider({ children }: { children: ReactNode }) {
     ({
       builderPreview,
       executionResult,
+      payoffSnapshot,
       recordedAtMs,
       refreshWarning,
     }: RecordSubmittedProofInput) => {
@@ -60,6 +63,7 @@ export function ProofSessionProvider({ children }: { children: ReactNode }) {
         description: executionResult.description,
         managerId: getFirstAffectedObjectId(executionResult.affectedObjects, 'manager'),
         oracleId: getFirstAffectedObjectId(executionResult.affectedObjects, 'oracle'),
+        payoffSnapshot,
         plpAmountAtomic: builderPreview.plpAmountAtomic,
         quantityQuote: builderPreview.quantityQuote,
         recordedAtMs,

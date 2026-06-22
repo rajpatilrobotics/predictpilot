@@ -79,15 +79,19 @@ describe('PP-048 transaction preview UI', () => {
           oracleFreshness: 'FRESH',
           oracleId,
           oracleStatus: 'ACTIVE',
+          payoffKind: 'binary',
           quantityQuote: 100_000n,
           quoteAsset: { symbol: 'DUSDC' },
+          strike1e9: 50_000_000_000_000n,
+          direction: 'UP',
           underlyingAsset: 'BTC',
           warnings: ['Oracle should be refreshed before signing.'],
         }}
       />,
     );
 
-    expect(screen.getByText('Estimated cost')).toBeInTheDocument();
+    expect(screen.getByText(/UP wins if settlement > strike/i)).toBeInTheDocument();
+    expect(screen.getAllByText('Estimated cost').length).toBeGreaterThan(0);
     expect(screen.getByText('250000 DUSDC')).toBeInTheDocument();
 
     rerender(

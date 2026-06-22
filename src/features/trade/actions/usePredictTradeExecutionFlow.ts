@@ -3,6 +3,7 @@ import { useCurrentClient, useDAppKit } from '@mysten/dapp-kit-react';
 import { useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query';
 import type { Transaction } from '@mysten/sui/transactions';
 import { useProofSession } from '@/features/proof/proof-session-context';
+import { createPayoffSnapshotFromPreview } from '@/features/trade/payoff-visualizer';
 import type { RiskPreviewProps } from '@/features/tx/RiskPreview';
 import {
   createLoadingPtbPreview,
@@ -284,6 +285,7 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
           proofSession.recordPreparedProof({
             builderPreview: prepared.builderPreview,
             executionRequest: prepared.executionRequest,
+            payoffSnapshot: createPayoffSnapshotFromPreview(prepared.riskPreview),
             preparedAtMs,
             simulationStatus: simulationPreview.status,
           });
@@ -363,6 +365,7 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
         proofSession.recordPreparedProof({
           builderPreview: state.builderPreview,
           executionRequest: state.executionRequest,
+          payoffSnapshot: createPayoffSnapshotFromPreview(state.riskPreview),
           preparedAtMs,
           simulationStatus: simulationPreview.status,
         });
@@ -387,6 +390,7 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
     state.builderPreview,
     state.executionRequest,
     state.phase,
+    state.riskPreview,
   ]);
 
   const requestSignature = useCallback(async () => {
@@ -501,6 +505,7 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
       proofSession.recordSubmittedProof({
         builderPreview,
         executionResult,
+        payoffSnapshot: createPayoffSnapshotFromPreview(state.riskPreview),
         recordedAtMs: nowMs(),
         refreshWarning: finalRefreshWarning,
       });
@@ -531,6 +536,7 @@ export function usePredictTradeExecutionFlow<TInput, TPreview extends PredictTra
     state.executionRequest,
     state.phase,
     state.previewPreparedAtMs,
+    state.riskPreview,
     state.simulationPreview,
     walletRecoveryNoticeDelayMs,
     walletReturnTimeoutMs,
