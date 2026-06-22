@@ -424,11 +424,59 @@ Use this for liquidity provider actions:
 
 Use this for proof. It should show indexed activity after transactions.
 
+### Proof Mode
+
+Use this after a transaction once the Proof Mode feature is available. It will summarize whether the app has enough evidence to call the action verified.
+
+Proof Mode should show:
+
+- wallet readiness
+- Testnet status
+- PredictManager ID
+- selected oracle ID
+- dUSDC readiness
+- simulation readiness
+- transaction digest
+- Sui Explorer link
+- portfolio refresh status
+- history refresh status
+
 ### Demo Mode
 
 Use this for safe explanation without real wallet execution.
 
-## 11. What To Capture For Hackathon Proof
+## 11. How To Use Proof Mode
+
+When Proof Mode is available, use it as the final check after a real wallet transaction.
+
+1. Complete the intended action, such as manager creation, DUSDC deposit, binary mint, range mint, or vault supply.
+2. Wait for the transaction digest.
+3. Open `Proof Mode`.
+4. Read the top verdict first.
+5. Confirm the page separates evidence by source:
+   - `Wallet`
+   - `Chain`
+   - `Predict server`
+   - `Local`
+6. Open the Sui Explorer link if a digest is shown.
+7. Check whether portfolio and history refresh are complete.
+8. Click `Copy proof summary` if available.
+9. Save the copied proof in your submission notes.
+
+### How To Read Proof States
+
+- `Blocked`: something required is missing, such as wallet, Testnet, manager, dUSDC, oracle, or simulation.
+- `Ready`: inputs are valid, but no wallet transaction has been submitted yet.
+- `Ready but Not Submitted`: a transaction was prepared and simulated, but you have not approved it in the wallet.
+- `Pending Index`: chain proof exists, but Predict server portfolio/history has not refreshed yet.
+- `Verified`: chain confirmation exists and the required refresh checks are visible.
+- `Failed`: simulation, wallet signing, transaction, or refresh failed.
+
+Important rule:
+
+> A digest is real chain evidence. A copied proof summary is only a convenient note. Demo Mode is never live proof.
+
+## 12. What To Capture For Hackathon Proof
 
 For a strong demo, capture these items:
 
@@ -441,13 +489,15 @@ For a strong demo, capture these items:
 7. History refresh screenshot.
 8. Sui Explorer page for the digest.
 9. Optional vault supply/withdraw digest.
+10. Proof Mode screenshot if available.
+11. Copied proof summary if available.
 
 Store proof in:
 
 - `docs/submission/proof/digests.md`
 - `docs/submission/screenshots/`
 
-## 12. Common Problems
+## 13. Common Problems
 
 ### Wallet Is Not Connected
 
@@ -494,7 +544,18 @@ Wait a little. Wallet return or indexed refresh can lag. Do not retry blindly if
 
 Wait and refresh. Indexed server data can take time after the onchain transaction succeeds.
 
-## 13. Beginner Testing Path
+### Proof Mode Says Pending Index
+
+This means the transaction digest exists, but the Predict server has not shown the refreshed portfolio or history row yet.
+
+Do this:
+
+1. Keep the digest.
+2. Open the explorer link.
+3. Wait and refresh the app.
+4. Do not call it fully `Verified` until the required refresh checks are visible.
+
+## 14. Beginner Testing Path
 
 Use this safe path while learning:
 

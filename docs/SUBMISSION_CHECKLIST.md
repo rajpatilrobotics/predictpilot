@@ -79,6 +79,32 @@ These are the minimum submission standards for PredictPilot if you want judges t
 - [ ] Show at least one real **transaction digest** and verify it in a Sui explorer.
 - [ ] Refresh portfolio/history state after execution.
 
+### Proof Mode submission checklist
+
+Capture these fields for the final proof package. If any field is missing, label it clearly as `Pending Index`, `Blocked`, or `TODO VERIFY`; do not hide the gap.
+
+- [ ] Public app URL used for the proof.
+- [ ] Real wallet address used for the proof.
+- [ ] Network shown as **Sui Testnet**.
+- [ ] PredictManager ID.
+- [ ] Selected oracle ID.
+- [ ] Selected action: binary mint, binary redeem, range mint, range redeem, vault supply, vault withdraw, manager deposit, or manager withdraw.
+- [ ] Quantity and quote asset.
+- [ ] Transaction digest.
+- [ ] Sui Explorer link.
+- [ ] Screenshot of Proof Mode verdict.
+- [ ] Screenshot or visible status for portfolio refresh.
+- [ ] Screenshot or visible status for history refresh.
+- [ ] If indexing is delayed, screenshot the `Pending Index` state and note that chain proof exists separately from Predict-server refresh.
+- [ ] If demo fixtures are shown anywhere, the screen clearly says they are **not live Testnet proof**.
+
+The final proof package should make the source of each claim obvious:
+
+- **Wallet**: connected account and user approval state.
+- **Chain**: digest, explorer link, transaction effects, and authoritative refresh when available.
+- **Predict server**: portfolio, manager, vault, PnL, and history refresh.
+- **Local**: form inputs, copied proof summary, demo notes, and route state.
+
 ### MUST SUBMIT, SHOULD SUBMIT, NICE TO HAVE, DO NOT SUBMIT
 
 **MUST SUBMIT**

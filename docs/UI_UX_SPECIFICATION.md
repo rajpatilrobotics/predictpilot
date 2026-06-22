@@ -46,6 +46,34 @@ This UI must be optimized for the actual hackathon context. The official Sui Ove
   - and post-transaction refresh that proves state changed.
 - The judge must never need to infer hidden protocol logic. Every important term should have visible first-run help: `PredictManager`, `OracleSVI`, `PLP`, `dUSDC`, ask bounds, expiry, settlement.
 
+**Proof-first UX layer**
+
+PredictPilot’s next judge-facing layer is Proof Mode: a compact route and shared proof model that answers one question quickly: “Can this live DeepBook Predict action be trusted?” It should be designed for a 60 to 90 second judge check, not for long-form analytics.
+
+Required Proof Mode states:
+
+- **Blocked**: a required prerequisite is missing, such as wallet connection, Testnet, manager, dUSDC, selected oracle, or simulation.
+- **Ready**: the app has enough verified inputs to prepare or review a transaction, but no wallet signature has been requested.
+- **Ready but Not Submitted**: a PTB was built and simulated, but the user has not approved a wallet transaction.
+- **Pending Index**: a chain-confirmed digest exists, but Predict server portfolio/history refresh has not caught up yet.
+- **Verified**: chain confirmation exists and required post-transaction refresh checks are visible.
+- **Failed**: wallet rejection, simulation failure, transaction failure, or refresh failure prevents proof completion.
+
+Required source labels:
+
+- **Wallet**: connected account, network, wallet rejection, user approval, and wallet-return state.
+- **Chain**: confirmed digest, explorer link, transaction effects, and authoritative object or coin reads.
+- **Predict server**: market, manager, vault, PnL, and history rows from the public Predict server.
+- **Local**: UI-only selections, form inputs, demo fixtures, route state, and copied proof summaries.
+
+Proof copy rules:
+
+- Never call a digest `Verified` until chain confirmation exists.
+- Never treat Predict-server indexed refresh as stronger than chain proof.
+- Never show a demo fixture, copied summary, or local session as live Testnet proof.
+- If chain proof exists but portfolio/history has not refreshed, show `Pending Index` with a retry or refresh action.
+- Keep the proof verdict above supporting details so judges do not have to read a whole page to understand status.
+
 **Design principles**
 
 - **Execution over decoration.**
@@ -79,6 +107,7 @@ This UI must be optimized for the actual hackathon context. The official Sui Ove
   - Strategy Builder
   - Risk Preview
   - Transaction Preview
+  - Proof Mode
   - Portfolio
   - PnL
   - Vault and PLP
@@ -132,6 +161,7 @@ This UI must be optimized for the actual hackathon context. The official Sui Ove
   - Strategy Builder
   - Risk Preview
   - Transaction Preview
+  - Proof Mode
   - Portfolio
   - Vault and PLP
   - Transaction History

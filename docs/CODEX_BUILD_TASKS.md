@@ -115,6 +115,7 @@ Phase ordering:
 - Phase 10: Testing and QA
 - Phase 11: Demo mode and polish
 - Phase 12: Deployment and submission
+- Phase 13: Judge-verifiable winning layer
 
 ## Atomic task backlog
 
@@ -793,6 +794,85 @@ Phase ordering:
   - Failure modes to avoid: shipping with known broken core flow
   - Definition of done: repo is ready for final hackathon submission
 
+**Phase 13**
+
+- **PP-061 | Build Proof Mode**
+  - Priority: MUST
+  - Dependency: PP-048, PP-054, PP-060
+  - Objective: Add a dedicated proof cockpit that lets a judge verify wallet, Testnet, manager, dUSDC, selected oracle, PTB simulation, latest digest, explorer link, portfolio refresh, and history refresh in 60 to 90 seconds.
+  - Files: `src/features/proof/`, route shell integration, proof-specific tests
+  - Implementation instructions: Separate proof sources as `Wallet`, `Chain`, `Predict server`, and `Local`; show `Blocked`, `Ready`, `Ready but Not Submitted`, `Pending Index`, `Verified`, and `Failed` without collapsing chain confirmation and indexed refresh into one boolean. Any digest shown in Proof Mode must come from a confirmed execution result, a strict wallet-return recovery match, or a matching indexed history row, never from arbitrary local text.
+  - Acceptance criteria: `/proof` shows a top verdict, readiness checklist, execution proof, reconciliation status, digest/explorer card when available, and honest stale/indexing states.
+  - Required tests: unit/component tests plus Playwright route smoke
+  - Failure modes to avoid: fake proof, claiming a digest is verified before chain confirmation, or treating delayed Predict-server history as transaction failure.
+  - Definition of done: a judge can open Proof Mode and understand exactly what is real, pending, blocked, or unproven.
+
+- **PP-062 | Add Demo Proof Recorder and copy summary**
+  - Priority: MUST
+  - Dependency: PP-061
+  - Objective: Add a copyable proof summary for screenshots, video narration, and submission proof notes.
+  - Files: `src/features/proof/`, proof utilities, proof-specific tests
+  - Implementation instructions: Generate a plain-text summary with network, wallet, action, manager, oracle, quantity, digest, explorer link, portfolio refresh, history refresh, and source labels. Never include raw transaction bytes, signed payloads, wallet auth state, cookies, stack traces, private metadata, or unbounded local/session data.
+  - Acceptance criteria: Copy proof works for verified and pending-index states and clearly labels missing or pending data.
+  - Required tests: unit tests for summary output and component tests for copy behavior
+  - Failure modes to avoid: copied proof that omits pending states or represents local/session data as chain proof.
+  - Definition of done: the copied proof summary can be pasted directly into submission notes without manual cleanup.
+
+- **PP-063 | Add Best Market Finder**
+  - Priority: MUST
+  - Dependency: PP-042, PP-061
+  - Objective: Surface a small set of judge-friendly demo markets from the large oracle list.
+  - Files: `src/features/markets/`, market ranking utilities, market page tests
+  - Implementation instructions: Rank markets conservatively by active lifecycle, freshness, BTC/demo suitability, non-expired timing, strike validity, tradeability, and ask-bounds availability. Unknown fields must produce lower confidence, not invented certainty.
+  - Acceptance criteria: Markets page exposes `Best Demo Markets` and an `Open Best Strategy` path without hiding the full oracle list.
+  - Required tests: ranking unit tests, markets component tests, Playwright smoke
+  - Failure modes to avoid: recommending expired, inactive, stale, or unsupported markets as best choices.
+  - Definition of done: a judge can reach a credible strategy candidate without manually searching thousands of oracles.
+
+- **PP-064 | Add payoff and risk visualizer**
+  - Priority: SHOULD
+  - Dependency: PP-043, PP-048, PP-061
+  - Objective: Explain binary and range payoff semantics before signing.
+  - Files: `src/features/trade/`, risk visualizer tests
+  - Implementation instructions: For binary trades, show UP/DOWN win conditions and simulated cost/payout when available. For range trades, show the `(lower, higher]` settlement band. Never fabricate pricing when simulation or estimator data is missing.
+  - Acceptance criteria: Strategy Builder and Proof Mode can show readable payoff/risk cards for selected binary or range inputs.
+  - Required tests: unit tests for display models and component tests for missing-data states
+  - Failure modes to avoid: presenting approximate payoff math as protocol-authoritative.
+  - Definition of done: a non-expert judge can explain what the selected trade wins or loses on.
+
+- **PP-065 | Add Oracle Health Audit**
+  - Priority: SHOULD
+  - Dependency: PP-012, PP-024, PP-044, PP-061
+  - Objective: Turn oracle lifecycle, freshness, ask bounds, expiry, and strike validity into a practical health checklist.
+  - Files: `src/features/oracle/`, health audit utilities, oracle tests
+  - Implementation instructions: Provide a tradeability score or label based on verified fields only; unknown or missing data must be visible and conservative.
+  - Acceptance criteria: Market detail, Oracle Status, and Proof Mode can show active/stale/settled/ask-bounds/strike-validity checks consistently.
+  - Required tests: utility tests plus Oracle Status component tests
+  - Failure modes to avoid: overbuilding unverified SVI math or hiding missing ask-bounds/risk payloads.
+  - Definition of done: selected-oracle readiness is understandable without reading raw JSON or external docs.
+
+- **PP-066 | Add Strategy Receipt and Proof Card**
+  - Priority: SHOULD
+  - Dependency: PP-061, PP-064, PP-065
+  - Objective: Create a concise card for the selected or executed strategy that can be used in UI, screenshots, and demo narration.
+  - Files: `src/features/proof/`, `src/features/trade/`, receipt tests
+  - Implementation instructions: Show action, market, oracle ID, manager ID, strike/range, quantity, warnings, digest, explorer link, and refresh states. Reuse Proof Mode source labels.
+  - Acceptance criteria: Strategy Receipt appears before signing without a digest and after execution with digest/explorer proof when available.
+  - Required tests: component tests for pre-sign, post-sign, and pending-index receipts
+  - Failure modes to avoid: showing fake digests, hiding warnings, or implying execution before wallet approval.
+  - Definition of done: a single card can explain the strategy and proof state in a screenshot.
+
+- **PP-067 | Add Judge Demo Path**
+  - Priority: SHOULD
+  - Dependency: PP-056, PP-061, PP-062, PP-063
+  - Objective: Add a guided path that takes judges from best market selection through proof verification with minimal branching.
+  - Files: `src/features/demo/`, proof/demo integration tests
+  - Implementation instructions: Guide through Best Market, Oracle Health, Strategy Preview, PTB Preview, Wallet Signature, Digest, Portfolio, History, and Proof Mode. Demo fixtures must remain labeled as offline and never replace live proof.
+  - Acceptance criteria: `Start Judge Demo` provides a clear path for both live-ready and offline/demo states.
+  - Required tests: component tests and Playwright smoke for the guided path
+  - Failure modes to avoid: using demo mode to imply live transaction proof or hiding required wallet/funding prerequisites.
+  - Definition of done: the product can be demonstrated coherently even if indexing lags or live dUSDC is unavailable.
+
 ## MUST, SHOULD, COULD, and DO NOT BUILD
 
 MUST HAVE tasks:
@@ -811,6 +891,9 @@ MUST HAVE tasks:
 - PP-057
 - PP-059
 - PP-060
+- PP-061
+- PP-062
+- PP-063
 
 SHOULD HAVE tasks:
 
@@ -822,6 +905,10 @@ SHOULD HAVE tasks:
 - PP-044
 - PP-056
 - PP-058
+- PP-064
+- PP-065
+- PP-066
+- PP-067
 
 COULD HAVE tasks:
 

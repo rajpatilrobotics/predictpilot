@@ -69,6 +69,10 @@ flowchart LR
     B --> N[Vault / PLP]
     J --> O[Transaction History]
     B --> P[Demo Mode]
+    I --> Q[Proof Mode]
+    O --> Q
+    P --> Q
+    Q --> R[Copy Proof Summary]
 ```
 
 ### Anti-fake API warning for Codex
@@ -143,6 +147,8 @@ The global shell is based on the official DeepBook Predict data flow guidance: r
 |   History            |
 | Demo                 |
 |   Demo Mode          |
+| Proof                |
+|   Proof Mode         |
 |----------------------|
 | Testnet | LIVE 3     |
 +----------------------+
@@ -1404,6 +1410,59 @@ After any transaction, users need immediate confirmation that the manager, portf
 
 **Codex notes:** keep digest column copyable with a one-click icon.
 
+### Proof Mode wireframe
+
+**Purpose:** give judges one fast, source-labeled proof page after a real or prepared execution flow.
+
+**Primary user:** judge, builder, demo operator.
+
+**Key data shown:** wallet, network, manager, selected oracle, dUSDC readiness, simulation readiness, latest digest, explorer link, portfolio refresh, history refresh.
+
+**Primary action:** copy proof summary.
+
+**Secondary actions:** open explorer, refresh proof, return to market, open portfolio, open history.
+
+**Required components:** verdict banner, readiness panel, execution proof panel, reconciliation panel, digest/proof card, copy-proof summary card.
+
+**ASCII:**
+```text
++------------------------------------------------------------------------------------------------------------------+
+| Proof Mode                                                                                                       |
+| VERDICT: Verified / Pending Index / Ready but Not Submitted / Blocked / Failed                                  |
+| Sources: Wallet | Chain | Predict server | Local                                                                |
+|------------------------------------------------------------------------------------------------------------------|
+| Readiness                         | Execution proof                         | Reconciliation                  |
+| Wallet: connected                 | Action: Binary mint                     | Manager summary: refreshed       |
+| Network: testnet                  | Oracle: 0x...                           | Portfolio: refreshed / pending   |
+| Manager: ready                    | Quantity: 1 dUSDC                       | History: refreshed / pending     |
+| dUSDC: available                  | Digest: 0x... [Explorer]                | Last checked: ...                |
+| Oracle health: pass/warn/fail     | Simulation: ready                       |                                  |
+|------------------------------------------------------------------------------------------------------------------|
+| Strategy Receipt / Proof Card                                                                                   |
+| Action, market, oracle ID, manager ID, strike/range, quantity, warnings, digest, explorer link, refresh state     |
+| [Copy proof summary] [Open explorer] [Refresh proof] [Open portfolio] [Open history]                             |
++------------------------------------------------------------------------------------------------------------------+
+```
+
+**Loading:** show a compact proof skeleton and label which source is loading.
+
+**Empty:** `No submitted transaction yet. Prepare a strategy or open Demo Mode.`
+
+**Blocked:** show the first missing prerequisite and one next action.
+
+**Pending Index:** show the confirmed digest first, then explain that Predict server portfolio/history rows may lag.
+
+**Verified:** show confirmed digest, explorer link, and refreshed portfolio/history status above the fold.
+
+**Failed:** show the failed evidence layer without raw stack traces or wallet internals.
+
+**Copy examples:**
+- `Chain proof exists. Waiting for Predict server history to index this action.`
+- `Verified means the digest is confirmed and the required refresh checks are visible.`
+- `Copy proof summary is for submission notes. It is not a new source of truth.`
+
+**Codex notes:** never show fixture data as proof, never call `Pending Index` verified, and never hide the digest behind lower-priority analytics.
+
 ### Demo mode wireframe
 
 **Purpose:** guided judge path with no confusion.
@@ -1608,7 +1667,10 @@ flowchart LR
     G --> H[Wallet sign]
     H --> I[Success modal with digest]
     I --> J[Portfolio refresh]
-    J --> K[Vault / PLP or SVI surface]
+    J --> K[History refresh]
+    K --> L[Proof Mode verdict]
+    L --> M[Copy proof summary]
+    L --> N[Vault / PLP or SVI surface]
 ```
 
 ### Landing page wireframe
@@ -1774,6 +1836,9 @@ Use current Sui branding assets only; do not stretch, recolor, or recreate the l
 - [ ] Portfolio and PnL screens refresh after execution.
 - [ ] History screen shows digests and action types.
 - [ ] Demo Mode provides a judge-friendly five-step path.
+- [ ] Proof Mode shows readiness, execution proof, reconciliation, digest, explorer link, and copy-proof summary.
+- [ ] Best Demo Markets can route a judge to a credible market without scanning thousands of rows.
+- [ ] Strategy Receipt / Proof Card never treats local/demo data as live proof.
 - [ ] Empty, loading, error, and success states are all implemented.
 - [ ] Mobile uses bottom tabs and full-screen preview sheets.
 - [ ] No generic sportsbook wording or visuals survive into the final UI.

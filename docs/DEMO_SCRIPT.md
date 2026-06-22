@@ -264,22 +264,56 @@ flowchart TD
     H --> I[Show success toast and digest]
     I --> J[Open digest in explorer]
     J --> K[Return to app and show refreshed portfolio and history]
-    K --> L[Optional vault and PLP flow]
+    K --> L[Open Proof Mode]
+    L --> M[Copy proof summary]
+    M --> N[Optional vault and PLP flow]
 ```
 
 This sequence matches what hackathon judges need most: fast context, real action, visible proof, then refreshed state. It also reflects Devpost guidance to quickly set the scene, demo the working project, and wrap with impact instead of spending time on setup fluff. citeturn13search1turn13search3
 
+### Proof-first judge path
+
+Use this as the preferred live or recorded story once Proof Mode is implemented:
+
+1. Start on Dashboard or Demo Mode.
+2. Open **Best Demo Markets** and choose the recommended active oracle.
+3. Open the oracle health audit and show lifecycle, freshness, ask-bounds, expiry, and strike validity.
+4. Open Strategy Builder and show binary or range payoff/risk.
+5. Open the PTB preview and show that simulation is ready before signing.
+6. Sign the wallet transaction on Sui Testnet.
+7. Show the digest and explorer link.
+8. Open Proof Mode and show readiness, execution proof, reconciliation, and source labels.
+9. Copy the proof summary for submission notes.
+10. Open Portfolio and History only after Proof Mode makes the proof status clear.
+
+Use this line when the proof page is visible:
+
+“This is the judge verification layer. Wallet, chain, Predict server, and local UI state are separated, so the app does not pretend that an indexed refresh is stronger than a confirmed digest.”
+
+### Pending Index fallback line
+
+If the chain transaction is confirmed but portfolio or history has not refreshed yet, say:
+
+“The chain proof is already here: we have the digest and explorer link. The Predict server is low-lag, not zero-lag, so the app labels portfolio/history as `Pending Index` instead of pretending the refresh has completed.”
+
 ### Recorded video demo flow
 
-The recorded video should be even tighter:
+The recorded video should be even tighter.
+
+Current live-build version:
 
 * Start on the dashboard with wallet already connected
 * Spend under 20 seconds on the problem statement
 * Show oracle freshness, ask bounds, and manager balance
 * Execute one binary mint end to end
-* Show success, digest, and refreshed portfolio
+* Show success, digest, explorer link, portfolio refresh, and history refresh
 * If time allows, show one vault supply preview or execution
 * Close with why DeepBook Predict plus Sui makes this special
+
+Future PP-061+ version:
+
+* Add Proof Mode after the digest
+* Copy the proof summary only after the proof page shows the correct source labels
 
 This approach follows Devpost guidance to show the project in action quickly and spend the limited time on the actual resolution of the problem. citeturn13search1turn13search3
 
@@ -351,7 +385,7 @@ Use the following timestamps and words.
 
 **2:40 to 3:00**
 
-“Back in the app, the portfolio and history refresh. This is the key credibility moment: live oracle to preview, preview to signature, signature to digest, digest to updated state. That is PredictPilot.”
+“Back in the app, I show the digest, explorer link, portfolio refresh, and history refresh. This is the key credibility moment: live oracle to preview, preview to signature, signature to digest, digest to updated state. After PP-061 ships, this same moment should end in Proof Mode with Verified or Pending Index source labels.”
 
 ### Five-minute demo script
 
@@ -383,7 +417,7 @@ Use this if you get the standard recorded-video slot.
 
 **3:10 to 3:40**
 
-“After confirmation, PredictPilot refreshes the manager summary, positions summary, PnL, and history. This is where a lot of hackathon demos stop short. We are showing the full post-trade state transition.” The repository quickstart explicitly recommends confirming onchain state, then refreshing the indexed endpoints that back the current page, because the server is low-lag, not zero-lag. citeturn19view0
+“After confirmation, PredictPilot shows the digest, explorer link, and refreshed app state. The digest is the chain proof. Portfolio and history are reconciliation checks. If the Predict server is still catching up, call that pending indexed refresh, not fake success. After PP-061 ships, this section should use Proof Mode to show the same evidence layers in one place.” The repository quickstart explicitly recommends confirming onchain state, then refreshing the indexed endpoints that back the current page, because the server is low-lag, not zero-lag.
 
 **3:40 to 4:20**
 
@@ -441,9 +475,15 @@ Show risk preview, PTB preview, sign, success, digest, explorer verification, po
 
 ### Judge walkthrough flow
 
-Use this route for a first-time judge:
+Use this route for a first-time judge.
+
+Current live-build path:
 
 Dashboard → Wallet connect → Market intelligence → Oracle detail → Manager funding or manager discovery → Binary trade builder → Risk preview → PTB preview → Wallet signature → Success and digest → Portfolio refresh → History row → Optional vault screen.
+
+Future PP-061+ path:
+
+Dashboard → Best Demo Markets → Oracle Health Audit → Manager funding or manager discovery → Binary trade builder → Payoff/Risk preview → PTB preview → Wallet signature → Success and digest → Proof Mode → Portfolio refresh → History row → Optional vault screen.
 
 This sequence follows the principle that the strongest demos set context briefly, spend most of the time in the working product, and finish by showing impact and proof. citeturn13search1turn13search0
 

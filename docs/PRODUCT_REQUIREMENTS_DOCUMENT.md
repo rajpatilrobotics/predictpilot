@@ -65,6 +65,22 @@ Context note: this draft could not directly inspect your local `Sui hack-2026(4)
 - No unsupported path is presented as if it were supported.
 - All unverified protocol assumptions are labeled `TODO VERIFY`.
 
+### Next milestone: proof-first judge verification
+
+The next product milestone is a judge-verifiable proof layer over the existing PredictPilot terminal. This is not a pivot or a feature-sprawl phase. It is the fastest way to make the live DeepBook Predict work legible: a judge should be able to verify wallet readiness, Testnet status, manager readiness, dUSDC funding, selected OracleSVI health, PTB simulation readiness, latest digest, explorer proof, and portfolio/history refresh in 60 to 90 seconds.
+
+The proof-first milestone adds seven connected capabilities:
+
+- **Proof Mode**: a dedicated verification cockpit for readiness, execution proof, and reconciliation state.
+- **Demo Proof Recorder / Copy Proof Summary**: a copyable text summary for submission notes, screenshots, and video narration.
+- **Best Market Finder**: a small ranked list of credible demo markets so judges do not search through thousands of oracles.
+- **Payoff + Risk Visualizer**: a plain explanation of binary and range win/loss conditions with simulated amounts when available.
+- **Oracle Health Audit**: lifecycle, freshness, ask-bounds, expiry, and strike-validity checks for the selected oracle.
+- **Strategy Receipt / Proof Card**: a concise card showing action, market, oracle, manager, quantity, warnings, digest, and refresh state.
+- **Judge Demo Path**: a guided route from best market selection to final Proof Mode verification.
+
+This milestone must preserve PredictPilot’s honesty rule: local/browser state, wallet result, direct chain confirmation, and Predict-server indexed refresh are separate evidence layers. A digest is useful, but the UI should not claim `Verified` until the chain confirmation is available, and delayed portfolio/history indexing should be shown as `Pending Index`, not hidden or mislabeled.
+
 ## Users, scope, and prioritized features
 
 The product must hide genuine protocol complexity. Official docs make clear that each user should create one reusable `PredictManager`; positions and ranges are internal balances, not separate objects; oracle lifecycle state determines whether minting is allowed; and applications should split reads across the public server, event streams, and direct onchain reads as freshness needs change. PredictPilot’s scope must therefore center on helping users navigate those exact complexities rather than abstracting them away so fully that the DeepBook Predict nature of the product disappears. citeturn7view0turn15view1turn15view4turn14view2
@@ -153,7 +169,7 @@ The product must hide genuine protocol complexity. Official docs make clear that
 - Permissionless settlement redemption initiated by a third party as a user-facing primary flow, unless needed for a demo edge case.
 - Mainnet deployment and production treasury handling.
 
-**Judge-mode flow.** A scripted “judge mode” must move through the product in this order: market overview, active oracle selection, manager verification, `DUSDC` funding, previewed binary trade, refreshed portfolio and history, previewed range trade, refreshed state, LP supply, LP summary, LP withdraw preview, and final “why this wins DeepBook” recap.
+**Judge-mode flow.** A scripted “judge mode” must move through the product in this order: dashboard or demo entry, best market selection, oracle health audit, manager and `DUSDC` funding verification, strategy payoff/risk preview, PTB simulation preview, wallet signature, digest and explorer proof, portfolio and history refresh, and final Proof Mode recap. If Predict-server indexing lags after a confirmed transaction, the demo must say `Pending Index` rather than pretending the refresh already completed.
 
 **Scope boundaries by protocol surface.** The verified application entry points exposed by official docs and the official Predict repo are `create_manager()`, binary preview via `get_trade_amounts()`, binary `mint()` and `redeem()`, settled binary `redeem_permissionless()`, range preview via `get_range_trade_amounts()`, range `mint_range()` and `redeem_range()`, and LP `supply()` and `withdraw()`. The repo integration guide also points app builders to `predict::create_manager`, `predict::mint`, `predict::redeem`, `predict::mint_range`, `predict::redeem_range`, `predict::supply`, `predict::withdraw`, and a manager deposit flow implemented onchain in `predict_manager::deposit`. PredictPilot must scope itself around these verified surfaces and avoid inventing additional execution paths. citeturn30view0turn14view2turn14view3
 
@@ -171,6 +187,7 @@ The required read contract is already documented. The official Predict server ex
 - **Risk preview requirements.** Every trade screen must display tradeability status, expiry proximity, previewed cost and payout, and a settlement-state warning. Every LP screen must display current vault state and withdrawal-constraint messaging. PredictPilot should borrow the clarity norm seen in the official DeepBook Margin materials, which emphasize explicit risk awareness and mitigation rather than hiding operational risk from the user. citeturn15view2turn30view0turn10search2turn10search3
 - **Transaction preview requirements.** Before signature, the app must present a human-readable summary of action type, target oracle, strike or range, quantity, quote asset, manager involved, and expected cost or payout. If any preview source is not verified for the specific flow, the UI must label the number as an estimate rather than a guarantee.
 - **Transaction history requirements.** The app must surface position mints, position redeems, range mints, range redeems, LP supplies, LP withdrawals, and oracle-specific trade history with timestamps and clear status cues. citeturn18view0
+- **Proof requirements.** The product must separate wallet readiness, local session state, direct chain confirmation, and Predict-server indexed refresh. Proof-facing UI states should include `Blocked`, `Ready`, `Ready but Not Submitted`, `Pending Index`, `Verified`, and `Failed`. The app must never represent demo fixtures, local session data, or delayed indexed rows as stronger proof than a confirmed Sui transaction.
 - **Error handling requirements.** The product must report wrong network, missing manager, insufficient `DUSDC`, inactive or untradeable oracle, invalid range bounds, wallet rejection, transaction failure, stale config IDs, and indexed-server lag after a write. Error copy must say what the user should do next.
 - **Loading state requirements.** Market pages, portfolio pages, previews, and post-transaction refresh paths must all have visible loading states. No core panel should look blank during active loading.
 - **Empty state requirements.** The product must provide explicit empty states for no manager, no balance, no positions, no LP history, no oracle selected, no active markets returned, and no wallet connected.
