@@ -5,7 +5,9 @@ import {
   TerminalStatCard as MetricCard,
 } from '@/components/terminal/TerminalPanels';
 import { StatePanel, StateSkeletonGrid } from '@/components/states/StatePrimitives';
+import { OracleHealthAuditCard } from '@/features/oracle/OracleHealthAuditCard';
 import { useLiveOracleTape } from '@/features/oracle/hooks/useLiveOracleTape';
+import { createOracleHealthAudit } from '@/features/oracle/lib/oracle-health-audit';
 import {
   freshnessBadgeLabel,
   freshnessClassName,
@@ -78,9 +80,15 @@ function OracleStatusPageContent({
   }
 
   const oracleState = liveTape.data.latestOracleState;
+  const effectiveNowMs = nowMs ?? liveTape.data.lastPollAtMs;
   const status = getOracleStatus({
-    nowMs: nowMs ?? liveTape.data.lastPollAtMs,
+    nowMs: effectiveNowMs,
     oracleState,
+  });
+  const healthAudit = createOracleHealthAudit({
+    nowMs: effectiveNowMs,
+    oracleState,
+    stateSource: 'Live polling',
   });
 
   return (
@@ -109,6 +117,8 @@ function OracleStatusPageContent({
         <MetricCard label="Expiry" value={formatTimestamp(oracleState.oracle.expiryMs)} />
         <MetricCard label="Expiry state" value={status.expiryStatus} />
       </section>
+
+      <OracleHealthAuditCard audit={healthAudit} />
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <Panel title="Freshness and price">

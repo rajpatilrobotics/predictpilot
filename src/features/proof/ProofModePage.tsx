@@ -8,11 +8,16 @@ import {
 import { StatePanel } from '@/components/states/StatePrimitives';
 import { useTransactionHistory } from '@/features/history/hooks/useTransactionHistory';
 import { usePredictManager } from '@/features/manager/hooks/usePredictManager';
+import { useAskBounds } from '@/features/markets/hooks/useAskBounds';
+import { useOracleState } from '@/features/markets/hooks/useOracleState';
+import { OracleHealthAuditCard } from '@/features/oracle/OracleHealthAuditCard';
+import { createOracleHealthAudit } from '@/features/oracle/lib/oracle-health-audit';
 import { useManagerSummary } from '@/features/portfolio/hooks/useManagerSummary';
 import { usePositionsSummary } from '@/features/portfolio/hooks/usePositionsSummary';
 import { PayoffRiskVisualizer } from '@/features/trade/PayoffRiskVisualizer';
 import { createPayoffVisualizerModelFromSnapshot } from '@/features/trade/payoff-visualizer';
 import { useWalletStatus } from '@/features/wallet/useWalletStatus';
+import { predictDeploymentConfig } from '@/config/predict';
 import { useProofSession } from './proof-session-context';
 import {
   selectProofModeViewModel,
@@ -43,12 +48,45 @@ export function ProofModePage() {
     owner: manager.owner,
   });
   const { latestPreparedReview, latestSubmittedProof } = useProofSession();
+  const [mountedAtMs] = useState(() => Date.now());
+  const proofOracleId = latestSubmittedProof?.oracleId ?? latestPreparedReview?.oracleId ?? null;
+  const proofOracleQueryId = proofOracleId ?? predictDeploymentConfig.predictObjectId;
+  const proofOracleState = useOracleState({
+    enabled: proofOracleId !== null,
+    oracleId: proofOracleQueryId,
+  });
+  const proofAskBounds = useAskBounds({
+    enabled: proofOracleId !== null,
+    oracleId: proofOracleQueryId,
+  });
+  const proofAuditNowMs =
+    latestSubmittedProof?.recordedAtMs ?? latestPreparedReview?.preparedAtMs ?? mountedAtMs;
   const payoffModel = useMemo(() => {
     const payoffSnapshot =
       latestSubmittedProof?.payoffSnapshot ?? latestPreparedReview?.payoffSnapshot ?? null;
 
     return payoffSnapshot === null ? null : createPayoffVisualizerModelFromSnapshot(payoffSnapshot);
   }, [latestPreparedReview?.payoffSnapshot, latestSubmittedProof?.payoffSnapshot]);
+  const proofOracleAudit = useMemo(() => {
+    if (proofOracleId === null) {
+      return createOracleHealthAudit({
+        nowMs: proofAuditNowMs,
+        oracleState: null,
+      });
+    }
+
+    return proofOracleState.data === undefined
+      ? createOracleHealthAudit({
+          nowMs: proofAuditNowMs,
+          oracleState: null,
+        })
+      : createOracleHealthAudit({
+          askBounds: proofAskBounds.data ?? proofOracleState.data.askBounds,
+          nowMs: proofAuditNowMs,
+          oracleState: proofOracleState.data,
+          stateSource: 'Predict server',
+        });
+  }, [proofAskBounds.data, proofAuditNowMs, proofOracleId, proofOracleState.data]);
   const viewModel = selectProofModeViewModel({
     history: history.data,
     historyError: history.error,
@@ -98,6 +136,11 @@ export function ProofModePage() {
           fallbackDescription="Proof Mode shows payoff recap only after a binary or range review records enough local context."
           model={payoffModel}
           title="Payoff recap"
+        />
+        <OracleHealthAuditCard
+          audit={proofOracleAudit}
+          title="Oracle health audit"
+          variant="compact"
         />
 
         <div className="grid gap-4 xl:grid-cols-3">

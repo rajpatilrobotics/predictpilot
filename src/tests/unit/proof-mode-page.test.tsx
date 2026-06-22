@@ -1,10 +1,19 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProofModePage } from '@/features/proof/ProofModePage';
+import { useAskBounds } from '@/features/markets/hooks/useAskBounds';
+import { useOracleState } from '@/features/markets/hooks/useOracleState';
 import type { ProofSessionContextValue } from '@/features/proof/proof-session-context';
 import type { UsePredictManagerResult } from '@/features/manager/hooks/usePredictManager';
 import type { WalletStatusModel } from '@/features/wallet/useWalletStatus';
 import type { ObjectId, SuiAddress, TransactionDigest } from '@/types/predict';
+import {
+  createTradeOracleState,
+  presentAskBounds,
+  querySuccess,
+  tradeTestNowMs,
+  tradeTestOracleId,
+} from './trade-test-helpers';
 
 const walletAddress =
   '0x24d9eb057f4f8597ae9362997a73d8406981a0c5fc96ed7b0ab7c7af3fa9d19b' as SuiAddress;
@@ -21,6 +30,14 @@ vi.mock('@/features/wallet/useWalletStatus', () => ({
 
 vi.mock('@/features/manager/hooks/usePredictManager', () => ({
   usePredictManager: () => managerMock,
+}));
+
+vi.mock('@/features/markets/hooks/useAskBounds', () => ({
+  useAskBounds: vi.fn(),
+}));
+
+vi.mock('@/features/markets/hooks/useOracleState', () => ({
+  useOracleState: vi.fn(),
 }));
 
 vi.mock('@/features/portfolio/hooks/useManagerSummary', () => ({
@@ -68,6 +85,8 @@ describe('ProofModePage', () => {
     walletMock = walletFixture({ isConnected: false });
     managerMock = managerFixture({ isReady: false });
     proofSessionMock = proofSessionFixture();
+    vi.mocked(useAskBounds).mockReturnValue(querySuccess(presentAskBounds()));
+    vi.mocked(useOracleState).mockReturnValue(querySuccess(createTradeOracleState()));
   });
 
   it('renders blocked copy for disconnected wallets without fake digest or enabled copy', () => {
@@ -78,6 +97,9 @@ describe('ProofModePage', () => {
     expect(screen.getAllByText(/No submitted transaction/i).length).toBeGreaterThan(0);
     expect(screen.getByRole('status', { name: 'Payoff recap unavailable' })).toHaveTextContent(
       'Payoff recap unavailable',
+    );
+    expect(screen.getByRole('region', { name: 'Oracle health audit' })).toHaveTextContent(
+      'Audit unavailable',
     );
     expect(screen.queryByRole('link', { name: /View transaction/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /copy proof summary/i })).toBeDisabled();
@@ -98,11 +120,11 @@ describe('ProofModePage', () => {
         completedDigest: digest,
         confirmedStatus: 'success',
         managerId,
-        oracleId: null,
+        oracleId: tradeTestOracleId,
         payoffSnapshot: {
           action: 'MINT',
           direction: 'UP',
-          expiryMs: 1_791_003_600_000n,
+          expiryMs: BigInt(tradeTestNowMs + 3_600_000),
           kind: 'binary',
           managerBalanceQuote: 5_000_000n,
           oracleId: '0xca4663000000000000000000000000000000000000000000000000000066775a',
@@ -111,7 +133,7 @@ describe('ProofModePage', () => {
           strike1e9: 50_000_000_000_000n,
           underlyingAsset: 'BTC',
         },
-        recordedAtMs: 1_791_000_000_000,
+        recordedAtMs: tradeTestNowMs,
         refreshWarning: null,
         sender: walletAddress,
       },
@@ -121,6 +143,9 @@ describe('ProofModePage', () => {
 
     expect(screen.getByRole('heading', { name: 'Proof verified' })).toBeInTheDocument();
     expect(screen.getByText(/UP wins if settlement > strike/i)).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Oracle health audit' })).toHaveTextContent(
+      'Use with caution',
+    );
     expect(screen.getAllByText(digest).length).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: /Open explorer proof/i })).toBeInTheDocument();
     expect(

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { predictDeploymentConfig } from '@/config/predict';
@@ -204,6 +204,8 @@ describe('MarketDetailPage and StrategyBuilder', () => {
 
     expect(screen.getByRole('heading', { name: 'Market Detail / Strategy' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Strategy builder' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Oracle Health Audit' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Pre-sign oracle health' })).toBeInTheDocument();
     expect(screen.getByText(/UP wins if settlement > strike/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Preview strategy' }));
@@ -339,6 +341,9 @@ describe('MarketDetailPage and StrategyBuilder', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Preview strategy' }));
 
+    const audit = screen.getByRole('region', { name: 'Pre-sign oracle health' });
+    expect(within(audit).getByText('Range strikes')).toBeInTheDocument();
+    expect(within(audit).getByText('blocked')).toBeInTheDocument();
     expect(
       await screen.findByRole('alert', { name: 'Strategy preview blocked' }),
     ).toHaveTextContent('A valid range key is required before mint range execution.');

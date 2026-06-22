@@ -3,6 +3,8 @@ import { ExecutionModal } from '@/components/modals/ExecutionModal';
 import { InlineStateNotice, StatePanel } from '@/components/states/StatePrimitives';
 import { TxDigestLink } from '@/components/tx/TxDigestLink';
 import { TerminalMetricCard, TerminalPanel } from '@/components/terminal/TerminalPanels';
+import { OracleHealthAuditCard } from '@/features/oracle/OracleHealthAuditCard';
+import { createOracleHealthAudit } from '@/features/oracle/lib/oracle-health-audit';
 import { PayoffRiskVisualizer } from '@/features/trade/PayoffRiskVisualizer';
 import { RiskPreview } from '@/features/tx/RiskPreview';
 import { useWalletStatus, type WalletStatusModel } from '@/features/wallet/useWalletStatus';
@@ -155,6 +157,36 @@ export function StrategyBuilder({
     [effectiveAskBounds, higherStrikeInput, lowerStrikeInput, oracleState.oracle],
   );
   const activeValidation = mode === 'binary' ? binaryKeyResult : rangeKeyResult;
+  const activeOracleAudit = useMemo(
+    () =>
+      createOracleHealthAudit({
+        askBounds: effectiveAskBounds,
+        nowMs: renderNowMs,
+        oracleState,
+        selection:
+          mode === 'binary'
+            ? {
+                direction,
+                kind: 'binary',
+                strike1e9: strikeInput,
+              }
+            : {
+                higherStrike1e9: higherStrikeInput,
+                kind: 'range',
+                lowerStrike1e9: lowerStrikeInput,
+              },
+      }),
+    [
+      direction,
+      effectiveAskBounds,
+      higherStrikeInput,
+      lowerStrikeInput,
+      mode,
+      oracleState,
+      renderNowMs,
+      strikeInput,
+    ],
+  );
   const activePayoffModel = useMemo(() => {
     const oracleStatus = getOracleStatus({ nowMs: renderNowMs, oracleState });
 
@@ -414,6 +446,12 @@ export function StrategyBuilder({
             <ValidationPanel
               errors={activeValidation.ok ? [] : activeValidation.errors}
               warnings={activeValidation.warnings}
+            />
+
+            <OracleHealthAuditCard
+              audit={activeOracleAudit}
+              title="Pre-sign oracle health"
+              variant="compact"
             />
 
             <PayoffRiskVisualizer model={activePayoffModel} />

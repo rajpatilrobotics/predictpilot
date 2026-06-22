@@ -7,6 +7,8 @@ import {
   TerminalMetricCard,
   TerminalPanel,
 } from '@/components/terminal/TerminalPanels';
+import { OracleHealthAuditCard } from '@/features/oracle/OracleHealthAuditCard';
+import { createOracleHealthAudit } from '@/features/oracle/lib/oracle-health-audit';
 import { useAskBounds } from '@/features/markets/hooks/useAskBounds';
 import { useOracleState } from '@/features/markets/hooks/useOracleState';
 import { usePredictManager } from '@/features/manager/hooks/usePredictManager';
@@ -190,10 +192,12 @@ function MarketDetailBody({
 
   const managerSummary = managerSummaryQuery.data?.summary ?? null;
   const positionsSummary = positionsSummaryQuery.data ?? null;
+  const effectiveAskBounds = askBoundsQuery.data ?? oracleStateQuery.data.askBounds;
 
   return (
     <div className="space-y-5">
       <MarketSnapshot
+        askBounds={effectiveAskBounds}
         isAskBoundsLoading={askBoundsQuery.isPending || askBoundsQuery.isLoading}
         nowMs={nowMs}
         oracleState={oracleStateQuery.data}
@@ -223,7 +227,7 @@ function MarketDetailBody({
         />
       )}
       <StrategyBuilder
-        askBounds={askBoundsQuery.data ?? oracleStateQuery.data.askBounds}
+        askBounds={effectiveAskBounds}
         key={oracleStateQuery.data.oracle.oracleId}
         manager={manager}
         managerSummary={managerSummary}
@@ -237,66 +241,76 @@ function MarketDetailBody({
 }
 
 function MarketSnapshot({
+  askBounds,
   isAskBoundsLoading,
   nowMs,
   oracleState,
 }: {
+  askBounds: OracleStateModel['askBounds'];
   isAskBoundsLoading: boolean;
   nowMs: number;
   oracleState: OracleStateModel;
 }) {
   const status = getOracleStatus({ nowMs, oracleState });
+  const audit = createOracleHealthAudit({ askBounds, nowMs, oracleState });
   const latestPrice = oracleState.latestPrice;
 
   return (
-    <section aria-label="Market detail snapshot" className="grid gap-4 xl:grid-cols-[1fr_0.9fr]">
-      <TerminalPanel title="OracleSVI market snapshot">
-        <div className="grid gap-3 md:grid-cols-2">
-          <TerminalMetricCard
-            helper="Market detail keeps the protocol object visible before strategy staging."
-            label="Oracle"
-            value={formatObjectId(oracleState.oracle.oracleId)}
-          />
-          <TerminalMetricCard
-            helper="Lifecycle controls whether mint and range mint are allowed."
-            label="Lifecycle"
-            value={formatLifecycleLabel(oracleState.oracle.lifecycleStatus)}
-          />
-          <TerminalMetricCard
-            helper="Freshness is derived from the existing oracle status utility."
-            label="Freshness"
-            value={status.freshness.aggregateStatus}
-          />
-          <TerminalMetricCard
-            helper="Ask-bound internals remain TODO VERIFY until server fields are confirmed."
-            label="Ask bounds"
-            value={isAskBoundsLoading ? 'Loading' : oracleState.askBounds.status}
-          />
-        </div>
-      </TerminalPanel>
+    <section aria-label="Market detail snapshot" className="grid gap-4">
+      <OracleHealthAuditCard audit={audit} />
 
-      <TerminalPanel title="Price and strike context">
-        <dl className="grid gap-3 md:grid-cols-2">
-          <TerminalDatum
-            label="Spot"
-            value={latestPrice === null ? 'Unavailable' : formatPrice1e9(latestPrice.spot1e9)}
-          />
-          <TerminalDatum
-            label="Forward"
-            value={latestPrice === null ? 'Unavailable' : formatPrice1e9(latestPrice.forward1e9)}
-          />
-          <TerminalDatum
-            label="Min strike"
-            value={formatPrice1e9(oracleState.oracle.minStrike1e9)}
-          />
-          <TerminalDatum label="Tick size" value={formatPrice1e9(oracleState.oracle.tickSize1e9)} />
-          <TerminalDatum
-            label="Expiry"
-            value={formatSafeIsoTimestamp(oracleState.oracle.expiryMs)}
-          />
-          <TerminalDatum label="Trade quantity unit" value={formatQuoteAmount(1_000_000n)} />
-        </dl>
-      </TerminalPanel>
+      <div className="grid gap-4 xl:grid-cols-[1fr_0.9fr]">
+        <TerminalPanel title="OracleSVI market snapshot">
+          <div className="grid gap-3 md:grid-cols-2">
+            <TerminalMetricCard
+              helper="Market detail keeps the protocol object visible before strategy staging."
+              label="Oracle"
+              value={formatObjectId(oracleState.oracle.oracleId)}
+            />
+            <TerminalMetricCard
+              helper="Lifecycle controls whether mint and range mint are allowed."
+              label="Lifecycle"
+              value={formatLifecycleLabel(oracleState.oracle.lifecycleStatus)}
+            />
+            <TerminalMetricCard
+              helper="Freshness is derived from the existing oracle status utility."
+              label="Freshness"
+              value={status.freshness.aggregateStatus}
+            />
+            <TerminalMetricCard
+              helper="Ask-bound internals remain TODO VERIFY until server fields are confirmed."
+              label="Ask bounds"
+              value={isAskBoundsLoading ? 'Loading' : askBounds.status}
+            />
+          </div>
+        </TerminalPanel>
+
+        <TerminalPanel title="Price and strike context">
+          <dl className="grid gap-3 md:grid-cols-2">
+            <TerminalDatum
+              label="Spot"
+              value={latestPrice === null ? 'Unavailable' : formatPrice1e9(latestPrice.spot1e9)}
+            />
+            <TerminalDatum
+              label="Forward"
+              value={latestPrice === null ? 'Unavailable' : formatPrice1e9(latestPrice.forward1e9)}
+            />
+            <TerminalDatum
+              label="Min strike"
+              value={formatPrice1e9(oracleState.oracle.minStrike1e9)}
+            />
+            <TerminalDatum
+              label="Tick size"
+              value={formatPrice1e9(oracleState.oracle.tickSize1e9)}
+            />
+            <TerminalDatum
+              label="Expiry"
+              value={formatSafeIsoTimestamp(oracleState.oracle.expiryMs)}
+            />
+            <TerminalDatum label="Trade quantity unit" value={formatQuoteAmount(1_000_000n)} />
+          </dl>
+        </TerminalPanel>
+      </div>
     </section>
   );
 }

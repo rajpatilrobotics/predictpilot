@@ -12,7 +12,9 @@ import {
   type BestDemoMarketEnrichment,
   type BestDemoMarketReadiness,
 } from '@/features/markets/lib/best-market-finder';
+import { OracleHealthAuditCard } from '@/features/oracle/OracleHealthAuditCard';
 import { useLiveOracleTape } from '@/features/oracle/hooks/useLiveOracleTape';
+import { createOracleHealthAudit } from '@/features/oracle/lib/oracle-health-audit';
 import { useManagerSummary } from '@/features/portfolio/hooks/useManagerSummary';
 import { useWalletStatus } from '@/features/wallet/useWalletStatus';
 import { getOracleStatus, type OracleActionAvailability } from '@/lib/oracle-status';
@@ -555,6 +557,15 @@ function SelectedMarketPanel({
   const latestPrice = oracleState?.latestPrice ?? null;
   const latestSvi = oracleState?.latestSvi ?? null;
   const effectiveAskBounds = askBounds ?? oracleState?.askBounds;
+  const audit =
+    oracleState === undefined
+      ? null
+      : createOracleHealthAudit({
+          askBounds: effectiveAskBounds,
+          nowMs,
+          oracleState,
+          stateSource: 'Predict server',
+        });
   const selectedCopied = copiedOracleId === oracle.oracleId;
 
   return (
@@ -617,6 +628,8 @@ function SelectedMarketPanel({
         {isOracleStatePending ? (
           <InlineInfo value="Loading selected oracle state from the existing oracle hook." />
         ) : null}
+
+        {audit === null ? null : <OracleHealthAuditCard audit={audit} variant="compact" />}
 
         <dl className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <MetricCard

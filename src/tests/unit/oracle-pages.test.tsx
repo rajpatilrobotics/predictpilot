@@ -154,6 +154,10 @@ describe('oracle page components', () => {
     const tradeability = screen.getByRole('region', { name: 'Tradeability explanation' });
     expect(within(tradeability).getByText('Mint is available')).toBeInTheDocument();
     expect(within(tradeability).getByText('Range mint is available')).toBeInTheDocument();
+    const audit = screen.getByRole('region', { name: 'Oracle Health Audit' });
+    expect(within(audit).getByText('Use with caution')).toBeInTheDocument();
+    expect(within(audit).getByText('Live polling')).toBeInTheDocument();
+    expect(within(audit).getByText('Ask bounds')).toBeInTheDocument();
     expect(client.fetchOracleStateDto).toHaveBeenCalledWith(oracleId);
   });
 
