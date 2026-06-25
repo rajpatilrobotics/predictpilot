@@ -92,7 +92,7 @@ describe('ProofModePage', () => {
   it('renders blocked copy for disconnected wallets without fake digest or enabled copy', () => {
     render(<ProofModePage />);
 
-    expect(screen.getByRole('heading', { name: 'Proof Mode' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Proof Center' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Proof blocked' })).toBeInTheDocument();
     expect(screen.getAllByText(/No submitted transaction/i).length).toBeGreaterThan(0);
     expect(screen.getByRole('status', { name: 'Payoff recap unavailable' })).toHaveTextContent(

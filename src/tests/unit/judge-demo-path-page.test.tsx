@@ -66,7 +66,7 @@ describe('JudgeDemoPathPage', () => {
   it('renders disconnected guidance without fake proof or signature CTA', () => {
     render(<JudgeDemoPathPage />);
 
-    expect(screen.getByRole('heading', { name: 'Judge Demo Path' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Live Demo Guide' })).toBeInTheDocument();
     expect(screen.getByRole('alert', { name: 'Judge demo verdict' })).toHaveTextContent('Blocked');
     expect(
       screen.getByRole('heading', { name: 'Connect wallet and confirm Testnet' }),
@@ -99,7 +99,10 @@ describe('JudgeDemoPathPage', () => {
         `/markets/${tradeTestOracleId}?source=best-market-finder`,
       );
     }
-    expect(screen.getByRole('link', { name: 'Open Proof Mode' })).toHaveAttribute('href', '/proof');
+    expect(screen.getByRole('link', { name: 'Open Proof Center' })).toHaveAttribute(
+      'href',
+      '/proof',
+    );
     expect(screen.getByText('Manager + DUSDC')).toBeInTheDocument();
     expect(screen.getByText('Demo evidence')).toBeInTheDocument();
   });

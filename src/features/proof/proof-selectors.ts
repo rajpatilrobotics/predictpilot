@@ -487,7 +487,7 @@ function getVerdictTitle(status: ProofVerdictStatus): string {
 function getVerdictExplanation(status: ProofVerdictStatus): string {
   switch (status) {
     case 'Blocked':
-      return 'Connect a Testnet wallet and confirm one PredictManager before Proof Mode can verify execution.';
+      return 'Connect a Testnet wallet and confirm one PredictManager before Proof Center can verify execution.';
     case 'Failed':
       return 'A wallet, read, transaction, or refresh error is blocking this proof checkpoint.';
     case 'Pending Index':

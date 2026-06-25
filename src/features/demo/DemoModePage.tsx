@@ -51,9 +51,9 @@ function DemoModePageContent({ onNavigate }: { onNavigate?: (path: string) => vo
       className="space-y-4 border border-[#c8d3ce] bg-white p-5 shadow-sm"
     >
       <TerminalPageHeader
-        eyebrow="Demo Mode"
+        eyebrow="Offline Demo"
         source="Offline fallback"
-        title="Demo Mode"
+        title="Offline Demo"
         titleId="demo-mode-title"
       />
 
@@ -93,7 +93,10 @@ function DemoModePageContent({ onNavigate }: { onNavigate?: (path: string) => vo
 
       <TerminalPanel title="Jump to live proof routes">
         <div className="flex flex-wrap gap-2">
-          <DemoRouteButton label="Start Judge Demo" onClick={() => onNavigate?.('/judge-demo')} />
+          <DemoRouteButton
+            label="Start Live Demo Guide"
+            onClick={() => onNavigate?.('/judge-demo')}
+          />
           <DemoRouteButton label="Open live markets" onClick={() => onNavigate?.('/markets')} />
           <DemoRouteButton label="Open PredictManager" onClick={() => onNavigate?.('/manager')} />
           <DemoRouteButton label="Open Vault / PLP" onClick={() => onNavigate?.('/vault')} />

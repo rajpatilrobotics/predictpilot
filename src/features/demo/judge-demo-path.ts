@@ -191,7 +191,7 @@ export function selectJudgeDemoPathViewModel({
     }),
     step({
       actionHref: '/proof',
-      actionLabel: hasSubmittedDigest ? 'Open Proof Mode' : 'Open proof checkpoint',
+      actionLabel: hasSubmittedDigest ? 'Open Proof Center' : 'Open proof checkpoint',
       description: hasSubmittedDigest
         ? 'A real Testnet digest exists from wallet submission.'
         : 'No digest exists yet. Do not claim live execution proof before wallet submission.',
@@ -203,7 +203,7 @@ export function selectJudgeDemoPathViewModel({
     }),
     step({
       actionHref: hasPendingIndex ? '/history' : '/proof',
-      actionLabel: hasPendingIndex ? 'Open History' : 'Open Proof Mode',
+      actionLabel: hasPendingIndex ? 'Open History' : 'Open Proof Center',
       description: hasVerifiedProof
         ? 'History and app reconciliation are visible.'
         : hasSubmittedDigest
@@ -217,15 +217,15 @@ export function selectJudgeDemoPathViewModel({
     }),
     step({
       actionHref: '/proof',
-      actionLabel: 'Open Proof Mode',
+      actionLabel: 'Open Proof Center',
       description: hasVerifiedProof
-        ? 'Proof Mode can show the verified evidence bundle.'
-        : 'Use Proof Mode to separate wallet, chain, Predict server, and local evidence.',
+        ? 'Proof Center can show the verified evidence bundle.'
+        : 'Use Proof Center to separate wallet, chain, Predict server, and local evidence.',
       evidenceSource: 'Local',
       id: 'proof-mode',
-      label: 'Proof Mode',
+      label: 'Proof Center',
       status: hasVerifiedProof ? 'complete' : hasSubmittedDigest ? 'pending' : 'ready',
-      title: 'Finish in Proof Mode',
+      title: 'Finish in Proof Center',
     }),
   ];
   const currentStep = steps.find((candidate) => candidate.status !== 'complete') ?? steps.at(-1);
@@ -516,7 +516,7 @@ function buildEvidence({
       value: latestSubmittedProof?.completedDigest ?? 'No submitted digest',
     },
     {
-      label: 'Proof Mode',
+      label: 'Proof Center',
       source: 'Local',
       value: proof.status,
     },

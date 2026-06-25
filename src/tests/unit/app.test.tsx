@@ -29,7 +29,7 @@ vi.mock('@/features/dashboard/DashboardPage', () => ({
 vi.mock('@/features/demo/DemoModePage', () => ({
   DemoModePage: () => (
     <article aria-label="Demo mode page">
-      <h1>Demo Mode</h1>
+      <h1>Offline Demo</h1>
       <p>Demo mode page mounted</p>
     </article>
   ),
@@ -38,7 +38,7 @@ vi.mock('@/features/demo/DemoModePage', () => ({
 vi.mock('@/features/demo/JudgeDemoPathPage', () => ({
   JudgeDemoPathPage: () => (
     <article aria-label="Judge demo path page">
-      <h1>Judge Demo Path</h1>
+      <h1>Live Demo Guide</h1>
       <p>Judge demo path page mounted</p>
     </article>
   ),
@@ -103,7 +103,7 @@ vi.mock('@/features/portfolio/PnlPage', () => ({
 vi.mock('@/features/proof/ProofModePage', () => ({
   ProofModePage: () => (
     <article aria-label="Proof mode page">
-      <h1>Proof Mode</h1>
+      <h1>Proof Center</h1>
       <p>Proof mode page mounted</p>
     </article>
   ),

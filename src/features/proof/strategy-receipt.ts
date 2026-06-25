@@ -585,7 +585,7 @@ function getReceiptDescription(state: StrategyReceiptState) {
     case 'submitted':
       return 'A real digest was submitted to Sui Testnet. Indexed reconciliation may still be catching up.';
     case 'verified':
-      return 'A real digest is present and Proof Mode found matching indexed reconciliation.';
+      return 'A real digest is present and Proof Center found matching indexed reconciliation.';
   }
 }
 

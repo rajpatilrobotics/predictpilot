@@ -14,9 +14,9 @@ const shellRoutes = [
   { heading: 'PnL', path: '/pnl' },
   { heading: 'Vault / PLP', path: '/vault' },
   { heading: 'History', path: '/history' },
-  { heading: 'Demo Mode', path: '/demo' },
-  { heading: 'Judge Demo Path', path: '/judge-demo' },
-  { heading: 'Proof Mode', path: '/proof' },
+  { heading: 'Offline Demo', path: '/demo' },
+  { heading: 'Live Demo Guide', path: '/judge-demo' },
+  { heading: 'Proof Center', path: '/proof' },
 ] as const;
 
 test('loads the PredictPilot app shell', async ({ page }) => {
@@ -40,16 +40,16 @@ test('reaches mounted and placeholder routes from navigation', async ({ page }) 
   await expect(page.getByRole('heading', { level: 1, name: 'Vault / PLP' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Vault actions' })).toBeVisible();
 
-  await primaryNav.getByRole('link', { name: 'Demo Mode' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Demo Mode' })).toBeVisible();
+  await primaryNav.getByRole('link', { name: 'Offline Demo' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Offline Demo' })).toBeVisible();
 
-  await primaryNav.getByRole('link', { name: 'Judge Demo Path' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Judge Demo Path' })).toBeVisible();
+  await primaryNav.getByRole('link', { name: 'Live Demo Guide' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Live Demo Guide' })).toBeVisible();
   await expect(page.getByRole('button', { name: /request wallet signature/i })).toHaveCount(0);
   await expect(page.getByRole('link', { name: /view transaction/i })).toHaveCount(0);
 
-  await primaryNav.getByRole('link', { name: 'Proof Mode' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Proof Mode' })).toBeVisible();
+  await primaryNav.getByRole('link', { name: 'Proof Center' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Proof Center' })).toBeVisible();
   await expect(page.getByRole('button', { name: /request wallet signature/i })).toHaveCount(0);
   await expect(page.getByRole('link', { name: /view transaction/i })).toHaveCount(0);
 });
@@ -181,15 +181,15 @@ test('demo mode is visibly offline and never claims execution proof', async ({ p
 
   await expect(page.getByRole('heading', { name: /DeepBook Predict Terminal/i })).toBeVisible();
   await expect(page.getByRole('status', { name: /Testnet status/i })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 1, name: 'Demo Mode' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Offline Demo' })).toBeVisible();
   await expect(page.getByText('Offline fixture').first()).toBeVisible();
   await expect(page.getByText('Not live Testnet proof').first()).toBeVisible();
   await expect(page.getByText('No wallet signature will be requested').first()).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Oracle readiness' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Start Judge Demo' }).click();
+  await page.getByRole('button', { name: 'Start Live Demo Guide' }).click();
   await expect(page).toHaveURL(/\/judge-demo$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'Judge Demo Path' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Live Demo Guide' })).toBeVisible();
   await expect(page.getByRole('button', { name: /request wallet signature/i })).toHaveCount(0);
   await expect(page.getByRole('link', { name: /view transaction/i })).toHaveCount(0);
 

@@ -99,14 +99,14 @@ export function JudgeDemoPathPage() {
     <article aria-labelledby={JUDGE_DEMO_TITLE_ID} className="space-y-5">
       <section className="border border-[#c8d3ce] bg-white p-5 shadow-sm">
         <TerminalPageHeader
-          eyebrow="PP-067 Judge Demo Path"
+          eyebrow="PP-067 Live Demo Guide"
           source="Live guided runway"
-          title="Judge Demo Path"
+          title="Live Demo Guide"
           titleId={JUDGE_DEMO_TITLE_ID}
         />
         <p className="mt-4 max-w-4xl text-sm leading-6 text-[#52615c]">
           Follow this path during judging to move from live readiness to market selection, execution
-          review, digest proof, indexed refresh, and Proof Mode. This page guides existing real
+          review, digest proof, indexed refresh, and Proof Center. This page guides existing real
           flows; it does not sign, submit, or fabricate proof.
         </p>
       </section>
@@ -144,10 +144,10 @@ export function JudgeDemoPathPage() {
             <div className="flex flex-wrap gap-2">
               <PrimaryStepLink step={viewModel.currentStep} />
               <a className={secondaryLinkClassName} href="/proof">
-                Open Proof Mode
+                Open Proof Center
               </a>
               <a className={secondaryLinkClassName} href="/demo">
-                Offline Demo Mode
+                Offline Demo
               </a>
             </div>
             <p className="border border-[#e0c891] bg-[#fff9ea] p-3 text-sm leading-6 text-[#5c4720]">

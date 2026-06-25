@@ -134,9 +134,9 @@ export function ProofModePage() {
       className="border border-[#c8d3ce] bg-white p-5 shadow-sm"
     >
       <TerminalPageHeader
-        eyebrow="PP-061 Proof Mode"
+        eyebrow="PP-061 Proof Center"
         source="Source-labeled evidence"
-        title="Proof Mode"
+        title="Proof Center"
         titleId={PROOF_TITLE_ID}
       />
 
@@ -144,7 +144,7 @@ export function ProofModePage() {
         <ProofVerdictBanner onRefresh={refreshProof} viewModel={viewModel} />
         <SourceLabelStrip labels={viewModel.sourceLabels} />
         <PayoffRiskVisualizer
-          fallbackDescription="Proof Mode shows payoff recap only after a binary or range review records enough local context."
+          fallbackDescription="Proof Center shows payoff recap only after a binary or range review records enough local context."
           model={payoffModel}
           title="Payoff recap"
         />
@@ -311,7 +311,7 @@ function DigestProofCard({ digest }: { digest: string | null }) {
   if (digest === null) {
     return (
       <StatePanel
-        description="No submitted transaction yet. Prepare a strategy or open Demo Mode; Proof Mode will not show a fake digest."
+        description="No submitted transaction yet. Prepare a strategy or open Offline Demo; Proof Center will not show a fake digest."
         label="No submitted proof"
         title="No submitted transaction"
         tone="empty"

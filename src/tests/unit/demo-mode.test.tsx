@@ -6,7 +6,7 @@ describe('DemoModePage', () => {
   it('renders explicit offline demo labels and proof boundaries', () => {
     render(<DemoModePage />);
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Demo Mode' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Offline Demo' })).toBeInTheDocument();
     expect(screen.getByText('Demo mode')).toBeInTheDocument();
     expect(screen.getAllByText('Offline fixture').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Not live Testnet proof').length).toBeGreaterThan(0);
@@ -37,7 +37,7 @@ describe('DemoModePage', () => {
     render(<DemoModePage onNavigate={onNavigate} />);
 
     const proofRoutes = screen.getByLabelText('Jump to live proof routes');
-    fireEvent.click(within(proofRoutes).getByRole('button', { name: 'Start Judge Demo' }));
+    fireEvent.click(within(proofRoutes).getByRole('button', { name: 'Start Live Demo Guide' }));
 
     expect(onNavigate).toHaveBeenCalledWith('/judge-demo');
 
