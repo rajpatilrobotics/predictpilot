@@ -639,6 +639,18 @@ async function executePredictTransactionWithWalletRecovery<
     ]);
 
     if (raceResult.kind === 'execution') {
+      if (shouldWaitForRecoveryAfterExecutionFailure(raceResult.executionResult)) {
+        const fallbackRaceResult = await Promise.race([recoveryEventPromise, timeoutEventPromise]);
+
+        if (fallbackRaceResult.kind === 'recovered') {
+          return createRecoveredExecutionResult({
+            action,
+            executionRequest,
+            recovered: fallbackRaceResult.recovered,
+          });
+        }
+      }
+
       return raceResult.executionResult;
     }
 
@@ -665,6 +677,18 @@ async function executePredictTransactionWithWalletRecovery<
     executionEventPromise.catch(() => undefined);
     recoveryEventPromise.catch(() => undefined);
   }
+}
+
+function shouldWaitForRecoveryAfterExecutionFailure(result: PredictTransactionExecutionResult) {
+  if (result.status !== 'failure') {
+    return false;
+  }
+
+  if (result.digest !== undefined) {
+    return false;
+  }
+
+  return result.error?.code !== 'TRANSACTION_REJECTED';
 }
 
 function createRecoveredExecutionResult({

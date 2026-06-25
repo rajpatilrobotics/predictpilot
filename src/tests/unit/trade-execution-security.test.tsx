@@ -163,6 +163,32 @@ describe('usePredictTradeExecutionFlow security hardening', () => {
     expect(executionTransport.signAndExecuteTransaction).toHaveBeenCalledTimes(1);
   });
 
+  it('lets strict recovery win when wallet handoff returns a generic no-digest error', async () => {
+    const executionTransport = createGenericFailedExecutionTransport();
+    const recoverSubmittedTransaction = vi
+      .fn()
+      .mockResolvedValue(createRecoveredDigest('generic-failure-recovered-digest'));
+    const { result } = renderSharedFlow({
+      executionTransport,
+      recoverSubmittedTransaction,
+      walletRecoveryNoticeDelayMs: 0,
+      walletReturnTimeoutMs: 10_000,
+    });
+
+    await act(async () => {
+      await result.current.beginReview(undefined);
+    });
+    await act(async () => {
+      await result.current.requestSignature();
+    });
+
+    expect(result.current.state.phase).toBe('success');
+    expect(result.current.state.completedDigest).toBe('generic-failure-recovered-digest');
+    expect(result.current.state.error).toBeNull();
+    expect(recoverSubmittedTransaction).toHaveBeenCalledTimes(1);
+    expect(executionTransport.signAndExecuteTransaction).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps wallet rejection precedence when no digest has been recovered', async () => {
     const executionTransport = createRejectedExecutionTransport();
     const recoverSubmittedTransaction = vi.fn(
@@ -347,6 +373,12 @@ function createExecutionTransport(): PredictTransactionTransport {
 function createPendingExecutionTransport(): PredictTransactionTransport {
   return {
     signAndExecuteTransaction: vi.fn(() => new Promise<never>(() => undefined)),
+  };
+}
+
+function createGenericFailedExecutionTransport(): PredictTransactionTransport {
+  return {
+    signAndExecuteTransaction: vi.fn().mockRejectedValue(new Error('Wallet handoff closed')),
   };
 }
 
