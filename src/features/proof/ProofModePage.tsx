@@ -32,6 +32,24 @@ import { buildProofStrategyReceipt } from './strategy-receipt';
 
 const PROOF_TITLE_ID = 'proof-mode-title';
 
+type ProofRefreshSource = 'Manager summary' | 'Positions' | 'Transaction history';
+
+type ProofRefreshState =
+  | {
+      status: 'idle';
+    }
+  | {
+      status: 'refreshing';
+    }
+  | {
+      refreshedAtMs: number;
+      status: 'success';
+    }
+  | {
+      failedSources: ProofRefreshSource[];
+      status: 'error';
+    };
+
 export function ProofModePage() {
   const wallet = useWalletStatus();
   const manager = usePredictManager();
@@ -51,6 +69,7 @@ export function ProofModePage() {
   });
   const { latestPreparedReview, latestSubmittedProof } = useProofSession();
   const [mountedAtMs] = useState(() => Date.now());
+  const [refreshState, setRefreshState] = useState<ProofRefreshState>({ status: 'idle' });
   const proofOracleId = latestSubmittedProof?.oracleId ?? latestPreparedReview?.oracleId ?? null;
   const proofOracleQueryId = proofOracleId ?? predictDeploymentConfig.predictObjectId;
   const proofOracleState = useOracleState({
@@ -124,8 +143,30 @@ export function ProofModePage() {
     [latestPreparedReview, latestSubmittedProof, viewModel],
   );
 
-  const refreshProof = useCallback(() => {
-    void Promise.all([managerSummary.refetch(), positions.refetch(), history.refetch()]);
+  const refreshProof = useCallback(async () => {
+    const refreshSources: {
+      label: ProofRefreshSource;
+      refresh: () => Promise<unknown>;
+    }[] = [
+      { label: 'Manager summary', refresh: () => managerSummary.refetch() },
+      { label: 'Positions', refresh: () => positions.refetch() },
+      { label: 'Transaction history', refresh: () => history.refetch() },
+    ];
+
+    setRefreshState({ status: 'refreshing' });
+
+    const results = await Promise.allSettled(refreshSources.map((source) => source.refresh()));
+    const failedSources = results.flatMap((result, index) =>
+      result.status === 'rejected' || isRefreshErrorResult(result.value)
+        ? [refreshSources[index]?.label ?? 'Transaction history']
+        : [],
+    );
+
+    setRefreshState(
+      failedSources.length === 0
+        ? { refreshedAtMs: Date.now(), status: 'success' }
+        : { failedSources, status: 'error' },
+    );
   }, [history, managerSummary, positions]);
 
   return (
@@ -141,7 +182,11 @@ export function ProofModePage() {
       />
 
       <div className="mt-5 grid gap-4">
-        <ProofVerdictBanner onRefresh={refreshProof} viewModel={viewModel} />
+        <ProofVerdictBanner
+          onRefresh={refreshProof}
+          refreshState={refreshState}
+          viewModel={viewModel}
+        />
         <SourceLabelStrip labels={viewModel.sourceLabels} />
         <PayoffRiskVisualizer
           fallbackDescription="Proof Center shows payoff recap only after a binary or range review records enough local context."
@@ -226,20 +271,25 @@ function ProofSummaryCard({ summary }: { summary: ProofSummaryModel }) {
 
 function ProofVerdictBanner({
   onRefresh,
+  refreshState,
   viewModel,
 }: {
-  onRefresh: () => void;
+  onRefresh: () => Promise<void>;
+  refreshState: ProofRefreshState;
   viewModel: ProofModeViewModel;
 }) {
+  const isRefreshing = refreshState.status === 'refreshing';
+
   return (
     <StatePanel
       action={
         <button
-          className="border border-[#8ba79c] bg-white px-3 py-2 text-sm font-semibold text-[#315447] transition hover:bg-[#edf5f1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315447]"
-          onClick={onRefresh}
+          className="border border-[#8ba79c] bg-white px-3 py-2 text-sm font-semibold text-[#315447] transition enabled:hover:bg-[#edf5f1] disabled:cursor-wait disabled:border-[#d9dfdc] disabled:text-[#8a9691] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315447]"
+          disabled={isRefreshing}
+          onClick={() => void onRefresh()}
           type="button"
         >
-          Refresh proof
+          {isRefreshing ? 'Refreshing proof...' : 'Refresh proof'}
         </button>
       }
       description={viewModel.explanation}
@@ -262,8 +312,81 @@ function ProofVerdictBanner({
           }
         />
       </div>
+      <ProofRefreshFeedback hasDigest={viewModel.digest !== null} refreshState={refreshState} />
     </StatePanel>
   );
+}
+
+function ProofRefreshFeedback({
+  hasDigest,
+  refreshState,
+}: {
+  hasDigest: boolean;
+  refreshState: ProofRefreshState;
+}) {
+  const digestCopy = hasDigest
+    ? 'Refresh reloads manager, position, and history evidence for the recorded digest.'
+    : 'Refresh reloads manager, position, and history evidence, but cannot create a missing digest.';
+
+  if (refreshState.status === 'error') {
+    return (
+      <div
+        className="mt-3 border border-[#e2b5b5] bg-[#fff7f7] p-3 text-sm text-[#7c2828]"
+        role="alert"
+      >
+        <p className="font-semibold">Proof refresh incomplete</p>
+        <p className="mt-1 leading-6">
+          Could not refresh {formatRefreshSources(refreshState.failedSources)}. Existing proof
+          evidence is still shown. {digestCopy}
+        </p>
+      </div>
+    );
+  }
+
+  if (refreshState.status === 'success') {
+    return (
+      <p aria-live="polite" className="mt-3 text-sm font-semibold text-[#557266]" role="status">
+        Last refreshed {formatRefreshTimestamp(refreshState.refreshedAtMs)}. Proof evidence was
+        reloaded. {digestCopy}
+      </p>
+    );
+  }
+
+  if (refreshState.status === 'refreshing') {
+    return (
+      <p aria-live="polite" className="mt-3 text-sm font-semibold text-[#557266]" role="status">
+        Refreshing proof evidence from manager summary, positions, and transaction history.{' '}
+        {digestCopy}
+      </p>
+    );
+  }
+
+  return <p className="mt-3 text-sm font-semibold text-[#557266]">{digestCopy}</p>;
+}
+
+function isRefreshErrorResult(result: unknown) {
+  return (
+    typeof result === 'object' &&
+    result !== null &&
+    'isError' in result &&
+    (result as { isError?: unknown }).isError === true
+  );
+}
+
+function formatRefreshSources(sources: ProofRefreshSource[]) {
+  if (sources.length === 0) {
+    return 'proof evidence';
+  }
+
+  if (sources.length === 1) {
+    return sources[0];
+  }
+
+  return `${sources.slice(0, -1).join(', ')} and ${sources[sources.length - 1]}`;
+}
+
+function formatRefreshTimestamp(timestampMs: number) {
+  return new Date(timestampMs).toISOString();
 }
 
 function SourceLabelStrip({ labels }: { labels: ProofSourceLabel[] }) {

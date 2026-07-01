@@ -24,6 +24,12 @@ let walletMock: WalletStatusModel;
 let managerMock: UsePredictManagerResult;
 let proofSessionMock: ProofSessionContextValue;
 
+const refetchMocks = vi.hoisted(() => ({
+  history: vi.fn(),
+  managerSummary: vi.fn(),
+  positions: vi.fn(),
+}));
+
 vi.mock('@/features/wallet/useWalletStatus', () => ({
   useWalletStatus: () => walletMock,
 }));
@@ -46,7 +52,7 @@ vi.mock('@/features/portfolio/hooks/useManagerSummary', () => ({
     error: null,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(),
+    refetch: refetchMocks.managerSummary,
   }),
 }));
 
@@ -56,7 +62,7 @@ vi.mock('@/features/portfolio/hooks/usePositionsSummary', () => ({
     error: null,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(),
+    refetch: refetchMocks.positions,
   }),
 }));
 
@@ -72,7 +78,7 @@ vi.mock('@/features/history/hooks/useTransactionHistory', () => ({
     error: null,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(),
+    refetch: refetchMocks.history,
   }),
 }));
 
@@ -82,9 +88,13 @@ vi.mock('@/features/proof/proof-session-context', () => ({
 
 describe('ProofModePage', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     walletMock = walletFixture({ isConnected: false });
     managerMock = managerFixture({ isReady: false });
     proofSessionMock = proofSessionFixture();
+    refetchMocks.history.mockResolvedValue(undefined);
+    refetchMocks.managerSummary.mockResolvedValue({ error: null, isError: false });
+    refetchMocks.positions.mockResolvedValue({ error: null, isError: false });
     vi.mocked(useAskBounds).mockReturnValue(querySuccess(presentAskBounds()));
     vi.mocked(useOracleState).mockReturnValue(querySuccess(createTradeOracleState()));
   });
@@ -109,6 +119,55 @@ describe('ProofModePage', () => {
       screen.queryByRole('link', { name: /Open receipt explorer proof/i }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /copy proof summary/i })).toBeDisabled();
+    expect(screen.getAllByText(/No submitted digest/i).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(
+        /Refresh reloads manager, position, and history evidence, but cannot create a missing digest/i,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('refreshes proof evidence with visible progress and success feedback', async () => {
+    const managerRefresh = createDeferredRefresh();
+    refetchMocks.managerSummary.mockReturnValueOnce(managerRefresh.promise);
+    walletMock = walletFixture({ isConnected: true });
+    managerMock = managerFixture({ isReady: true });
+
+    render(<ProofModePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh proof' }));
+
+    expect(screen.getByRole('button', { name: 'Refreshing proof...' })).toBeDisabled();
+    expect(screen.getByText(/Refreshing proof evidence from manager summary/i)).toBeInTheDocument();
+    expect(refetchMocks.managerSummary).toHaveBeenCalledTimes(1);
+    expect(refetchMocks.positions).toHaveBeenCalledTimes(1);
+    expect(refetchMocks.history).toHaveBeenCalledTimes(1);
+
+    managerRefresh.resolve({ error: null, isError: false });
+
+    expect(await screen.findByText(/Last refreshed/i)).toBeInTheDocument();
+    expect(screen.getByText(/Proof evidence was reloaded/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Refresh reloads manager, position, and history evidence, but cannot create a missing digest/i,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText(/No submitted digest/i).length).toBeGreaterThan(0);
+  });
+
+  it('shows a safe alert when proof evidence refresh fails', async () => {
+    refetchMocks.history.mockRejectedValueOnce(new Error('history refresh failed'));
+    walletMock = walletFixture({ isConnected: true });
+    managerMock = managerFixture({ isReady: true });
+
+    render(<ProofModePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh proof' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Proof refresh incomplete');
+    expect(screen.getByRole('alert')).toHaveTextContent('Transaction history');
+    expect(screen.getByRole('alert')).toHaveTextContent('Existing proof evidence is still shown.');
+    expect(screen.getByRole('alert')).toHaveTextContent('cannot create a missing digest');
   });
 
   it('renders verified digest evidence and copies the proof summary', async () => {
@@ -170,6 +229,18 @@ describe('ProofModePage', () => {
     expect(screen.getByText('Proof summary copied.')).toBeInTheDocument();
   });
 });
+
+function createDeferredRefresh() {
+  let resolve!: (value: { error: null; isError: false }) => void;
+  const promise = new Promise<{ error: null; isError: false }>((innerResolve) => {
+    resolve = innerResolve;
+  });
+
+  return {
+    promise,
+    resolve,
+  };
+}
 
 function walletFixture({ isConnected }: { isConnected: boolean }): WalletStatusModel {
   return {

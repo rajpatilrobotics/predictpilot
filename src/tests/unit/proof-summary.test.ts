@@ -16,7 +16,6 @@ const digest = '7jnrG6TaPH6vFgmxTeZyiXShsZwXywfQ8iAtVi9sVg19' as TransactionDige
 describe('proof summary formatter', () => {
   it('keeps no-proof summaries non-copyable and digest-free', () => {
     const summary = buildProofSummary({
-      generatedAtMs: 0,
       latestPreparedReview: null,
       latestSubmittedProof: null,
       viewModel: viewModelFixture({ status: 'Ready' }),
@@ -27,11 +26,13 @@ describe('proof summary formatter', () => {
     expect(summary.text).toContain('Mode: NO PROOF');
     expect(summary.text).toContain('Digest [C]: none');
     expect(summary.text).toContain('No preview or executed Testnet action');
+    expect(summary.text).toContain('Generated at [L]: Not generated yet');
+    expect(summary.text).not.toContain('1970');
   });
 
   it('labels local previews as preview only without fake execution proof', () => {
     const summary = buildProofSummary({
-      generatedAtMs: 0,
+      generatedAtMs: 1_791_000_000_000,
       latestPreparedReview: preparedReviewFixture(),
       latestSubmittedProof: null,
       viewModel: viewModelFixture({ status: 'Ready but Not Submitted' }),
@@ -47,7 +48,7 @@ describe('proof summary formatter', () => {
 
   it('includes real digest and pending-index copy for submitted proofs', () => {
     const summary = buildProofSummary({
-      generatedAtMs: 0,
+      generatedAtMs: 1_791_000_010_000,
       latestPreparedReview: preparedReviewFixture(),
       latestSubmittedProof: submittedProofFixture(),
       viewModel: viewModelFixture({ digest, status: 'Pending Index' }),
@@ -59,11 +60,12 @@ describe('proof summary formatter', () => {
     expect(summary.text).toContain(`Digest [C]: ${digest}`);
     expect(summary.text).toContain('/txblock/');
     expect(summary.text).toContain('Indexed portfolio/history may still be catching up.');
+    expect(summary.text).toContain('Generated at [L]: 2026-10-03T04:00:10.000Z');
   });
 
   it('marks verified summaries only when the proof view is verified', () => {
     const summary = buildProofSummary({
-      generatedAtMs: 0,
+      generatedAtMs: 1_791_000_010_000,
       latestPreparedReview: preparedReviewFixture(),
       latestSubmittedProof: submittedProofFixture(),
       viewModel: viewModelFixture({
@@ -81,7 +83,7 @@ describe('proof summary formatter', () => {
 
   it('does not turn failed proof states into verified copy', () => {
     const summary = buildProofSummary({
-      generatedAtMs: 0,
+      generatedAtMs: 1_791_000_010_000,
       latestPreparedReview: preparedReviewFixture(),
       latestSubmittedProof: submittedProofFixture(),
       viewModel: viewModelFixture({ digest, status: 'Failed' }),

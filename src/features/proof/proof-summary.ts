@@ -20,10 +20,8 @@ export interface BuildProofSummaryOptions {
   viewModel: ProofModeViewModel;
 }
 
-const DEFAULT_GENERATED_AT_MS = 0;
-
 export function buildProofSummary({
-  generatedAtMs = DEFAULT_GENERATED_AT_MS,
+  generatedAtMs,
   latestPreparedReview,
   latestSubmittedProof,
   viewModel,
@@ -31,7 +29,7 @@ export function buildProofSummary({
   const activeRecord = latestSubmittedProof ?? latestPreparedReview;
   const mode = getSummaryMode(viewModel, latestPreparedReview, latestSubmittedProof);
   const digest = latestSubmittedProof?.completedDigest ?? null;
-  const generatedAt = new Date(generatedAtMs).toISOString();
+  const generatedAt = getGeneratedAt(activeRecord, generatedAtMs);
   const text = [
     'PREDICTPILOT PROOF SUMMARY',
     `Mode: ${formatMode(mode)}`,
@@ -144,6 +142,17 @@ function getPreviewLine(latestPreparedReview: ProofPreparedReviewRecord | null) 
   return `${latestPreparedReview.simulationStatus} at ${new Date(
     latestPreparedReview.preparedAtMs,
   ).toISOString()}`;
+}
+
+function getGeneratedAt(
+  activeRecord: ProofPreparedReviewRecord | ProofSubmittedRecord | null,
+  generatedAtMs: number | undefined,
+) {
+  if (activeRecord === null || generatedAtMs === undefined) {
+    return 'Not generated yet';
+  }
+
+  return new Date(generatedAtMs).toISOString();
 }
 
 function getRowValue(rows: ProofEvidenceRow[], label: string) {

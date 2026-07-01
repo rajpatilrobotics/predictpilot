@@ -158,7 +158,12 @@ export function useTransactionHistory({
     isPending: queries.some((query) => query.isPending),
     isSuccess: canLoadHistory && queries.every((query) => query.isSuccess),
     refetch: async () => {
-      await Promise.all(queries.map((query) => query.refetch()));
+      const results = await Promise.all(queries.map((query) => query.refetch()));
+      const firstFailedResult = results.find((result) => result.isError && result.error !== null);
+
+      if (firstFailedResult !== undefined && firstFailedResult.error !== null) {
+        throw toThrowableAppError(firstFailedResult.error);
+      }
     },
   };
 }

@@ -372,6 +372,37 @@ describe('PnL and transaction history hooks', () => {
     });
   });
 
+  it('rejects manual transaction history refetch when a source fails', async () => {
+    const client = createHistoryClient({
+      fetchPositionMintHistoryDto: vi
+        .fn()
+        .mockResolvedValueOnce([])
+        .mockRejectedValueOnce(
+          new HttpClientError({
+            kind: 'timeout',
+            message: 'Predict server timed out',
+            url: 'https://predict-server.testnet.mystenlabs.com/positions/minted',
+          }),
+        ),
+    });
+    const wrapper = createTestWrapper();
+
+    const { result } = renderHook(() => useTransactionHistory({ client, managerId, owner }), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    await expect(result.current.refetch()).rejects.toMatchObject({
+      code: 'PREDICT_SERVER_UNAVAILABLE',
+      context: {
+        managerId,
+        owner,
+        query: 'history-position-mints',
+      },
+    });
+  });
+
   it('does not call history clients when disabled', () => {
     const client = createHistoryClient();
     const wrapper = createTestWrapper();
