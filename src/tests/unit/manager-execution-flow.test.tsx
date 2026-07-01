@@ -255,6 +255,49 @@ describe('manager execution flows', () => {
     expect(invalidatedText).toContain('manager');
   });
 
+  it('recovers a manager deposit digest after an early empty recovery and no-digest wallet error', async () => {
+    const invalidateQueries = vi.fn().mockResolvedValue(undefined);
+    const executionTransport = createTradeExecutionTransport({
+      signAndExecuteTransaction: vi.fn().mockRejectedValue(new Error('Wallet handoff closed')),
+    });
+    const authoritativeClient = createAuthoritativeManagerClientSequence([
+      'old-manager-digest',
+      'late-recovered-deposit-digest',
+    ]);
+    const indexedClient = createManagerSummaryClientSequence(['1000000']);
+    const { result } = renderDepositFlow({
+      authoritativeClient,
+      executionTransport,
+      indexedClient,
+      managerRecoveryMaxAttempts: 1,
+      managerRecoveryPollDelayMs: 0,
+      previousManagerTransactionDigest: 'old-manager-digest',
+      previousTradingBalanceQuote: 0n,
+      queryClient: { invalidateQueries },
+      simulationTransport: createReadyTradeSimulationTransport(),
+      walletReturnTimeoutMs: 10_000,
+    });
+    await beginDepositReview(result);
+
+    await act(async () => {
+      await result.current.requestSignature();
+    });
+
+    const invalidatedText = JSON.stringify(invalidateQueries.mock.calls);
+
+    expect(result.current.state.phase).toBe('success');
+    expect(result.current.state.completedDigest).toBe('late-recovered-deposit-digest');
+    expect(result.current.state.error).toBeNull();
+    expect(result.current.state.executionResult).toMatchObject({
+      confirmedStatus: 'success',
+      digest: 'late-recovered-deposit-digest',
+      status: 'success',
+    });
+    expect(authoritativeClient.getObject).toHaveBeenCalledTimes(2);
+    expect(indexedClient.fetchManagerSummaryDto).toHaveBeenCalledWith(tradeTestManagerId);
+    expect(invalidatedText).toContain('manager');
+  });
+
   it('times out manager deposit recovery when manager state does not prove a new deposit', async () => {
     const executionTransport = createTradeExecutionTransport({
       signAndExecuteTransaction: vi.fn().mockImplementation(createNeverResolvingWalletPromise),
@@ -604,24 +647,25 @@ function createManagerSummaryClient({
   tradingBalance: string;
 }): PortfolioReadClient {
   return {
-    fetchManagerSummaryDto: vi.fn().mockResolvedValue({
-      account_value: tradingBalance,
-      awaiting_settlement_positions: 0,
-      balances: [
-        {
-          balance: tradingBalance,
-          quote_asset: predictDeploymentConfig.quoteAsset.type,
-        },
-      ],
-      manager_id: tradeTestManagerId,
-      open_exposure: '0',
-      open_positions: 0,
-      owner: tradeTestOwner,
-      realized_pnl: '0',
-      redeemable_value: '0',
-      trading_balance: tradingBalance,
-      unrealized_pnl: '0',
+    fetchManagerSummaryDto: vi.fn().mockResolvedValue(createManagerSummaryDto({ tradingBalance })),
+  } as unknown as PortfolioReadClient;
+}
+
+function createManagerSummaryClientSequence(tradingBalances: string[]): PortfolioReadClient {
+  const fallbackTradingBalance = tradingBalances[tradingBalances.length - 1] ?? '0';
+  const fetchManagerSummaryDto = vi.fn();
+
+  tradingBalances.forEach((tradingBalance) => {
+    fetchManagerSummaryDto.mockResolvedValueOnce(createManagerSummaryDto({ tradingBalance }));
+  });
+  fetchManagerSummaryDto.mockResolvedValue(
+    createManagerSummaryDto({
+      tradingBalance: fallbackTradingBalance,
     }),
+  );
+
+  return {
+    fetchManagerSummaryDto,
   } as unknown as PortfolioReadClient;
 }
 
@@ -631,18 +675,60 @@ function createAuthoritativeManagerClient({
   previousTransaction: string | null;
 }): AuthoritativeSuiClient {
   return {
-    getObject: vi.fn().mockResolvedValue({
-      object: {
-        digest: 'manager-object-digest',
-        json: null,
-        objectId: tradeTestManagerId,
-        owner: tradeTestOwner,
-        previousTransaction,
-        type: `${predictDeploymentConfig.packageId}::predict_manager::PredictManager`,
-        version: '2',
-      },
-    }),
+    getObject: vi.fn().mockResolvedValue(createAuthoritativeManagerObject(previousTransaction)),
     listCoins: vi.fn(),
+  };
+}
+
+function createAuthoritativeManagerClientSequence(
+  previousTransactions: Array<string | null>,
+): AuthoritativeSuiClient {
+  const fallbackPreviousTransaction = previousTransactions[previousTransactions.length - 1] ?? null;
+  const getObject = vi.fn();
+
+  previousTransactions.forEach((previousTransaction) => {
+    getObject.mockResolvedValueOnce(createAuthoritativeManagerObject(previousTransaction));
+  });
+  getObject.mockResolvedValue(createAuthoritativeManagerObject(fallbackPreviousTransaction));
+
+  return {
+    getObject,
+    listCoins: vi.fn(),
+  };
+}
+
+function createManagerSummaryDto({ tradingBalance }: { tradingBalance: string }) {
+  return {
+    account_value: tradingBalance,
+    awaiting_settlement_positions: 0,
+    balances: [
+      {
+        balance: tradingBalance,
+        quote_asset: predictDeploymentConfig.quoteAsset.type,
+      },
+    ],
+    manager_id: tradeTestManagerId,
+    open_exposure: '0',
+    open_positions: 0,
+    owner: tradeTestOwner,
+    realized_pnl: '0',
+    redeemable_value: '0',
+    trading_balance: tradingBalance,
+    unrealized_pnl: '0',
+  };
+}
+
+function createAuthoritativeManagerObject(previousTransaction: string | null) {
+  return {
+    object: {
+      digest: 'manager-object-digest',
+      json: null,
+      objectId: tradeTestManagerId,
+      owner: tradeTestOwner,
+      previousTransaction,
+      type: `${predictDeploymentConfig.packageId}::predict_manager::PredictManager`,
+      version: '2',
+    },
   };
 }
 

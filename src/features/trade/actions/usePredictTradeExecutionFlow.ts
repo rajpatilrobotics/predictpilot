@@ -611,25 +611,57 @@ async function executePredictTransactionWithWalletRecovery<
     delayMs: walletRecoveryNoticeDelayMs,
     onRecoveryStart,
   });
-  const recoveryEventPromise = recoverSubmittedTransaction({
+  const recoveryContext = {
     action,
     builderPreview,
     executionRequest,
     requestedAtMs,
-  })
-    .then((recovered) =>
-      recovered === null
-        ? {
-            kind: 'recovery-empty' as const,
-          }
-        : {
-            kind: 'recovered' as const,
-            recovered,
-          },
-    )
-    .catch(() => ({
-      kind: 'recovery-empty' as const,
-    }));
+  } satisfies PredictSubmittedTransactionRecoveryContext<TPreview>;
+  const createRecoveryEventPromise = () =>
+    recoverSubmittedTransaction(recoveryContext)
+      .then((recovered) =>
+        recovered === null
+          ? {
+              kind: 'recovery-empty' as const,
+            }
+          : {
+              kind: 'recovered' as const,
+              recovered,
+            },
+      )
+      .catch(() => ({
+        kind: 'recovery-empty' as const,
+      }));
+  const recoveryEventPromise = createRecoveryEventPromise();
+  const recoverAfterNoDigestFailure = async (
+    executionResult: PredictTransactionExecutionResult,
+  ) => {
+    if (!shouldWaitForRecoveryAfterExecutionFailure(executionResult)) {
+      return null;
+    }
+
+    onRecoveryStart();
+    const freshRecoveryEventPromise = createRecoveryEventPromise();
+
+    try {
+      const fallbackRaceResult = await Promise.race([
+        freshRecoveryEventPromise,
+        timeoutEventPromise,
+      ]);
+
+      if (fallbackRaceResult.kind === 'recovered') {
+        return createRecoveredExecutionResult({
+          action,
+          executionRequest,
+          recovered: fallbackRaceResult.recovered,
+        });
+      }
+
+      return null;
+    } finally {
+      freshRecoveryEventPromise.catch(() => undefined);
+    }
+  };
 
   try {
     const raceResult = await Promise.race([
@@ -639,16 +671,10 @@ async function executePredictTransactionWithWalletRecovery<
     ]);
 
     if (raceResult.kind === 'execution') {
-      if (shouldWaitForRecoveryAfterExecutionFailure(raceResult.executionResult)) {
-        const fallbackRaceResult = await Promise.race([recoveryEventPromise, timeoutEventPromise]);
+      const recoveredResult = await recoverAfterNoDigestFailure(raceResult.executionResult);
 
-        if (fallbackRaceResult.kind === 'recovered') {
-          return createRecoveredExecutionResult({
-            action,
-            executionRequest,
-            recovered: fallbackRaceResult.recovered,
-          });
-        }
+      if (recoveredResult !== null) {
+        return recoveredResult;
       }
 
       return raceResult.executionResult;
@@ -666,6 +692,14 @@ async function executePredictTransactionWithWalletRecovery<
       const fallbackRaceResult = await Promise.race([executionEventPromise, timeoutEventPromise]);
 
       if (fallbackRaceResult.kind === 'execution') {
+        const recoveredResult = await recoverAfterNoDigestFailure(
+          fallbackRaceResult.executionResult,
+        );
+
+        if (recoveredResult !== null) {
+          return recoveredResult;
+        }
+
         return fallbackRaceResult.executionResult;
       }
     }

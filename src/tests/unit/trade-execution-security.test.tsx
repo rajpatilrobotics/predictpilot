@@ -185,8 +185,65 @@ describe('usePredictTradeExecutionFlow security hardening', () => {
     expect(result.current.state.phase).toBe('success');
     expect(result.current.state.completedDigest).toBe('generic-failure-recovered-digest');
     expect(result.current.state.error).toBeNull();
-    expect(recoverSubmittedTransaction).toHaveBeenCalledTimes(1);
+    expect(recoverSubmittedTransaction).toHaveBeenCalledTimes(2);
     expect(executionTransport.signAndExecuteTransaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs a fresh recovery when an early empty check is followed by a no-digest wallet error', async () => {
+    const executionTransport = createGenericFailedExecutionTransport();
+    const recoverSubmittedTransaction = vi
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(createRecoveredDigest('late-generic-failure-recovered-digest'));
+    const { result } = renderSharedFlow({
+      executionTransport,
+      recoverSubmittedTransaction,
+      walletRecoveryNoticeDelayMs: 0,
+      walletReturnTimeoutMs: 10_000,
+    });
+
+    await act(async () => {
+      await result.current.beginReview(undefined);
+    });
+    await act(async () => {
+      await result.current.requestSignature();
+    });
+
+    expect(result.current.state.phase).toBe('success');
+    expect(result.current.state.completedDigest).toBe('late-generic-failure-recovered-digest');
+    expect(result.current.state.error).toBeNull();
+    expect(recoverSubmittedTransaction).toHaveBeenCalledTimes(2);
+    expect(executionTransport.signAndExecuteTransaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('recovers when an empty recovery result wins before a later wallet handoff failure', async () => {
+    const controlledExecution = createControlledGenericFailedExecutionTransport();
+    const recoverSubmittedTransaction = vi
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(createRecoveredDigest('empty-first-recovered-digest'));
+    const { result } = renderSharedFlow({
+      executionTransport: controlledExecution.transport,
+      recoverSubmittedTransaction,
+      walletRecoveryNoticeDelayMs: 0,
+      walletReturnTimeoutMs: 10_000,
+    });
+
+    await act(async () => {
+      await result.current.beginReview(undefined);
+    });
+    await act(async () => {
+      const signaturePromise = result.current.requestSignature();
+      await Promise.resolve();
+      controlledExecution.reject(new Error('Wallet handoff closed'));
+      await signaturePromise;
+    });
+
+    expect(result.current.state.phase).toBe('success');
+    expect(result.current.state.completedDigest).toBe('empty-first-recovered-digest');
+    expect(result.current.state.error).toBeNull();
+    expect(recoverSubmittedTransaction).toHaveBeenCalledTimes(2);
+    expect(controlledExecution.transport.signAndExecuteTransaction).toHaveBeenCalledTimes(1);
   });
 
   it('keeps wallet rejection precedence when no digest has been recovered', async () => {
@@ -379,6 +436,20 @@ function createPendingExecutionTransport(): PredictTransactionTransport {
 function createGenericFailedExecutionTransport(): PredictTransactionTransport {
   return {
     signAndExecuteTransaction: vi.fn().mockRejectedValue(new Error('Wallet handoff closed')),
+  };
+}
+
+function createControlledGenericFailedExecutionTransport() {
+  let rejectWallet: (reason?: unknown) => void = () => undefined;
+  const walletPromise = new Promise<never>((_resolve, reject) => {
+    rejectWallet = reject;
+  });
+
+  return {
+    reject: rejectWallet,
+    transport: {
+      signAndExecuteTransaction: vi.fn(() => walletPromise),
+    } satisfies PredictTransactionTransport,
   };
 }
 
