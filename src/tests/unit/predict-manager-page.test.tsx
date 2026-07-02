@@ -187,6 +187,32 @@ describe('PredictManagerPage', () => {
     expect(screen.getAllByText('0').length).toBeGreaterThan(0);
   });
 
+  it('keeps loaded manager account data visible when a query still reports loading', () => {
+    setReadyManager();
+    hookState.managerSummary = queryLoadingWithData(createTradeManagerSummaryPortfolio());
+    hookState.positionsSummary = queryLoadingWithData(createTradePositionsSummary());
+
+    renderManagerPage({ walletDusdcBalanceQuote: 3_000_000n });
+
+    expect(screen.getAllByText('5 DUSDC').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Loading manager account data')).not.toBeInTheDocument();
+
+    const withdrawPanel = screen.getByRole('region', { name: 'Withdraw DUSDC to wallet' });
+    fireEvent.change(within(withdrawPanel).getByLabelText('Withdraw amount'), {
+      target: { value: '1.00' },
+    });
+
+    expect(
+      within(withdrawPanel).queryByText('Loading balance before execution review.'),
+    ).not.toBeInTheDocument();
+    expect(
+      within(withdrawPanel).getByText('Ready to open the pre-sign execution review.'),
+    ).toBeInTheDocument();
+    expect(
+      within(withdrawPanel).getByRole('button', { name: 'Open execution review' }),
+    ).toBeEnabled();
+  });
+
   it('shows ambiguous managers without auto-selecting one', () => {
     connectWallet();
     hookState.manager = {
@@ -393,6 +419,17 @@ function querySuccess<TData>(data: TData): MockQueryResult<TData> {
     isError: false,
     isLoading: false,
     isPending: false,
+    isSuccess: true,
+  };
+}
+
+function queryLoadingWithData<TData>(data: TData): MockQueryResult<TData> {
+  return {
+    data,
+    error: null,
+    isError: false,
+    isLoading: true,
+    isPending: true,
     isSuccess: true,
   };
 }
