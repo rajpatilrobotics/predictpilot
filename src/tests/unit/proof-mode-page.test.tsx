@@ -5,6 +5,7 @@ import { useAskBounds } from '@/features/markets/hooks/useAskBounds';
 import { useOracleState } from '@/features/markets/hooks/useOracleState';
 import type { ProofSessionContextValue } from '@/features/proof/proof-session-context';
 import type { UsePredictManagerResult } from '@/features/manager/hooks/usePredictManager';
+import type { ManagerSummaryPortfolioModel } from '@/features/portfolio/lib/portfolio-selectors';
 import type { WalletStatusModel } from '@/features/wallet/useWalletStatus';
 import type { ObjectId, SuiAddress, TransactionDigest } from '@/types/predict';
 import {
@@ -22,6 +23,7 @@ const digest = '7jnrG6TaPH6vFgmxTeZyiXShsZwXywfQ8iAtVi9sVg19' as TransactionDige
 
 let walletMock: WalletStatusModel;
 let managerMock: UsePredictManagerResult;
+let managerSummaryMock: ManagerSummaryPortfolioModel | undefined;
 let proofSessionMock: ProofSessionContextValue;
 
 const refetchMocks = vi.hoisted(() => ({
@@ -48,7 +50,7 @@ vi.mock('@/features/markets/hooks/useOracleState', () => ({
 
 vi.mock('@/features/portfolio/hooks/useManagerSummary', () => ({
   useManagerSummary: () => ({
-    data: undefined,
+    data: managerSummaryMock,
     error: null,
     isFetching: false,
     isLoading: false,
@@ -70,7 +72,8 @@ vi.mock('@/features/history/hooks/useTransactionHistory', () => ({
   useTransactionHistory: () => ({
     data: {
       records:
-        proofSessionMock.latestSubmittedProof === null
+        proofSessionMock.latestSubmittedProof === null ||
+        proofSessionMock.latestSubmittedProof.action === 'DEPOSIT_QUOTE'
           ? []
           : [{ digest, kind: 'BINARY_MINT', timestampMs: 1_791_000_000_000n }],
       totalCount: proofSessionMock.latestSubmittedProof === null ? 0 : 1,
@@ -91,6 +94,7 @@ describe('ProofModePage', () => {
     vi.clearAllMocks();
     walletMock = walletFixture({ isConnected: false });
     managerMock = managerFixture({ isReady: false });
+    managerSummaryMock = undefined;
     proofSessionMock = proofSessionFixture();
     refetchMocks.history.mockResolvedValue(undefined);
     refetchMocks.managerSummary.mockResolvedValue({ error: null, isError: false });
@@ -228,6 +232,37 @@ describe('ProofModePage', () => {
     expect(writeText.mock.calls[0]?.[0]).toContain(`Digest [C]: ${digest}`);
     expect(screen.getByText('Proof summary copied.')).toBeInTheDocument();
   });
+
+  it('renders manager funding proof as verified after manager summary refresh', () => {
+    walletMock = walletFixture({ isConnected: true });
+    managerMock = managerFixture({ isReady: true });
+    managerSummaryMock = managerSummaryFixture();
+    const submittedProof = {
+      action: 'DEPOSIT_QUOTE' as const,
+      affectedObjects: [{ id: managerId, kind: 'manager' as const }],
+      amountQuote: 1_000n,
+      completedDigest: digest,
+      confirmedStatus: 'success' as const,
+      managerId,
+      oracleId: null,
+      recordedAtMs: tradeTestNowMs,
+      refreshWarning: null,
+      sender: walletAddress,
+    };
+    proofSessionMock = proofSessionFixture({
+      latestSubmittedProof: submittedProof,
+      submittedProofs: [submittedProof],
+    });
+
+    render(<ProofModePage />);
+
+    expect(screen.getByRole('heading', { name: 'Proof verified' })).toBeInTheDocument();
+    expect(screen.getAllByText('Manager summary refreshed').length).toBeGreaterThan(0);
+    expect(screen.getByText('Manager summary refreshed after digest')).toBeInTheDocument();
+    expect(
+      screen.getByText('Manager summary refreshed after funding digest'),
+    ).toBeInTheDocument();
+  });
 });
 
 function createDeferredRefresh() {
@@ -288,6 +323,40 @@ function proofSessionFixture(
     latestSubmittedProof: null,
     recordPreparedProof: vi.fn(),
     recordSubmittedProof: vi.fn(),
+    submittedProofs: [],
     ...overrides,
+  };
+}
+
+function managerSummaryFixture(): ManagerSummaryPortfolioModel {
+  return {
+    balanceSummary: {
+      accountValueQuote: 1_000n,
+      awaitingSettlementPositions: 0,
+      balances: [],
+      managerId,
+      openExposureQuote: 0n,
+      openPositions: 0,
+      owner: walletAddress,
+      realizedPnlQuote: 0n,
+      redeemableValueQuote: 0n,
+      totalManagerBalanceQuote: 1_000n,
+      tradingBalanceQuote: 1_000n,
+      unrealizedPnlQuote: 0n,
+    },
+    summary: {
+      accountValueQuote: 1_000n,
+      awaitingSettlementPositions: 0,
+      balances: [],
+      lastRefreshedAtMs: null,
+      managerId,
+      openExposureQuote: 0n,
+      openPositions: 0,
+      owner: walletAddress,
+      realizedPnlQuote: 0n,
+      redeemableValueQuote: 0n,
+      tradingBalanceQuote: 1_000n,
+      unrealizedPnlQuote: 0n,
+    },
   };
 }

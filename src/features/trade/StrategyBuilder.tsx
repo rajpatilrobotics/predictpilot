@@ -789,11 +789,11 @@ function PreviewResult({ previewState }: { previewState: PreviewState }) {
     <StatePanel
       description={
         isTodoVerify
-          ? 'Inputs reached the estimator boundary. TODO VERIFY / simulation required before any wallet signature.'
+          ? 'Inputs reached the estimator boundary. Simulation is required before any wallet signature.'
           : previewState.error.message
       }
       label="Strategy preview blocked"
-      title={isTodoVerify ? 'TODO VERIFY / simulation required' : previewState.error.title}
+      title={isTodoVerify ? 'Simulation required' : previewState.error.title}
       tone={isTodoVerify ? 'warning' : 'blocked'}
     >
       <div className="grid gap-3">

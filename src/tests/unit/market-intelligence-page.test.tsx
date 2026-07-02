@@ -106,7 +106,7 @@ beforeEach(() => {
 });
 
 describe('MarketIntelligencePage', () => {
-  it('renders active oracle context, freshness, ask-bounds TODO VERIFY state, and detail actions', () => {
+  it('renders active oracle context, freshness, unavailable ask-bounds state, and detail actions', () => {
     render(<MarketIntelligencePage nowMs={nowMs} />);
 
     expect(screen.getByRole('heading', { name: 'Market Intelligence' })).toBeInTheDocument();
@@ -120,13 +120,13 @@ describe('MarketIntelligencePage', () => {
       `/oracle-status?oracleId=${btcOracleId}&source=best-market-finder`,
     );
     expect(screen.getByText('DUSDC supported')).toBeInTheDocument();
-    expect(screen.getByText('TODO VERIFY missing')).toBeInTheDocument();
+    expect(screen.getByText('Not provided by endpoint')).toBeInTheDocument();
 
     const selectedMarket = screen.getByLabelText('Selected market');
     expect(within(selectedMarket).getByRole('heading', { name: /BTC/i })).toBeInTheDocument();
     expect(within(selectedMarket).getByText('Fresh')).toBeInTheDocument();
     expect(
-      within(selectedMarket).getByText('TODO VERIFY numeric bounds unmapped'),
+      within(selectedMarket).getByText('Bounds not mapped by current endpoint'),
     ).toBeInTheDocument();
     expect(within(selectedMarket).getByText(ORACLE_LIVE_TAPE_SOURCE)).toBeInTheDocument();
 
@@ -254,8 +254,9 @@ describe('MarketIntelligencePage', () => {
     const selectedMarket = screen.getByLabelText('Selected market');
     expect(within(selectedMarket).getAllByText('Unknown').length).toBeGreaterThan(0);
     expect(within(selectedMarket).getAllByText('Blocked').length).toBeGreaterThan(0);
-    expect(within(selectedMarket).getAllByText('TODO VERIFY latest price missing')).toHaveLength(2);
-    expect(within(selectedMarket).getByText('TODO VERIFY live oracle tape')).toBeInTheDocument();
+    expect(within(selectedMarket).getAllByText('Latest price unavailable')).toHaveLength(2);
+    expect(within(selectedMarket).getByText('Live oracle tape unavailable')).toBeInTheDocument();
+    expect(within(selectedMarket).queryByText(/TODO VERIFY/i)).not.toBeInTheDocument();
   });
 });
 

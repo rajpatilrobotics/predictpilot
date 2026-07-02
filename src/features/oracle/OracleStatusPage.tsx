@@ -306,7 +306,7 @@ function OracleUnavailableState({ message, title }: { message: string; title: st
 function getSettlementCopy(oracleState: OracleStateModel) {
   if (oracleState.oracle.lifecycleStatus === 'SETTLED') {
     if (oracleState.oracle.settlementPrice1e9 === null) {
-      return 'Settled OracleSVI, but settlement price is unavailable. TODO VERIFY before showing redeem-critical values.';
+      return 'Settled OracleSVI, but settlement price is unavailable from the current endpoint, so redeem-critical values are hidden.';
     }
 
     return 'Settled OracleSVI. Mint is blocked; redeem context can reference the indexed settlement price shown here.';

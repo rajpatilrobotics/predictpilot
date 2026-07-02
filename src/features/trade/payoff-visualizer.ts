@@ -294,31 +294,31 @@ function createFacts(snapshot: PayoffVisualizerSnapshot, quoteSymbol: string) {
 
   return [
     { label: 'Action', value: formatAction(snapshot.action) },
-    { label: 'Underlying', value: snapshot.underlyingAsset ?? 'Unavailable / TODO VERIFY' },
+    { label: 'Underlying', value: snapshot.underlyingAsset ?? 'Unavailable from current server data' },
     { label: snapshot.kind === 'binary' ? 'Strike' : 'Range', value: strikeOrRange },
     {
       label: 'Expiry',
       value:
         snapshot.expiryMs === undefined
-          ? 'Unavailable / TODO VERIFY'
+          ? 'Unavailable from current server data'
           : formatExpiry(snapshot.expiryMs),
     },
     {
       label: 'Quantity',
       value:
         snapshot.quantityQuote === undefined
-          ? 'Unavailable / TODO VERIFY'
+          ? 'Unavailable from current server data'
           : formatQuoteAmount(snapshot.quantityQuote, quoteSymbol),
     },
     {
       label: 'Manager balance',
       value:
         snapshot.managerBalanceQuote === undefined
-          ? 'Unavailable / TODO VERIFY'
+          ? 'Unavailable from current server data'
           : formatQuoteAmount(snapshot.managerBalanceQuote, quoteSymbol),
     },
     { label: 'Quote asset', value: quoteSymbol },
-    { label: 'Oracle', value: snapshot.oracleId ?? 'Unavailable / TODO VERIFY' },
+    { label: 'Oracle', value: snapshot.oracleId ?? 'Unavailable from current server data' },
   ];
 }
 
@@ -507,7 +507,7 @@ function formatAction(action: string) {
 }
 
 function formatOptionalStrike(value: bigint | undefined) {
-  return value === undefined ? 'Unavailable / TODO VERIFY' : formatPrice1e9(value);
+  return value === undefined ? 'Unavailable from current server data' : formatPrice1e9(value);
 }
 
 function formatExpiry(value: bigint | number) {

@@ -111,8 +111,8 @@ function SVISurfacePageContent({
         <Panel title="Current SVI parameters">
           {oracleState.latestSvi === null ? (
             <UnavailableNotice>
-              SVI parameters unavailable. TODO VERIFY the server state before rendering any smile,
-              surface, replay, or parameter-derived chart.
+              SVI parameters are unavailable from the current server state, so no smile, surface,
+              replay, or parameter-derived chart is shown.
             </UnavailableNotice>
           ) : (
             <SviParameterGrid svi={oracleState.latestSvi.svi} />
@@ -153,9 +153,9 @@ function SVISurfacePageContent({
           <div className="border border-dashed border-[#b8c6c0] bg-[#fbfcfc] p-5">
             <p className="text-lg font-semibold text-[#17211d]">Surface derivation unavailable</p>
             <p className="mt-2 text-sm leading-6 text-[#52615c]">
-              TODO VERIFY SVI visualization math and history support before rendering volatility
-              smiles, 3D surfaces, replay timelines, butterfly flags, or calendar flags. The current
-              lane only has latest OracleSVI parameters from the existing oracle state model.
+              Volatility charts require SVI visualization math and history support that are not
+              available from the current endpoint. This page only shows latest OracleSVI parameters
+              from the existing oracle state model.
             </p>
           </div>
           <dl className="mt-4 grid gap-3 md:grid-cols-2">

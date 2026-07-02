@@ -223,6 +223,8 @@ function createProofViewModel(status: 'Pending Index' | 'Verified') {
     digest,
     executionRows: [],
     explanation: status,
+    indexedSourceValue:
+      status === 'Verified' ? 'Predict server matched' : 'Awaiting matching history',
     matchedHistoryDigest: status === 'Verified' ? digest : null,
     readinessRows: [],
     reconciliationRows: [],

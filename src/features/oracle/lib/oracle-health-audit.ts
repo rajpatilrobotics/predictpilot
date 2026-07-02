@@ -241,7 +241,7 @@ function askBoundsCheck(askBounds: OracleAskBoundsModel | undefined): OracleHeal
   }
 
   return {
-    detail: 'Ask bounds are present, but exact lower/upper server fields remain TODO VERIFY.',
+    detail: 'Ask bounds are present, but exact lower/upper server fields are not mapped yet.',
     label: 'Ask bounds',
     source: 'Predict server',
     status: 'caution',

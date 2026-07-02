@@ -39,6 +39,7 @@ export interface ProofModeViewModel {
   digest: TransactionDigest | null;
   executionRows: ProofEvidenceRow[];
   explanation: string;
+  indexedSourceValue: string;
   matchedHistoryDigest: TransactionDigest | null;
   reconciliationRows: ProofEvidenceRow[];
   readinessRows: ProofEvidenceRow[];
@@ -80,6 +81,10 @@ export function selectProofModeViewModel({
   wallet,
 }: SelectProofModeViewModelOptions): ProofModeViewModel {
   const historyMatch = findMatchingHistoryRecord(history?.records ?? [], latestSubmittedProof);
+  const managerFundingMatch = findManagerFundingSummaryMatch({
+    latestSubmittedProof,
+    managerSummary,
+  });
   const error = manager.error ?? managerSummaryError ?? positionsError ?? historyError;
   const readinessRows = buildReadinessRows({
     error,
@@ -94,12 +99,14 @@ export function selectProofModeViewModel({
     historyMatch,
     latestPreparedReview,
     latestSubmittedProof,
+    managerFundingMatch,
   });
   const reconciliationRows = buildReconciliationRows({
     history,
     historyLoading,
     historyMatch,
     latestSubmittedProof,
+    managerFundingMatch,
     managerSummary,
     managerSummaryLoading,
     positions,
@@ -110,6 +117,7 @@ export function selectProofModeViewModel({
     historyMatch,
     latestPreparedReview,
     latestSubmittedProof,
+    managerFundingMatch,
     manager,
     wallet,
   });
@@ -125,6 +133,7 @@ export function selectProofModeViewModel({
     digest: latestSubmittedProof?.completedDigest ?? historyMatch?.digest ?? null,
     executionRows,
     explanation: getVerdictExplanation(status),
+    indexedSourceValue: getIndexedSourceValue({ historyMatch, latestSubmittedProof, managerFundingMatch }),
     matchedHistoryDigest: historyMatch?.digest ?? null,
     reconciliationRows,
     readinessRows,
@@ -140,6 +149,7 @@ function selectVerdictStatus({
   historyMatch,
   latestPreparedReview,
   latestSubmittedProof,
+  managerFundingMatch,
   manager,
   wallet,
 }: {
@@ -147,6 +157,7 @@ function selectVerdictStatus({
   historyMatch: ProtocolHistoryRecord | null;
   latestPreparedReview: ProofPreparedReviewRecord | null;
   latestSubmittedProof: ProofSubmittedRecord | null;
+  managerFundingMatch: ManagerFundingSummaryMatch | null;
   manager: UsePredictManagerResult;
   wallet: WalletStatusModel;
 }): ProofVerdictStatus {
@@ -162,7 +173,7 @@ function selectVerdictStatus({
     return latestPreparedReview === null ? 'Ready' : 'Ready but Not Submitted';
   }
 
-  if (historyMatch === null) {
+  if (historyMatch === null && managerFundingMatch === null) {
     return 'Pending Index';
   }
 
@@ -254,10 +265,12 @@ function buildExecutionRows({
   historyMatch,
   latestPreparedReview,
   latestSubmittedProof,
+  managerFundingMatch,
 }: {
   historyMatch: ProtocolHistoryRecord | null;
   latestPreparedReview: ProofPreparedReviewRecord | null;
   latestSubmittedProof: ProofSubmittedRecord | null;
+  managerFundingMatch: ManagerFundingSummaryMatch | null;
 }): ProofEvidenceRow[] {
   const activeRecord = latestSubmittedProof ?? latestPreparedReview;
 
@@ -282,10 +295,17 @@ function buildExecutionRows({
       value: latestSubmittedProof?.completedDigest ?? 'Digest appears only after wallet submission',
     },
     {
-      label: 'Indexed match',
+      label: isManagerFundingAction(latestSubmittedProof?.action) ? 'Manager refresh' : 'Indexed match',
       source: 'Predict server',
-      status: historyMatch === null ? 'pending' : 'pass',
-      value: historyMatch === null ? 'Waiting for matching history row' : historyMatch.digest,
+      status: historyMatch === null && managerFundingMatch === null ? 'pending' : 'pass',
+      value:
+        historyMatch !== null
+          ? historyMatch.digest
+          : managerFundingMatch !== null
+            ? 'Manager summary refreshed after digest'
+            : isManagerFundingAction(latestSubmittedProof?.action)
+              ? 'Waiting for manager summary refresh'
+              : 'Waiting for matching history row',
     },
     {
       label: 'Prepared review',
@@ -304,6 +324,7 @@ function buildReconciliationRows({
   historyLoading,
   historyMatch,
   latestSubmittedProof,
+  managerFundingMatch,
   managerSummary,
   managerSummaryLoading,
   positions,
@@ -313,6 +334,7 @@ function buildReconciliationRows({
   historyLoading: boolean;
   historyMatch: ProtocolHistoryRecord | null;
   latestSubmittedProof: ProofSubmittedRecord | null;
+  managerFundingMatch: ManagerFundingSummaryMatch | null;
   managerSummary: ManagerSummaryPortfolioModel | undefined;
   managerSummaryLoading: boolean;
   positions: NormalizedManagerPositionsSummaryModel | undefined;
@@ -333,13 +355,24 @@ function buildReconciliationRows({
     {
       label: 'History reconciliation',
       source: 'Predict server',
-      status: historyMatch === null ? (historyLoading ? 'pending' : 'blocked') : 'pass',
+      status:
+        historyMatch !== null || managerFundingMatch !== null
+          ? 'pass'
+          : historyLoading || managerSummaryLoading
+            ? 'pending'
+            : 'blocked',
       value:
-        historyMatch === null
-          ? historyLoading
-            ? 'Refreshing history'
-            : 'No matching history row yet'
-          : `${historyMatch.kind} indexed`,
+        historyMatch !== null
+          ? `${historyMatch.kind} indexed`
+          : managerFundingMatch !== null
+            ? 'Manager summary refreshed after funding digest'
+            : isManagerFundingAction(latestSubmittedProof?.action)
+              ? managerSummaryLoading
+                ? 'Refreshing manager summary'
+                : 'No manager summary refresh yet'
+              : historyLoading
+                ? 'Refreshing history'
+                : 'No matching history row yet',
     },
     {
       label: 'Portfolio refresh',
@@ -427,6 +460,57 @@ function findMatchingHistoryRecord(
   return records.find((record) => record.digest === latestSubmittedProof.completedDigest) ?? null;
 }
 
+interface ManagerFundingSummaryMatch {
+  managerId: string;
+}
+
+function findManagerFundingSummaryMatch({
+  latestSubmittedProof,
+  managerSummary,
+}: {
+  latestSubmittedProof: ProofSubmittedRecord | null;
+  managerSummary: ManagerSummaryPortfolioModel | undefined;
+}): ManagerFundingSummaryMatch | null {
+  if (
+    latestSubmittedProof === null ||
+    !isManagerFundingAction(latestSubmittedProof.action) ||
+    latestSubmittedProof.confirmedStatus !== 'success' ||
+    latestSubmittedProof.managerId === null ||
+    managerSummary === undefined ||
+    managerSummary.balanceSummary.managerId !== latestSubmittedProof.managerId
+  ) {
+    return null;
+  }
+
+  return { managerId: latestSubmittedProof.managerId };
+}
+
+function isManagerFundingAction(action: ProofSubmittedRecord['action'] | undefined) {
+  return action === 'DEPOSIT_QUOTE' || action === 'WITHDRAW_QUOTE';
+}
+
+function getIndexedSourceValue({
+  historyMatch,
+  latestSubmittedProof,
+  managerFundingMatch,
+}: {
+  historyMatch: ProtocolHistoryRecord | null;
+  latestSubmittedProof: ProofSubmittedRecord | null;
+  managerFundingMatch: ManagerFundingSummaryMatch | null;
+}) {
+  if (historyMatch !== null) {
+    return 'Predict server matched';
+  }
+
+  if (managerFundingMatch !== null) {
+    return 'Manager summary refreshed';
+  }
+
+  return isManagerFundingAction(latestSubmittedProof?.action)
+    ? 'Awaiting manager summary refresh'
+    : 'Awaiting matching history';
+}
+
 function getManagerReadinessValue(manager: UsePredictManagerResult): string {
   if (manager.isReady && manager.managerId !== null) {
     return manager.managerId;
@@ -497,7 +581,7 @@ function getVerdictExplanation(status: ProofVerdictStatus): string {
     case 'Ready but Not Submitted':
       return 'A local simulation-ready review exists, but it is not proof until a wallet submission returns a digest.';
     case 'Verified':
-      return 'The digest exists and a matching Predict server history row is visible.';
+      return 'The digest exists and the required Predict server reconciliation is visible.';
   }
 }
 

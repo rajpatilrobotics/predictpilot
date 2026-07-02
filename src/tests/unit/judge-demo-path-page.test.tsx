@@ -231,6 +231,7 @@ function proofSessionFixture(
     latestSubmittedProof: null,
     recordPreparedProof: vi.fn(),
     recordSubmittedProof: vi.fn(),
+    submittedProofs: [],
     ...overrides,
   };
 }

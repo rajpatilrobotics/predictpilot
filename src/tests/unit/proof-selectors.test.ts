@@ -5,6 +5,7 @@ import type {
   ProofSubmittedRecord,
 } from '@/features/proof/proof-session-context';
 import type { UsePredictManagerResult } from '@/features/manager/hooks/usePredictManager';
+import type { ManagerSummaryPortfolioModel } from '@/features/portfolio/lib/portfolio-selectors';
 import type { WalletStatusModel } from '@/features/wallet/useWalletStatus';
 import type { TransactionHistoryTimelineModel } from '@/features/history/lib/history-selectors';
 import type { ProtocolHistoryRecord } from '@/types/history';
@@ -58,6 +59,30 @@ describe('proof mode selectors', () => {
     expect(viewModel.digest).toBe(digest);
     expect(viewModel.matchedHistoryDigest).toBeNull();
     expect(viewModel.sourceLabels.find((label) => label.label === 'Chain')?.status).toBe('pass');
+  });
+
+  it('verifies manager funding with chain digest and refreshed manager summary', () => {
+    const viewModel = selectProofModeViewModel({
+      ...baseOptions(),
+      latestSubmittedProof: {
+        ...submittedProofFixture(),
+        action: 'DEPOSIT_QUOTE',
+        amountQuote: 1_000n,
+        oracleId: null,
+      },
+      managerSummary: managerSummaryFixture(),
+    });
+
+    expect(viewModel.status).toBe('Verified');
+    expect(viewModel.digest).toBe(digest);
+    expect(viewModel.matchedHistoryDigest).toBeNull();
+    expect(viewModel.indexedSourceValue).toBe('Manager summary refreshed');
+    expect(
+      viewModel.executionRows.find((row) => row.label === 'Manager refresh')?.value,
+    ).toBe('Manager summary refreshed after digest');
+    expect(
+      viewModel.reconciliationRows.find((row) => row.label === 'History reconciliation')?.value,
+    ).toBe('Manager summary refreshed after funding digest');
   });
 
   it('verifies proof when Predict server history contains the submitted digest', () => {
@@ -165,6 +190,39 @@ function submittedProofFixture(): ProofSubmittedRecord {
     confirmedStatus: 'success',
     recordedAtMs: 1_791_000_010_000,
     refreshWarning: null,
+  };
+}
+
+function managerSummaryFixture(): ManagerSummaryPortfolioModel {
+  return {
+    balanceSummary: {
+      accountValueQuote: 1_000n,
+      awaitingSettlementPositions: 0,
+      balances: [],
+      managerId,
+      openExposureQuote: 0n,
+      openPositions: 0,
+      owner: walletAddress,
+      realizedPnlQuote: 0n,
+      redeemableValueQuote: 0n,
+      totalManagerBalanceQuote: 1_000n,
+      tradingBalanceQuote: 1_000n,
+      unrealizedPnlQuote: 0n,
+    },
+    summary: {
+      accountValueQuote: 1_000n,
+      awaitingSettlementPositions: 0,
+      balances: [],
+      lastRefreshedAtMs: null,
+      managerId,
+      openExposureQuote: 0n,
+      openPositions: 0,
+      owner: walletAddress,
+      realizedPnlQuote: 0n,
+      redeemableValueQuote: 0n,
+      tradingBalanceQuote: 1_000n,
+      unrealizedPnlQuote: 0n,
+    },
   };
 }
 

@@ -230,13 +230,13 @@ export function buildProofStrategyReceipt({
         value: viewModel.status,
       },
       {
-        label: 'Indexed match',
+        label: 'Server reconciliation',
         source: 'Predict server',
         value:
           viewModel.matchedHistoryDigest === null
             ? digest === null
               ? 'No submitted proof'
-              : 'Pending index'
+              : viewModel.indexedSourceValue
             : 'History matched digest',
       },
     ],
@@ -256,10 +256,10 @@ export function buildProofStrategyReceipt({
         value: viewModel.status === 'Verified' ? 'Visible after digest' : 'Pending or unavailable',
       },
       {
-        label: 'History refresh',
+        label: 'Server refresh',
         source: 'Predict server',
         value:
-          viewModel.matchedHistoryDigest === null ? 'Awaiting matching history' : 'Matched digest',
+          viewModel.matchedHistoryDigest === null ? viewModel.indexedSourceValue : 'Matched digest',
       },
       {
         label: 'Refresh warning',
@@ -372,14 +372,14 @@ function createSnapshotRows(
     {
       label: 'Underlying',
       source: 'Predict server',
-      value: snapshot.underlyingAsset ?? 'Unavailable / TODO VERIFY',
+      value: snapshot.underlyingAsset ?? 'Unavailable from current server data',
     },
     {
       label: snapshot.kind === 'binary' ? 'Direction / strike' : 'Range',
       source: 'Local',
       value:
         snapshot.kind === 'binary'
-          ? `${snapshot.direction ?? 'TODO VERIFY'} @ ${strikeOrRange}`
+          ? `${snapshot.direction ?? 'Direction unavailable'} @ ${strikeOrRange}`
           : strikeOrRange,
     },
     {
@@ -387,7 +387,7 @@ function createSnapshotRows(
       source: 'Local',
       value:
         snapshot.quantityQuote === undefined
-          ? 'Unavailable / TODO VERIFY'
+          ? 'Unavailable from current server data'
           : formatQuoteAmount(snapshot.quantityQuote, snapshot.quoteAssetSymbol),
     },
     {
@@ -395,7 +395,7 @@ function createSnapshotRows(
       source: 'Predict server',
       value:
         snapshot.expiryMs === undefined
-          ? 'Unavailable / TODO VERIFY'
+          ? 'Unavailable from current server data'
           : formatExpiry(snapshot.expiryMs),
     },
     {
@@ -495,7 +495,7 @@ function createSessionRows({
           ? formatQuoteAmount(submitted.quantityQuote)
           : prepared?.quantityQuote !== undefined
             ? formatQuoteAmount(prepared.quantityQuote)
-            : 'Unavailable / TODO VERIFY',
+            : 'Unavailable from current server data',
     },
   ];
 }
@@ -599,12 +599,12 @@ function normalizeDigest(value: string | null | undefined): TransactionDigest | 
 
 function formatNullableObject(value: string | null | undefined) {
   return value === null || value === undefined || value === ''
-    ? 'Unavailable / TODO VERIFY'
+    ? 'Unavailable from current server data'
     : formatObjectId(value);
 }
 
 function formatOptionalStrike(value: bigint | undefined) {
-  return value === undefined ? 'Unavailable / TODO VERIFY' : formatPrice1e9(value);
+  return value === undefined ? 'Unavailable from current server data' : formatPrice1e9(value);
 }
 
 function formatExpiry(value: bigint | number) {

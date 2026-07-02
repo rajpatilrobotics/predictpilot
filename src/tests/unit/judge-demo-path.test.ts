@@ -211,6 +211,8 @@ function proofFixture({
     digest: proofDigest,
     executionRows: [],
     explanation: status,
+    indexedSourceValue:
+      status === 'Verified' ? 'Predict server matched' : 'Awaiting matching history',
     matchedHistoryDigest: status === 'Verified' ? proofDigest : null,
     readinessRows: [],
     reconciliationRows: [],

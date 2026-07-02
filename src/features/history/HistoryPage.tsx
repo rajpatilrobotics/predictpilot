@@ -7,6 +7,7 @@ import {
 } from '@/components/terminal/TerminalPanels';
 import { TxDigestLink } from '@/components/tx/TxDigestLink';
 import { usePredictManager } from '@/features/manager/hooks/usePredictManager';
+import { useProofSession, type ProofSubmittedRecord } from '@/features/proof/proof-session-context';
 import { useWalletStatus } from '@/features/wallet/useWalletStatus';
 import {
   formatPrice1e9,
@@ -23,6 +24,12 @@ export function HistoryPage() {
   const managerId = manager.managerId ?? undefined;
   const owner = (manager.owner ?? wallet.accountAddress ?? null) as SuiAddress | null;
   const canLoadHistory = wallet.isConnected && manager.isReady && managerId !== undefined;
+  const proofSession = useProofSession();
+  const managerFundingProofs = selectManagerFundingProofs({
+    managerId,
+    owner,
+    proofs: proofSession.submittedProofs,
+  });
   const history = useTransactionHistory({
     enabled: canLoadHistory,
     managerId,
@@ -95,7 +102,7 @@ export function HistoryPage() {
         title="History unavailable"
       />
     );
-  } else if (history.data.isEmpty) {
+  } else if (history.data.isEmpty && managerFundingProofs.length === 0) {
     content = (
       <HistoryState
         description="No indexed mints, redeems, supplies, or withdrawals matched this manager and wallet yet."
@@ -103,7 +110,7 @@ export function HistoryPage() {
       />
     );
   } else {
-    content = <HistorySuccess history={history.data} />;
+    content = <HistorySuccess history={history.data} managerFundingProofs={managerFundingProofs} />;
   }
 
   return (
@@ -121,8 +128,10 @@ export function HistoryPage() {
 
 function HistorySuccess({
   history,
+  managerFundingProofs,
 }: {
   history: NonNullable<ReturnType<typeof useTransactionHistory>['data']>;
+  managerFundingProofs: ProofSubmittedRecord[];
 }) {
   return (
     <div className="space-y-5">
@@ -147,6 +156,8 @@ function HistorySuccess({
           value="Indexed"
         />
       </section>
+
+      <ManagerFundingSubmissions records={managerFundingProofs} />
 
       <HistoryGroup
         records={history.feeds.positionMints}
@@ -179,6 +190,71 @@ function HistorySuccess({
         total={history.countsByKind.LP_WITHDRAW}
       />
     </div>
+  );
+}
+
+function ManagerFundingSubmissions({ records }: { records: ProofSubmittedRecord[] }) {
+  return (
+    <section aria-labelledby="manager-funding-submissions-title" className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-[#17211d]" id="manager-funding-submissions-title">
+          Manager Funding Submissions
+        </h2>
+        <span className="border border-[#b8c6c0] bg-[#edf5f1] px-2 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#315447]">
+          {records.length}
+        </span>
+      </div>
+      <p className="border border-[#d9dfdc] bg-[#fbfcfc] p-4 text-sm leading-6 text-[#3f514b]">
+        Manager deposit and withdraw actions do not have a dedicated Predict Server history feed.
+        This section shows real submitted chain digests captured in the current app session after
+        wallet confirmation.
+      </p>
+      {records.length === 0 ? (
+        <div className="border border-[#d9dfdc] bg-[#fbfcfc] p-4 text-sm text-[#3f514b]">
+          No manager funding submissions recorded in this app session.
+        </div>
+      ) : (
+        <div className="overflow-x-auto border border-[#d9dfdc]">
+          <table className="min-w-full border-collapse text-left text-sm">
+            <thead className="bg-[#edf5f1] text-xs uppercase tracking-[0.12em] text-[#46635a]">
+              <tr>
+                <th className="p-3 font-semibold">Time</th>
+                <th className="p-3 font-semibold">Action</th>
+                <th className="p-3 font-semibold">Manager</th>
+                <th className="p-3 font-semibold">Amount</th>
+                <th className="p-3 font-semibold">Source</th>
+                <th className="p-3 font-semibold">Digest</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map((record) => (
+                <ManagerFundingRow key={record.completedDigest} record={record} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ManagerFundingRow({ record }: { record: ProofSubmittedRecord }) {
+  return (
+    <tr className="border-t border-[#d9dfdc]">
+      <td className="p-3 text-[#3f514b]">{formatTimestamp(BigInt(record.recordedAtMs))}</td>
+      <td className="p-3 font-semibold text-[#17211d]">{formatHistoryAction(record.action)}</td>
+      <td className="p-3 text-[#3f514b]">{record.managerId ?? 'Unavailable'}</td>
+      <td className="p-3 text-[#3f514b]">
+        {record.amountQuote === undefined ? 'Unavailable' : formatQuoteAmount(record.amountQuote)}
+      </td>
+      <td className="p-3 text-[#3f514b]">Chain + local session</td>
+      <td className="p-3">
+        <TxDigestLink
+          className="font-semibold text-[#176b5b] underline"
+          digest={record.completedDigest}
+        />
+      </td>
+    </tr>
   );
 }
 
@@ -328,5 +404,40 @@ function formatHistoryKind(kind: ProtocolHistoryRecord['kind']) {
       return 'LP withdraw';
     case 'ORACLE_TRADE':
       return 'Oracle trade';
+  }
+}
+
+function selectManagerFundingProofs({
+  managerId,
+  owner,
+  proofs,
+}: {
+  managerId: string | undefined;
+  owner: SuiAddress | null;
+  proofs: ProofSubmittedRecord[];
+}) {
+  if (managerId === undefined) {
+    return [];
+  }
+
+  return proofs
+    .filter((proof) => isManagerFundingAction(proof.action))
+    .filter((proof) => proof.managerId === managerId)
+    .filter((proof) => owner === null || proof.sender === owner)
+    .sort((left, right) => right.recordedAtMs - left.recordedAtMs);
+}
+
+function isManagerFundingAction(action: ProofSubmittedRecord['action']) {
+  return action === 'DEPOSIT_QUOTE' || action === 'WITHDRAW_QUOTE';
+}
+
+function formatHistoryAction(action: ProofSubmittedRecord['action']) {
+  switch (action) {
+    case 'DEPOSIT_QUOTE':
+      return 'Manager deposit';
+    case 'WITHDRAW_QUOTE':
+      return 'Manager withdraw';
+    default:
+      return formatHistoryKind('ORACLE_TRADE');
   }
 }

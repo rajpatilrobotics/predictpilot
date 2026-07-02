@@ -148,7 +148,7 @@ function createSimulationRows(preview: PredictPtbSimulationPreview): PredictTxPr
 function formatPreviewStatus(status: PredictPtbSimulationPreview['status']) {
   switch (status) {
     case 'TODO_VERIFY_BLOCKED':
-      return 'TODO VERIFY blocked';
+      return 'Verification blocked';
     case 'blocked':
       return 'Blocked';
     case 'error':

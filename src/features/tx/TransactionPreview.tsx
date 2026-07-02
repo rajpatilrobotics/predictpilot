@@ -126,7 +126,7 @@ export function TransactionPreview({
 function formatStatusLabel(status: PredictPtbSimulationPreview['status']) {
   switch (status) {
     case 'TODO_VERIFY_BLOCKED':
-      return 'TODO VERIFY blocked';
+      return 'Verification blocked';
     case 'blocked':
       return 'Blocked';
     case 'error':

@@ -77,6 +77,7 @@ export interface ProofSessionContextValue {
   latestSubmittedProof: ProofSubmittedRecord | null;
   recordPreparedProof: (input: RecordPreparedProofInput) => void;
   recordSubmittedProof: (input: RecordSubmittedProofInput) => void;
+  submittedProofs: ProofSubmittedRecord[];
 }
 
 const noopContext: ProofSessionContextValue = {
@@ -85,6 +86,7 @@ const noopContext: ProofSessionContextValue = {
   latestSubmittedProof: null,
   recordPreparedProof: () => undefined,
   recordSubmittedProof: () => undefined,
+  submittedProofs: [],
 };
 
 export const ProofSessionContext = createContext<ProofSessionContextValue>(noopContext);

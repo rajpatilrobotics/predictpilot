@@ -6,6 +6,7 @@ import { PnlPage } from '@/features/portfolio/PnlPage';
 import { PortfolioPage } from '@/features/portfolio/PortfolioPage';
 import type { TransactionHistoryTimelineModel } from '@/features/history/lib/history-selectors';
 import type { UsePredictManagerResult } from '@/features/manager/hooks/usePredictManager';
+import type { ProofSessionContextValue } from '@/features/proof/proof-session-context';
 import type { WalletStatusModel } from '@/features/wallet/useWalletStatus';
 import type {
   ManagerSummaryPortfolioModel,
@@ -37,6 +38,7 @@ interface HookState {
   managerSummary: MockQueryResult<ManagerSummaryPortfolioModel>;
   pnl: MockQueryResult<ManagerPnlModel>;
   positionsSummary: MockQueryResult<NormalizedManagerPositionsSummaryModel>;
+  proofSession: ProofSessionContextValue;
   wallet: WalletStatusModel;
 }
 
@@ -85,6 +87,14 @@ const hookState = vi.hoisted(
       isLoading: false,
       isPending: false,
     },
+    proofSession: {
+      clearProofSession: vi.fn(),
+      latestPreparedReview: null,
+      latestSubmittedProof: null,
+      recordPreparedProof: vi.fn(),
+      recordSubmittedProof: vi.fn(),
+      submittedProofs: [],
+    },
     wallet: {
       accountAddress: null,
       currentNetwork: 'testnet',
@@ -126,6 +136,10 @@ vi.mock('@/features/portfolio/hooks/usePnl', () => ({
 
 vi.mock('@/features/history/hooks/useTransactionHistory', () => ({
   useTransactionHistory: () => hookState.history,
+}));
+
+vi.mock('@/features/proof/proof-session-context', () => ({
+  useProofSession: () => hookState.proofSession,
 }));
 
 describe('portfolio, PnL, and history pages', () => {
@@ -295,6 +309,30 @@ describe('portfolio, PnL, and history pages', () => {
       within(rangeSection as HTMLElement).getByText(/62,000.00-70,000.00/),
     ).toBeInTheDocument();
   });
+
+  it('renders current-session manager funding submissions separately from indexed history', () => {
+    setReadyManager();
+    hookState.history = historySuccess(emptyHistory());
+    hookState.proofSession = proofSessionFixture({
+      latestSubmittedProof: managerFundingProof(),
+      submittedProofs: [managerFundingProof()],
+    });
+
+    render(<HistoryPage />);
+
+    expect(
+      screen.getByRole('heading', { name: 'Manager Funding Submissions' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Manager deposit')).toBeInTheDocument();
+    expect(screen.getByText('0.001 dUSDC')).toBeInTheDocument();
+    expect(screen.getByText('Chain + local session')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'View transaction manager-...digest on Sui Explorer' }),
+    ).toBeInTheDocument();
+    const summary = screen.getByRole('region', { name: 'History summary' });
+    expect(within(summary).getByText('Matched indexed events')).toBeInTheDocument();
+    expect(within(summary).getByText('0')).toBeInTheDocument();
+  });
 });
 
 function resetHookState() {
@@ -331,6 +369,7 @@ function resetHookState() {
   };
   hookState.managerSummary = queryIdle();
   hookState.positionsSummary = queryIdle();
+  hookState.proofSession = proofSessionFixture();
   hookState.pnl = queryIdle();
   hookState.history = {
     data: undefined,
@@ -341,6 +380,35 @@ function resetHookState() {
     isPending: false,
     isSuccess: false,
     refetch: vi.fn(),
+  };
+}
+
+function proofSessionFixture(
+  overrides: Partial<ProofSessionContextValue> = {},
+): ProofSessionContextValue {
+  return {
+    clearProofSession: vi.fn(),
+    latestPreparedReview: null,
+    latestSubmittedProof: null,
+    recordPreparedProof: vi.fn(),
+    recordSubmittedProof: vi.fn(),
+    submittedProofs: [],
+    ...overrides,
+  };
+}
+
+function managerFundingProof() {
+  return {
+    action: 'DEPOSIT_QUOTE' as const,
+    affectedObjects: [{ id: managerId, kind: 'manager' as const }],
+    amountQuote: 1_000n,
+    completedDigest: 'manager-funding-digest',
+    confirmedStatus: 'success' as const,
+    managerId,
+    oracleId: null,
+    recordedAtMs: 1_781_635_400_000,
+    refreshWarning: null,
+    sender: owner,
   };
 }
 

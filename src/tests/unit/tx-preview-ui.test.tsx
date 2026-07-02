@@ -107,14 +107,14 @@ describe('PP-048 transaction preview UI', () => {
 
     expect(screen.getByText('Estimated payout')).toBeInTheDocument();
     expect(screen.getByText('125000 DUSDC')).toBeInTheDocument();
-    expect(screen.getAllByText('Unavailable / TODO VERIFY').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Unavailable from current server data').length).toBeGreaterThan(0);
   });
 
   it('renders honest fallback copy when optional risk data is missing', () => {
     render(<RiskPreview preview={{ action: 'MINT' }} />);
 
     expect(screen.getByText('Simulation required')).toBeInTheDocument();
-    expect(screen.getAllByText('Unavailable / TODO VERIFY').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Unavailable from current server data').length).toBeGreaterThan(0);
     expect(
       screen.getByText(/Missing optional risk data is shown as unavailable instead of estimated/i),
     ).toBeInTheDocument();

@@ -11,13 +11,12 @@ import {
 export function ProofSessionProvider({ children }: { children: ReactNode }) {
   const [latestPreparedReview, setLatestPreparedReview] =
     useState<ProofPreparedReviewRecord | null>(null);
-  const [latestSubmittedProof, setLatestSubmittedProof] = useState<ProofSubmittedRecord | null>(
-    null,
-  );
+  const [submittedProofs, setSubmittedProofs] = useState<ProofSubmittedRecord[]>([]);
+  const latestSubmittedProof = submittedProofs[0] ?? null;
 
   const clearProofSession = useCallback(() => {
     setLatestPreparedReview(null);
-    setLatestSubmittedProof(null);
+    setSubmittedProofs([]);
   }, []);
 
   const recordPreparedProof = useCallback(
@@ -54,7 +53,7 @@ export function ProofSessionProvider({ children }: { children: ReactNode }) {
       recordedAtMs,
       refreshWarning,
     }: RecordSubmittedProofInput) => {
-      setLatestSubmittedProof({
+      const submittedProof = {
         action: builderPreview.action,
         affectedObjects: executionResult.affectedObjects,
         amountQuote: builderPreview.amountQuote,
@@ -69,7 +68,12 @@ export function ProofSessionProvider({ children }: { children: ReactNode }) {
         recordedAtMs,
         refreshWarning,
         sender: builderPreview.sender,
-      });
+      };
+
+      setSubmittedProofs((current) => [
+        submittedProof,
+        ...current.filter((proof) => proof.completedDigest !== submittedProof.completedDigest),
+      ]);
     },
     [],
   );
@@ -81,6 +85,7 @@ export function ProofSessionProvider({ children }: { children: ReactNode }) {
       latestSubmittedProof,
       recordPreparedProof,
       recordSubmittedProof,
+      submittedProofs,
     }),
     [
       clearProofSession,
@@ -88,6 +93,7 @@ export function ProofSessionProvider({ children }: { children: ReactNode }) {
       latestSubmittedProof,
       recordPreparedProof,
       recordSubmittedProof,
+      submittedProofs,
     ],
   );
 

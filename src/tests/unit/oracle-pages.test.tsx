@@ -178,7 +178,7 @@ describe('oracle page components', () => {
     expect(screen.getByText('-0.3')).toBeInTheDocument();
     expect(screen.getByText('Forward minus spot')).toBeInTheDocument();
     expect(screen.getByText('Surface derivation unavailable')).toBeInTheDocument();
-    expect(screen.getByText(/TODO VERIFY SVI visualization math/i)).toBeInTheDocument();
+    expect(screen.getByText(/Volatility charts require SVI visualization math/i)).toBeInTheDocument();
   });
 
   it('shows stale oracle warnings and blocked mint status', async () => {
@@ -251,10 +251,10 @@ describe('oracle page components', () => {
     expect(
       await screen.findByRole('heading', { name: 'SVI Surface Explorer' }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/SVI parameters unavailable/i)).toBeInTheDocument();
+    expect(screen.getByText(/SVI parameters are unavailable/i)).toBeInTheDocument();
     expect(screen.getByText(/Latest price unavailable/i)).toBeInTheDocument();
     expect(screen.getByText('Surface derivation unavailable')).toBeInTheDocument();
-    expect(screen.getAllByText(/TODO VERIFY/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/TODO VERIFY/i)).not.toBeInTheDocument();
   });
 
   it('renders no-oracle empty states without calling the oracle client', () => {

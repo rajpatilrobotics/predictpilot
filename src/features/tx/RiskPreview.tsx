@@ -52,7 +52,7 @@ export interface RiskPreviewProps {
   title?: string;
 }
 
-const unavailableCopy = 'Unavailable / TODO VERIFY';
+const unavailableCopy = 'Unavailable from current server data';
 
 export function RiskPreview({ className = '', preview, title = 'Risk preview' }: RiskPreviewProps) {
   const payoffModel = createPayoffVisualizerModelFromPreview(preview);

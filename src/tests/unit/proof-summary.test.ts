@@ -138,6 +138,8 @@ function viewModelFixture({
       },
     ],
     explanation: 'Proof summary test fixture.',
+    indexedSourceValue:
+      matchedHistoryDigest === null ? 'Awaiting matching history' : 'Predict server matched',
     matchedHistoryDigest,
     readinessRows: [
       {

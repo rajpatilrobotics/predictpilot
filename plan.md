@@ -26,55 +26,50 @@ Build according to `docs/CODEX_BUILD_TASKS.md`, `docs/MVP_SCOPE.md`, `docs/TECHN
 
 Do not scaffold the app, install dependencies, implement product features, or build DeepBook Predict integration until the relevant phase is approved.
 
-## Current Focus: Manager Summary Loading Patch
+## Current Focus: Proof/History Demo Completion Patch
 
 ### Goal
 
-Make the live Manager page demo-safe by showing already-loaded manager account data instead of leaving stale loading copy on screen.
+Make the live demo proof path truthful and complete for manager funding by showing chain-confirmed manager funding submissions in History and marking Proof Center verified when the manager summary refresh confirms the same manager.
 
 ### Problem
 
-The Predict server can return the manager summary and positions, but `/manager` may still show “Loading manager account data” and “Not loaded” style UI when a query flag remains loading or refetching around already-present data. This makes a real successful manager deposit look confusing during demo smoke testing.
+Manager deposit/withdraw transactions do not have a dedicated Predict Server history endpoint. The app currently waits for a matching indexed history row, so a successful manager deposit can remain `Pending Index` even after the digest is real and the manager balance refreshes.
 
 ### Proposed Solution
 
-Use data-first render logic on the Manager page. Only show the account loading panel when summary or positions data is genuinely missing and still loading. Keep loaded balances usable for deposit and withdraw panels even if a query is refreshing in the background.
+Keep indexed protocol history separate, but add a current-session manager funding lane backed by real chain digests from Proof Session. Proof Center should verify manager funding through chain confirmation plus refreshed manager summary, while trade and LP actions still require matching indexed history rows.
 
 ### Files To Change
 
-- `src/features/manager/PredictManagerPage.tsx`
-- `src/features/manager/hooks/usePredictManager.ts`
-- `src/features/manager/lib/manager-select.ts`
-- `src/lib/bigint-json.ts`
-- `src/main.tsx`
-- `src/tests/unit/bigint-json.test.ts`
-- `src/tests/unit/predict-manager-page.test.tsx`
-- `src/tests/unit/predict-manager-hook.test.tsx`
-- `src/tests/unit/market-intelligence-page.test.tsx`
-- `src/tests/unit/trade-test-helpers.ts`
+- `src/features/proof/**`
+- `src/features/history/**`
+- `src/features/trade/payoff-visualizer.ts`
+- `src/features/oracle/**`
+- `src/features/markets/**`
+- Focused tests under `src/tests/unit/**`
 
 ### Step By Step Tasks
 
-1. Inspect Manager page summary and positions query rendering.
-2. Change loading checks so data present means the summary UI is considered loaded.
-3. Keep indexed manager discovery render-safe by storing only `managerId` and `owner` in the hook state.
-4. Install explicit BigInt JSON serialization for React dev tooling and browser diagnostics.
-5. Keep wallet signing, PTB builders, config, and protocol integrations unchanged.
-6. Add regression tests for data-present plus loading-flag state, discovery shape, and BigInt JSON serialization.
+1. Extend Proof Session to retain current-session submitted proofs.
+2. Render manager funding submissions in History using chain digest plus local session context.
+3. Update Proof Center verification rules for manager funding actions.
+4. Replace judge-facing `TODO VERIFY` wording with clear unavailable-data copy.
+5. Keep wallet signing, PTB builders, config, protocol integrations, and endpoints unchanged.
+6. Add focused regression tests for proof session, History, Proof Center, and wording.
 7. Run targeted tests plus lint, typecheck, build, diff check, and secret scan.
 
 ### Acceptance Criteria
 
-- `/manager` shows loaded manager DUSDC and account value when summary data exists.
-- The loading panel appears only while required account data is absent and still loading.
-- Funding action panels do not remain blocked by stale loading flags when their balance data exists.
-- Manager discovery does not put BigInt indexed-event fields into the live route state.
-- React dev/browser tooling can stringify BigInt-backed query data without blocking Manager page updates.
-- The patch does not change wallet signing, PTB builders, config, protocol logic, or endpoints.
+- History shows the latest current-session manager funding digest without labeling it as an indexed server row.
+- Proof Center marks manager funding verified when chain confirmation succeeds and manager summary for that manager is loaded.
+- Trade and LP proof still require matching indexed history where those endpoints exist.
+- No fake digest, fake server history, storage persistence, wallet signing rewrite, PTB edit, config edit, or new endpoint is introduced.
+- Judge-facing proof/risk/oracle copy does not show raw `TODO VERIFY` labels.
 
 ### Testing Plan
 
-- `pnpm exec vitest run src/tests/unit/predict-manager-page.test.tsx src/tests/unit/predict-manager-hook.test.tsx src/tests/unit/manager-select.test.ts src/tests/unit/bigint-json.test.ts`
+- `pnpm exec vitest run src/tests/unit/proof-session-provider.test.tsx src/tests/unit/portfolio-history-pages.test.tsx src/tests/unit/proof-selectors.test.ts src/tests/unit/proof-mode-page.test.tsx src/tests/unit/tx-preview-ui.test.tsx src/tests/unit/oracle-pages.test.tsx src/tests/unit/market-intelligence-page.test.tsx`
 - `pnpm lint`
 - `pnpm typecheck`
 - `pnpm build`
@@ -83,4 +78,4 @@ Use data-first render logic on the Manager page. Only show the account loading p
 
 ### Open Questions
 
-- None. Live chain/API checks already confirm the previous manager deposit succeeded; this patch fixes Manager page clarity for the next smoke test.
+- None. Manager funding verification should be truthful demo proof, not new indexer work.

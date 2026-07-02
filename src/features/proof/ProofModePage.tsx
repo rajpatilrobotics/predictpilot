@@ -304,12 +304,8 @@ function ProofVerdictBanner({
           value={viewModel.digest === null ? 'No submitted digest' : 'Chain digest available'}
         />
         <TerminalDatum
-          label="Indexed source"
-          value={
-            viewModel.matchedHistoryDigest === null
-              ? 'Awaiting matching history'
-              : 'Predict server matched'
-          }
+          label="Server source"
+          value={viewModel.indexedSourceValue}
         />
       </div>
       <ProofRefreshFeedback hasDigest={viewModel.digest !== null} refreshState={refreshState} />

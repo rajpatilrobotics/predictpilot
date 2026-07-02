@@ -40,6 +40,7 @@ describe('ProofSessionProvider', () => {
     expect(result.current.latestPreparedReview?.action).toBe('MINT');
     expect(result.current.latestPreparedReview?.managerId).toBe(managerId);
     expect(result.current.latestSubmittedProof).toBeNull();
+    expect(result.current.submittedProofs).toHaveLength(0);
   });
 
   it('records successful execution digest proof and clears session state', () => {
@@ -70,6 +71,8 @@ describe('ProofSessionProvider', () => {
 
     expect(result.current.latestSubmittedProof?.completedDigest).toBe(digest);
     expect(result.current.latestSubmittedProof?.managerId).toBe(managerId);
+    expect(result.current.submittedProofs).toHaveLength(1);
+    expect(result.current.submittedProofs[0]?.completedDigest).toBe(digest);
 
     act(() => {
       result.current.clearProofSession();
@@ -77,5 +80,46 @@ describe('ProofSessionProvider', () => {
 
     expect(result.current.latestPreparedReview).toBeNull();
     expect(result.current.latestSubmittedProof).toBeNull();
+    expect(result.current.submittedProofs).toHaveLength(0);
+  });
+
+  it('keeps current-session submitted proofs with latest first', () => {
+    const { result } = renderHook(() => useProofSession(), {
+      wrapper: ProofSessionProvider,
+    });
+    const firstDigest = 'first-digest' as TransactionDigest;
+    const secondDigest = 'second-digest' as TransactionDigest;
+
+    act(() => {
+      result.current.recordSubmittedProof(createSubmittedInput(firstDigest));
+      result.current.recordSubmittedProof(createSubmittedInput(secondDigest));
+    });
+
+    expect(result.current.latestSubmittedProof?.completedDigest).toBe(secondDigest);
+    expect(result.current.submittedProofs.map((proof) => proof.completedDigest)).toEqual([
+      secondDigest,
+      firstDigest,
+    ]);
   });
 });
+
+function createSubmittedInput(completedDigest: TransactionDigest): RecordSubmittedProofInput {
+  return {
+    builderPreview: {
+      action: 'DEPOSIT_QUOTE',
+      affectedObjects: [{ id: managerId, kind: 'manager' }],
+      amountQuote: 1_000n,
+      sender,
+    },
+    executionResult: {
+      action: 'DEPOSIT_QUOTE',
+      affectedObjects: [{ id: managerId, kind: 'manager' }],
+      confirmedStatus: 'success',
+      digest: completedDigest,
+      sender,
+      status: 'success',
+    },
+    recordedAtMs: 1_791_000_010_000,
+    refreshWarning: null,
+  };
+}

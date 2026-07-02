@@ -246,7 +246,7 @@ function askBoundsWarnings(
       return [
         {
           code: 'ASK_BOUNDS_PRESENT_UNMAPPED',
-          message: 'Ask bounds are present but their exact server fields are still TODO VERIFY.',
+          message: 'Ask bounds are present but their exact server fields are not mapped yet.',
         },
       ];
   }

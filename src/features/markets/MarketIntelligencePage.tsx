@@ -307,7 +307,7 @@ function PredictStatePanel({ predictState }: { predictState: PredictStateModel |
       <MetricCard
         label="Quote asset"
         tone={quoteAssetSupported ? 'success' : 'warning'}
-        value={quoteAssetSupported ? 'DUSDC supported' : 'TODO VERIFY quote support'}
+        value={quoteAssetSupported ? 'DUSDC supported' : 'Quote support unavailable'}
       />
       <MetricCard
         label="Trading pause"
@@ -317,12 +317,12 @@ function PredictStatePanel({ predictState }: { predictState: PredictStateModel |
       <MetricCard
         label="Pricing payload"
         tone={predictState?.pricingStatus === 'PRESENT' ? 'success' : 'warning'}
-        value={predictState?.pricingStatus === 'PRESENT' ? 'Present' : 'TODO VERIFY missing'}
+        value={predictState?.pricingStatus === 'PRESENT' ? 'Present' : 'Not provided by endpoint'}
       />
       <MetricCard
         label="Risk payload"
         tone={predictState?.riskStatus === 'PRESENT' ? 'success' : 'warning'}
-        value={predictState?.riskStatus === 'PRESENT' ? 'Present' : 'TODO VERIFY missing'}
+        value={predictState?.riskStatus === 'PRESENT' ? 'Present' : 'Not provided by endpoint'}
       />
     </dl>
   );
@@ -670,13 +670,13 @@ function SelectedMarketPanel({
               [
                 'Spot',
                 latestPrice === null
-                  ? 'TODO VERIFY latest price missing'
+                  ? 'Latest price unavailable'
                   : formatPrice1e9(latestPrice.spot1e9),
               ],
               [
                 'Forward',
                 latestPrice === null
-                  ? 'TODO VERIFY latest price missing'
+                  ? 'Latest price unavailable'
                   : formatPrice1e9(latestPrice.forward1e9),
               ],
               [
@@ -728,7 +728,7 @@ function LiveTapePanel({
   if (liveTape === undefined) {
     return (
       <InlineWarning
-        title="TODO VERIFY live oracle tape"
+        title="Live oracle tape unavailable"
         value="No focused tape payload is available yet; the page keeps server-rendered state visible."
       />
     );
@@ -935,7 +935,7 @@ function formatAskBounds(askBounds: OracleAskBoundsModel | undefined) {
     return 'Unavailable';
   }
 
-  return 'TODO VERIFY numeric bounds unmapped';
+  return 'Bounds not mapped by current endpoint';
 }
 
 function formatAvailability(availability: OracleActionAvailability) {

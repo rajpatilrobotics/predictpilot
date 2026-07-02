@@ -278,7 +278,7 @@ function MarketSnapshot({
               value={status.freshness.aggregateStatus}
             />
             <TerminalMetricCard
-              helper="Ask-bound internals remain TODO VERIFY until server fields are confirmed."
+              helper="Ask-bound internals are not mapped until the server fields are confirmed."
               label="Ask bounds"
               value={isAskBoundsLoading ? 'Loading' : askBounds.status}
             />

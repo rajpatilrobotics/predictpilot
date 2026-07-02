@@ -148,7 +148,7 @@ describe('market key helpers', () => {
     });
   });
 
-  it('preserves present-but-unmapped ask-bounds as a TODO VERIFY warning', () => {
+  it('preserves present-but-unmapped ask-bounds as an unmapped warning', () => {
     const result = buildRangeKey({
       askBounds: { status: 'PRESENT_UNMAPPED' },
       higherStrike1e9: 70_000_000_000_000n,
