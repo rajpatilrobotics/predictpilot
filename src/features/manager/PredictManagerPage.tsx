@@ -125,9 +125,14 @@ export function PredictManagerPage({
     walletDusdcBalanceQuote === undefined
       ? (walletDusdcQuery.data ?? null)
       : walletDusdcBalanceQuote;
+  const managerSummary = managerSummaryQuery.data ?? null;
+  const positionsSummary = positionsSummaryQuery.data ?? null;
+  const isWalletDusdcLoading = effectiveWalletDusdcBalance === null && walletDusdcQuery.isLoading;
+  const isManagerSummaryLoading = managerSummary === null && managerSummaryQuery.isLoading;
+  const isPositionsSummaryLoading = positionsSummary === null && positionsSummaryQuery.isLoading;
+  const isManagerAccountDataLoading = isManagerSummaryLoading || isPositionsSummaryLoading;
   const previousManagerTransactionDigest = manager.authoritativeObject?.previousTransaction ?? null;
-  const previousTradingBalanceQuote =
-    managerSummaryQuery.data?.balanceSummary.tradingBalanceQuote ?? null;
+  const previousTradingBalanceQuote = managerSummary?.balanceSummary.tradingBalanceQuote ?? null;
   const depositAmount = useMemo(
     () => parseDecimalAmount(depositInput, predictDeploymentConfig.quoteDecimals),
     [depositInput],
@@ -226,11 +231,11 @@ export function PredictManagerPage({
         <>
           <ManagerOverview
             manager={manager}
-            managerSummary={managerSummaryQuery.data ?? null}
-            positionsSummary={positionsSummaryQuery.data ?? null}
+            managerSummary={managerSummary}
+            positionsSummary={positionsSummary}
             walletDusdcBalance={effectiveWalletDusdcBalance}
           />
-          {managerSummaryQuery.isLoading || positionsSummaryQuery.isLoading ? (
+          {isManagerAccountDataLoading ? (
             <StatePanel
               description="Loading manager balances and positions from the Predict server."
               label="Manager account data loading"
@@ -258,7 +263,7 @@ export function PredictManagerPage({
               balanceValue={effectiveWalletDusdcBalance}
               flow={depositFlow}
               inputError={depositAmount.error}
-              isBalanceLoading={walletDusdcQuery.isLoading}
+              isBalanceLoading={isWalletDusdcLoading}
               onAmountChange={setDepositInput}
               onReview={() => void handleDeposit()}
               parsedAmount={depositAmount}
@@ -269,10 +274,10 @@ export function PredictManagerPage({
               amountLabel="Withdraw amount"
               amountPlaceholder="25.00"
               balanceLabel="Manager DUSDC"
-              balanceValue={managerSummaryQuery.data?.balanceSummary.tradingBalanceQuote ?? null}
+              balanceValue={managerSummary?.balanceSummary.tradingBalanceQuote ?? null}
               flow={withdrawFlow}
               inputError={withdrawAmount.error}
-              isBalanceLoading={managerSummaryQuery.isLoading}
+              isBalanceLoading={isManagerSummaryLoading}
               onAmountChange={setWithdrawInput}
               onReview={() => void handleWithdraw()}
               parsedAmount={withdrawAmount}

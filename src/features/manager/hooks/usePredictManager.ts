@@ -16,6 +16,7 @@ import type { ObjectId, SuiAddress } from '@/types/predict';
 import type { PredictManagerCreatedModel } from '@/types/portfolio';
 import {
   selectPredictManagerForOwner,
+  type PredictManagerDiscoveryRecord,
   type PredictManagerDiscoveryStatus,
   type PredictManagerDiscoveryWarning,
 } from '../lib/manager-select';
@@ -35,9 +36,9 @@ export interface UsePredictManagerResult {
   isConfirming: boolean;
   isLoading: boolean;
   isReady: boolean;
-  manager: PredictManagerCreatedModel | null;
+  manager: PredictManagerDiscoveryRecord | null;
   managerId: ObjectId | null;
-  matchingManagers: PredictManagerCreatedModel[];
+  matchingManagers: PredictManagerDiscoveryRecord[];
   owner: SuiAddress | null;
   requiresCreateManager: boolean;
   status: PredictManagerHookStatus;
@@ -53,11 +54,12 @@ export function usePredictManager({
   const owner = wallet.accountAddress as SuiAddress | null;
   const canLoadManagers = enabled && wallet.isConnected && owner !== null;
 
-  const managersQuery = useQuery<PredictManagerCreatedModel[], PredictPilotError>({
+  const managersQuery = useQuery<PredictManagerDiscoveryRecord[], PredictPilotError>({
     enabled: canLoadManagers,
     queryFn: async () => {
       try {
-        return await getManagers({ client: indexedClient });
+        const managers = await getManagers({ client: indexedClient });
+        return managers.map(toPredictManagerDiscoveryRecord);
       } catch (error) {
         throw toThrowableAppError(
           normalizeAppError(error, {
@@ -212,4 +214,13 @@ function managerResult({
 
 function toThrowableAppError(error: PredictPilotError) {
   return Object.assign(new Error(error.message), error);
+}
+
+function toPredictManagerDiscoveryRecord(
+  manager: PredictManagerCreatedModel,
+): PredictManagerDiscoveryRecord {
+  return {
+    managerId: manager.managerId,
+    owner: manager.owner,
+  };
 }

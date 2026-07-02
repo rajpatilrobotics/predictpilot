@@ -1,6 +1,5 @@
 import type { PredictPilotError } from '@/lib/errors';
 import type { ObjectId, SuiAddress } from '@/types/predict';
-import type { PredictManagerCreatedModel } from '@/types/portfolio';
 
 export type PredictManagerDiscoveryStatus =
   | 'AMBIGUOUS'
@@ -16,10 +15,15 @@ export interface PredictManagerDiscoveryWarning {
   message: string;
 }
 
+export interface PredictManagerDiscoveryRecord {
+  managerId: ObjectId;
+  owner: SuiAddress;
+}
+
 interface PredictManagerSelectionBase {
-  manager: PredictManagerCreatedModel | null;
+  manager: PredictManagerDiscoveryRecord | null;
   managerId: ObjectId | null;
-  matchingManagers: PredictManagerCreatedModel[];
+  matchingManagers: PredictManagerDiscoveryRecord[];
   owner: SuiAddress | null;
   status: PredictManagerDiscoveryStatus;
   warnings: PredictManagerDiscoveryWarning[];
@@ -38,7 +42,7 @@ export type PredictManagerSelection =
       status: 'NO_MANAGER';
     })
   | (PredictManagerSelectionBase & {
-      manager: PredictManagerCreatedModel;
+      manager: PredictManagerDiscoveryRecord;
       managerId: ObjectId;
       owner: SuiAddress;
       status: 'READY';
@@ -58,7 +62,7 @@ export type PredictManagerSelection =
 
 export interface SelectPredictManagerForOwnerOptions {
   error?: PredictPilotError;
-  managers: readonly PredictManagerCreatedModel[];
+  managers: readonly PredictManagerDiscoveryRecord[];
   owner: SuiAddress | null | undefined;
 }
 

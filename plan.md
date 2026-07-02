@@ -26,44 +26,55 @@ Build according to `docs/CODEX_BUILD_TASKS.md`, `docs/MVP_SCOPE.md`, `docs/TECHN
 
 Do not scaffold the app, install dependencies, implement product features, or build DeepBook Predict integration until the relevant phase is approved.
 
-## Current Focus: Wallet Recovery Race Patch
+## Current Focus: Manager Summary Loading Patch
 
 ### Goal
 
-Prevent a successful wallet-approved manager transaction from being shown as an app error when indexed recovery data arrives slightly after the first recovery check.
+Make the live Manager page demo-safe by showing already-loaded manager account data instead of leaving stale loading copy on screen.
 
 ### Problem
 
-The transaction can succeed onchain, but the wallet callback may return a generic no-digest error while the first recovery check has already resolved empty. The UI then keeps the generic error instead of making one fresh recovery attempt against updated manager state.
+The Predict server can return the manager summary and positions, but `/manager` may still show “Loading manager account data” and “Not loaded” style UI when a query flag remains loading or refetching around already-present data. This makes a real successful manager deposit look confusing during demo smoke testing.
 
 ### Proposed Solution
 
-For non-rejection wallet failures without a digest, run a fresh submitted-transaction recovery attempt before surfacing the failure. Keep the existing timeout and proof rules, and never invent or backfill a digest unless authoritative recovery proves it.
+Use data-first render logic on the Manager page. Only show the account loading panel when summary or positions data is genuinely missing and still loading. Keep loaded balances usable for deposit and withdraw panels even if a query is refreshing in the background.
 
 ### Files To Change
 
-- `src/features/trade/actions/usePredictTradeExecutionFlow.ts`
-- `src/tests/unit/trade-execution-security.test.tsx`
-- `src/tests/unit/manager-execution-flow.test.tsx`
+- `src/features/manager/PredictManagerPage.tsx`
+- `src/features/manager/hooks/usePredictManager.ts`
+- `src/features/manager/lib/manager-select.ts`
+- `src/lib/bigint-json.ts`
+- `src/main.tsx`
+- `src/tests/unit/bigint-json.test.ts`
+- `src/tests/unit/predict-manager-page.test.tsx`
+- `src/tests/unit/predict-manager-hook.test.tsx`
+- `src/tests/unit/market-intelligence-page.test.tsx`
+- `src/tests/unit/trade-test-helpers.ts`
 
 ### Step By Step Tasks
 
-1. Add a fresh post-failure recovery attempt for generic no-digest wallet errors.
-2. Reuse the same recovery path when recovery returns empty before the wallet callback fails.
-3. Keep user-rejection behavior unchanged.
-4. Update focused unit tests for late recovery, empty recovery, rejection, and manager deposit proof recording.
-5. Run targeted tests plus lint, typecheck, build, diff check, and secret scan.
+1. Inspect Manager page summary and positions query rendering.
+2. Change loading checks so data present means the summary UI is considered loaded.
+3. Keep indexed manager discovery render-safe by storing only `managerId` and `owner` in the hook state.
+4. Install explicit BigInt JSON serialization for React dev tooling and browser diagnostics.
+5. Keep wallet signing, PTB builders, config, and protocol integrations unchanged.
+6. Add regression tests for data-present plus loading-flag state, discovery shape, and BigInt JSON serialization.
+7. Run targeted tests plus lint, typecheck, build, diff check, and secret scan.
 
 ### Acceptance Criteria
 
-- A generic no-digest wallet error can still resolve to success when fresh authoritative recovery finds the submitted digest.
-- A user-rejected transaction remains a rejected failure and does not recover as success.
-- Recovered digests continue through the existing success path for history and Proof Center state.
-- The patch does not change PTB builders, wallet signing, config, protocol logic, or endpoints.
+- `/manager` shows loaded manager DUSDC and account value when summary data exists.
+- The loading panel appears only while required account data is absent and still loading.
+- Funding action panels do not remain blocked by stale loading flags when their balance data exists.
+- Manager discovery does not put BigInt indexed-event fields into the live route state.
+- React dev/browser tooling can stringify BigInt-backed query data without blocking Manager page updates.
+- The patch does not change wallet signing, PTB builders, config, protocol logic, or endpoints.
 
 ### Testing Plan
 
-- `pnpm exec vitest run src/tests/unit/trade-execution-security.test.tsx src/tests/unit/manager-execution-flow.test.tsx src/tests/unit/proof-mode-page.test.tsx`
+- `pnpm exec vitest run src/tests/unit/predict-manager-page.test.tsx src/tests/unit/predict-manager-hook.test.tsx src/tests/unit/manager-select.test.ts src/tests/unit/bigint-json.test.ts`
 - `pnpm lint`
 - `pnpm typecheck`
 - `pnpm build`
@@ -72,4 +83,4 @@ For non-rejection wallet failures without a digest, run a fresh submitted-transa
 
 ### Open Questions
 
-- None. The previous transaction succeeded onchain; this patch improves future wallet-result recovery and demo clarity.
+- None. Live chain/API checks already confirm the previous manager deposit succeeded; this patch fixes Manager page clarity for the next smoke test.

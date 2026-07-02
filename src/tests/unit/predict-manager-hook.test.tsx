@@ -230,6 +230,8 @@ describe('usePredictManager', () => {
       managerId,
       owner,
     });
+    expect(result.current.manager).toEqual({ managerId, owner });
+    expect(result.current.manager).not.toHaveProperty('checkpoint');
     expect(authoritativeClient.getObject).toHaveBeenCalledWith({
       include: {
         json: false,
